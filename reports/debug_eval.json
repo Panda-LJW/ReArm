@@ -1,0 +1,207 @@
+{
+  "metadata": {
+    "timestamp": "2026-11-13T10:18:46.639341+00:00",
+    "seed": 20261113,
+    "trials_per_class": 2,
+    "complete_sample": false,
+    "elapsed_seconds": 6.062662375043146,
+    "python": "3.11.15",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "runtime_evidence": "runtime/eval-5gz_w730",
+    "dependencies": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1",
+      "opencv-contrib-python": "5.0.0.93",
+      "fastapi": "0.162.5",
+      "pytest": "9.2.0"
+    },
+    "config_sha256": {
+      "arm_nominal.yaml": "b1155ddd4ce9c2c915ab00f25f8c2f7b07171433685f9843b26d94f8d6ca6a1d",
+      "camera.yaml": "b3558296101dc784c1da0a76a334df5848cefaa8c7a6f3b5731bfac5c80752d1",
+      "sim.yaml": "2bba35670605620b1aad3e7f4ad17bea8ea41c7f0b4f7d742487eccaae3aee7a",
+      "thresholds.yaml": "f589973d54c4da5e5a167c9f75b81f074391b3caaa69b8fd1cf8416b46fd7d07"
+    }
+  },
+  "criteria": {
+    "基线": true,
+    "误报": true,
+    "发现": false,
+    "诊断": false,
+    "新伤恢复": false,
+    "旧伤恢复": false,
+    "伤愈识别": false,
+    "护栏": true,
+    "菜单外的伤": true,
+    "残差模型": true,
+    "回退": true,
+    "测试": false
+  },
+  "measured": {
+    "baseline": {
+      "hits": 20,
+      "count": 20,
+      "rate": 1.0,
+      "guard": {
+        "accepted": true,
+        "candidate_median": 0.12843751116798768,
+        "old_median": 7.2624934971923185,
+        "reduction": 0.9823149568095804,
+        "in_bounds": true,
+        "reasons": [],
+        "shots": 4
+      }
+    },
+    "false_alarms": 0,
+    "cases": [
+      {
+        "label": "j1",
+        "kind": "j1",
+        "trials": 2,
+        "alarms_in_3": 2,
+        "diagnosed_correct": 2,
+        "recovered": 2,
+        "repeat_in_3": 2,
+        "restored": 2,
+        "accepted_worse": 0,
+        "max_recovery_shots": 14,
+        "holdout_medians": [
+          0.16496110367606226,
+          0.18419743896477286
+        ]
+      },
+      {
+        "label": "j2",
+        "kind": "j2",
+        "trials": 2,
+        "alarms_in_3": 2,
+        "diagnosed_correct": 2,
+        "recovered": 2,
+        "repeat_in_3": 2,
+        "restored": 2,
+        "accepted_worse": 0,
+        "max_recovery_shots": 14,
+        "holdout_medians": [
+          0.12234579894176498,
+          0.09691270889681919
+        ]
+      },
+      {
+        "label": "extension_20",
+        "kind": "extension",
+        "trials": 2,
+        "alarms_in_3": 0,
+        "diagnosed_correct": 0,
+        "recovered": 0,
+        "repeat_in_3": 0,
+        "restored": 0,
+        "accepted_worse": 0,
+        "max_recovery_shots": 0,
+        "holdout_medians": []
+      },
+      {
+        "label": "extension_40",
+        "kind": "extension",
+        "trials": 2,
+        "alarms_in_3": 0,
+        "diagnosed_correct": 0,
+        "recovered": 0,
+        "repeat_in_3": 0,
+        "restored": 0,
+        "accepted_worse": 0,
+        "max_recovery_shots": 0,
+        "holdout_medians": []
+      },
+      {
+        "label": "base_x",
+        "kind": "base_x",
+        "trials": 2,
+        "alarms_in_3": 2,
+        "diagnosed_correct": 2,
+        "recovered": 2,
+        "repeat_in_3": 2,
+        "restored": 2,
+        "accepted_worse": 0,
+        "max_recovery_shots": 14,
+        "holdout_medians": [
+          0.1210190504608632,
+          0.1545133343476476
+        ]
+      },
+      {
+        "label": "base_y",
+        "kind": "base_y",
+        "trials": 2,
+        "alarms_in_3": 2,
+        "diagnosed_correct": 2,
+        "recovered": 2,
+        "repeat_in_3": 2,
+        "restored": 2,
+        "accepted_worse": 0,
+        "max_recovery_shots": 14,
+        "holdout_medians": [
+          0.09423248731756846,
+          0.17481774413860404
+        ]
+      },
+      {
+        "label": "base_rotation",
+        "kind": "base_rotation",
+        "trials": 2,
+        "alarms_in_3": 2,
+        "diagnosed_correct": 0,
+        "recovered": 2,
+        "repeat_in_3": 2,
+        "restored": 2,
+        "accepted_worse": 0,
+        "max_recovery_shots": 14,
+        "holdout_medians": [
+          0.1104012891446278,
+          0.08286313182113887
+        ]
+      },
+      {
+        "label": "combination_1",
+        "kind": "combination",
+        "trials": 2,
+        "alarms_in_3": 2,
+        "diagnosed_correct": 1,
+        "recovered": 2,
+        "repeat_in_3": 2,
+        "restored": 2,
+        "accepted_worse": 0,
+        "max_recovery_shots": 14,
+        "holdout_medians": [
+          0.14415744540388137,
+          0.23147715959183318
+        ]
+      }
+    ],
+    "accepted_worse": 0,
+    "unmodeled_rejected": true,
+    "gp_initial": {
+      "accepted": true,
+      "geometry_median": 1.7222545189141614,
+      "old_median": 1.7222545189141614,
+      "new_median": 0.1465944833590695,
+      "train_count": 225,
+      "holdout_count": 75
+    },
+    "gp_weight": {
+      "accepted": true,
+      "geometry_median": 2.978189368877609,
+      "old_median": 1.377094522966431,
+      "new_median": 0.16061035561215214,
+      "train_count": 375,
+      "holdout_count": 125
+    },
+    "rollback_max_mm": 0.0,
+    "pytest": {
+      "passed": false,
+      "count": 0,
+      "failures": 0,
+      "skipped": 0,
+      "executed": false
+    }
+  }
+}

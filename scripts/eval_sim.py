@@ -223,7 +223,8 @@ def evaluate(output: Path, trials: int | None = None, run_pytest=True):
     lines += ["", "## 每类伤的完整计数", "", "| 类别 | ≤3 发报警 | 类型及格数正确 | BIC 模型名匹配 | 新伤恢复 | 旧伤 3 发 | 复原识别 | 最大恢复发数 | 护栏中位数最大值 mm |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cases:
         maximum=max(c["holdout_medians"],default=float('nan'))
-        lines.append(f"| {c['label']} | {c['alarms_in_3']}/{trials} | {c['diagnosed_correct']}/{trials} | {c['hypothesis_matched']}/{trials} | {c['recovered']}/{trials} | {c['repeat_in_3']}/{trials} | {c['restored']}/{trials} | {c['max_recovery_shots'] if c['max_recovery_shots'] else '未触发'} | {maximum:.4f} |")
+        maximum_text=f"{maximum:.4f}" if np.isfinite(maximum) else "未观测"
+        lines.append(f"| {c['label']} | {c['alarms_in_3']}/{trials} | {c['diagnosed_correct']}/{trials} | {c['hypothesis_matched']}/{trials} | {c['recovered']}/{trials} | {c['repeat_in_3']}/{trials} | {c['restored']}/{trials} | {c['max_recovery_shots'] if c['max_recovery_shots'] else '未触发'} | {maximum_text} |")
     lines += ["", "## 口径和无法满足项", "",
         "- J1/J2 的 100 次均匀覆盖 −2、−1、+1、+2 格；底座平移覆盖正负 20 mm，旋转覆盖正负 10°；组合伤为 J1 +1 格与 J2 −1 格。",
         "- 每次独立初始化版本库与随机种子；诊断不读取注入标签或真实参数。先观测 3 发，再识旧 3 发，未识别才诊断和护栏。",
