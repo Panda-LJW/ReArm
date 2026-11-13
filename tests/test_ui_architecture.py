@@ -24,7 +24,10 @@ def test_http_state_commands_and_static(config,tmp_path):
     controller=build_app(config,tmp_path)
     server=create_server(controller,controller.bus,controller.snapshot())
     assert request(server,"/")[0]==200
-    assert b"WebSocket" in request(server,"/")[1]
+    html=request(server,"/")[1]
+    assert b'/static/app.js' in html and b'/static/app.css' in html
+    assert b'<style>' not in html and b'<script>' not in html
+    assert b"WebSocket" in request(server,"/static/app.js")[1]
     status,body=request(server,"/api/state")
     assert status==200 and json.loads(body)["head"]["id"]=="v0001"
     assert request(server,"/api/command/inject","POST",{"kind":"j1","amount":1})[0]==200

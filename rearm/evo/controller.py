@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import asdict
 from pathlib import Path
-from threading import RLock
+from threading import Event as ThreadEvent, RLock
 import time
 import numpy as np
 
@@ -34,6 +34,15 @@ class Controller:
         self.sequence = 0
         self.alarms = 0
         self.lock = RLock()
+        self.stop_requested = ThreadEvent()
+        self.stop_lock = RLock()
+        self.stop_generation = self.stopping = 0
+        self.laser_lock = RLock()
+        self.laser_on = False
+        self.estop_error = None
+        self.busy = False
+        self.active_command = None
+        self.heal_start = None
         self.last_recovery_shots = 0
         self.last_recognition_shots = 0
         self.started = time.time()
@@ -53,13 +62,69 @@ class Controller:
 
     def transition(self, state: State):
         self.state = state
-        self.emit("state", state=state.value)
+        self.emit("state", state=state.value, heal_start=self.heal_start)
+
+    def check_estop(self):
+        if self.stop_requested.is_set():
+            raise ValueError("emergency stop active; reset before operating")
+
+    def set_laser(self, on: bool):
+        # Only serialize the laser write, never the movement/observation workflow.
+        with self.laser_lock:
+            if on:
+                self.check_estop()
+            self.arm.laser(on)
+            self.laser_on = bool(on)
+            self.emit("laser", laser_on=self.laser_on)
+
+    def estop(self):
+        # Latch before touching any lock or driver, including unsupported hardware.
+        with self.stop_lock:
+            self.stop_requested.set()
+            self.stop_generation += 1
+            self.stopping += 1
+            self.emit("estop", estop=True, laser_on=self.laser_on, estop_error=None)
+        try:
+            self.set_laser(False)
+            self.estop_error = None
+        except Exception:
+            self.estop_error = "laser shutdown failed; check hardware emergency stop"
+        with self.stop_lock:
+            self.stopping -= 1
+            result = {"estop": True, "laser_on": self.laser_on, "estop_error": self.estop_error}
+            self.emit("safety", **result)
+        return result
+
+    def reset_estop(self):
+        if self.busy or not self.lock.acquire(blocking=False):
+            raise ValueError("operation still stopping; wait before resetting emergency stop")
+        try:
+            with self.stop_lock:
+                generation = self.stop_generation
+                if self.stopping:
+                    raise ValueError("operation still stopping; wait before resetting emergency stop")
+            try:
+                self.set_laser(False)
+            except Exception as error:
+                raise ValueError("laser shutdown failed; cannot reset emergency stop") from error
+            with self.stop_lock:
+                if self.stopping or generation != self.stop_generation:
+                    raise ValueError("operation still stopping; wait before resetting emergency stop")
+                self.estop_error = None
+                self.stop_requested.clear()
+                self.emit("estop_reset", estop=False, laser_on=self.laser_on, estop_error=None)
+            result = self.snapshot()
+            self.emit("snapshot", snapshot=result)
+            return result
+        finally:
+            self.lock.release()
 
     def model(self, version=None) -> Predictor:
         version = version or self.store.head()
         return self.predictor_factory(self.residual_loader(version.residual_id))
 
     def shoot(self, q: np.ndarray, anomalous=False, role="task") -> Shot:
+        self.check_estop()
         version = self.store.head()
         shot = self.shooter.shoot(q, version, self.model(version), anomalous, role)
         # Exclude the first suspect shot too, before the 3-shot alarm is latched.
@@ -77,6 +142,7 @@ class Controller:
             shot = self.shoot(q, self.state != State.NORMAL)
             if self.detector.update(shot):
                 self.alarms += 1
+                self.heal_start = self.sequence
                 self.transition(State.ALARM)
                 self.emit("alarm", count=self.alarms)
                 if recover:
@@ -96,6 +162,8 @@ class Controller:
 
     def baseline(self):
         with self.lock:
+            self.check_estop()
+            self.heal_start = None
             self.transition(State.CALIBRATE)
             old = self.store.head()
             n = self.config.thresholds["fit"]["baseline_shots"]
@@ -107,6 +175,7 @@ class Controller:
             holdout = [self.shoot(q, True, "baseline_holdout") for q in self.pool[n:n+count]]
             report = self.guard.check(old.params, fit.params, holdout)
             self.last_guard = report
+            self.check_estop()
             if report.accepted and fit.success:
                 self.store.commit(fit.params, "zero", {"kind": "baseline", "guard": jsonable(report)})
             else:
@@ -118,13 +187,16 @@ class Controller:
 
     def recover(self):
         with self.lock:
+            self.check_estop()
             start = self.sequence
+            self.heal_start = start
             old = self.store.head()
             self.transition(State.RECOGNIZE)
             count = self.config.thresholds["recognizer"]["probes"]
             probes = [self.shoot(q, True, "recognition") for q in self.probe_pool[:count]]
             self.last_recognition_shots = len(probes)
             match = self.store.match(probes)
+            self.check_estop()
             if match is not None:
                 self.store.checkout(match[0])
                 self.emit("switch", version_id=match[0], rms=match[1], probe_shots=len(probes))
@@ -159,6 +231,7 @@ class Controller:
                 holdout = [self.shoot(q, True, "guard") for q in reserved]
                 report = self.guard.check(old.params, fit.params, holdout)
                 self.last_guard = report
+                self.check_estop()
                 meta = {"kind": "geometry", "diagnosis": jsonable(diagnosis), "guard": jsonable(report),
                         "fit_q": [s.q for s in shots], "holdout_q": [s.q for s in holdout]}
                 if report.accepted and fit.success:
@@ -176,6 +249,7 @@ class Controller:
                     self.record_recovery("rejected", probes, self.sequence-start, None, diagnosis.best.name, report.candidate_median)
                     self.transition(State.REJECTED)
             except ValueError as error:
+                self.check_estop()
                 self.store.reject(old.params, {"kind": "insufficient_observations"}, (str(error),))
                 self.record_recovery("rejected", probes, self.sequence-start)
                 self.transition(State.REJECTED)
@@ -185,6 +259,7 @@ class Controller:
 
     def retrain(self):
         with self.lock:
+            self.check_estop()
             previous_state = self.state
             if previous_state != State.NORMAL:
                 raise ValueError("resolve the geometry anomaly before residual training")
@@ -196,6 +271,7 @@ class Controller:
                 candidate = self.residual_factory()
                 report = self.trainer.train(data, self.residual_loader(old.residual_id), candidate)
                 self.last_training = report
+                self.check_estop()
                 if report.accepted:
                     residual_id = self.residual_saver(candidate)
                     self.store.commit(old.params, residual_id, {"kind": "residual", "training": jsonable(report)})
@@ -207,6 +283,7 @@ class Controller:
 
     def rollback(self, version_id, component="both"):
         with self.lock:
+            self.check_estop()
             self.store.checkout(version_id, component)
             self.detector.reset()
             self.transition(State.NORMAL)
@@ -215,12 +292,14 @@ class Controller:
     def preview(self, version_id):
         """Fire the fixed probe poses and compare a stored version with the current one, without switching."""
         with self.lock:
+            self.check_estop()
             if self.state not in (State.NORMAL, State.REJECTED):
                 raise ValueError("machine busy; preview needs an idle arm")
             head, candidate = self.store.head(), self.store.get(version_id)
             current_model, candidate_model = self.model(head), self.model(candidate)
             rows = []
             for q in self.probe_pool[:self.config.thresholds["recognizer"]["probes"]]:
+                self.check_estop()
                 shot = self.shooter.shoot(q, candidate, candidate_model, True, "preview")
                 self.shot_log.append(shot)
                 current = current_model.predict(head.params, np.asarray(shot.q), shot.features())[0]
@@ -229,6 +308,7 @@ class Controller:
                              "current": current.tolist(),
                              "candidate_mm": None if observed is None else float(np.linalg.norm(observed - shot.predicted)),
                              "current_mm": None if observed is None else float(np.linalg.norm(observed - current))})
+            self.check_estop()
             measured = [r for r in rows if r["candidate_mm"] is not None]
             limit = self.config.thresholds["guard"]["median_mm"]
             candidate_median = float(np.median([r["candidate_mm"] for r in measured])) if measured else None
@@ -242,6 +322,7 @@ class Controller:
     def switch(self, version_id, confirm, component="both", force=False, operator="panel"):
         """Manual version change: needs a fresh passing preview (or force), and can be undone briefly."""
         with self.lock:
+            self.check_estop()
             ui = self.config.thresholds["ui"]
             if confirm != version_id:
                 raise ValueError("confirmation does not match the selected version")
@@ -265,6 +346,10 @@ class Controller:
     def snapshot(self):
         with self.lock:
             return jsonable({"state": self.state, "head": self.store.head(), "versions": self.store.list(),
+                "estop": self.stop_requested.is_set(), "laser_on": self.laser_on, "estop_error": self.estop_error,
+                "busy": self.busy, "active_command": self.active_command, "heal_start": self.heal_start,
+                "command_shots": {"baseline": self.config.thresholds["fit"]["baseline_shots"] + self.config.thresholds["guard"]["poses"],
+                                  "preview": self.config.thresholds["recognizer"]["probes"], "retrain": 0},
                 "recent": list(self.recent), "diagnosis": self.last_diagnosis,
                 "guard": self.last_guard, "training": self.last_training,
                 "alarms": self.alarms, "shots": self.sequence, "history_limit": self.config.thresholds["ui"]["history"],
@@ -273,7 +358,17 @@ class Controller:
                 "preview": self.last_preview, "last_switch": self.last_switch})
 
     def command(self, name, payload):
-        with self.lock:
+        if name == "estop":
+            return self.estop()
+        if name == "reset_estop":
+            return self.reset_estop()
+        self.check_estop()
+        if not self.lock.acquire(blocking=False):
+            raise ValueError("machine busy; wait for the current operation")
+        try:
+            self.check_estop()
+            self.busy, self.active_command = True, name
+            self.emit("operation", busy=True, active_command=name)
             if name == "selfcheck":
                 for _ in range(self.config.thresholds["detector"]["window"]):
                     self.step()
@@ -296,6 +391,14 @@ class Controller:
                 self.emit("damage_injected", damage=jsonable(damage))
             else:
                 raise ValueError("unknown command")
-            result = self.snapshot()
-            self.emit("snapshot", snapshot=result)
-            return result
+            self.check_estop()
+        finally:
+            if self.stop_requested.is_set() and self.state not in (State.NORMAL, State.REJECTED):
+                self.transition(State.REJECTED)
+            self.busy, self.active_command = False, None
+            self.emit("operation", busy=False, active_command=None)
+            try:
+                self.emit("snapshot", snapshot=self.snapshot())
+            finally:
+                self.lock.release()
+        return self.snapshot()

@@ -83,11 +83,13 @@ def build_app(config: Settings | None = None, data_dir="runtime", sim=True, seed
                 inject(part)
         else:
             arm.true_params = damaged_params(arm.true_params, damage, config)
-    return Controller(config, arm, geometry, bus, store, JsonlShotLog(root / "shots.jsonl"),
-        Shooter(config, arm), AnomalyDetector(config), Diagnoser(config, geometry, fitter), fitter,
+    controller = Controller(config, arm, geometry, bus, store, JsonlShotLog(root / "shots.jsonl"),
+        Shooter(config, arm, lambda: controller.check_estop(), lambda on: controller.set_laser(on)),
+        AnomalyDetector(config), Diagnoser(config, geometry, fitter), fitter,
         CalibrationGuard(config, geometry), ResidualDataset(config, geometry), TemporalTrainer(config),
         NumericalIK(config, geometry), pool, probe_pool, residual_loader, lambda: GPResidual(config),
         lambda residual: SelfModel(geometry, residual), residual_saver, inject)
+    return controller
 
 
 def serve_ui():
