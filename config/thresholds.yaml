@@ -1,0 +1,70 @@
+detector:
+  window: 3
+  alarm_mm: 6.0
+recognizer:
+  probes: 3
+  rms_mm: 3.0
+  runner_up_ratio: 0.5
+fit:
+  huber_mm: 1.0
+  regularization: 0.001
+  max_nfev: 180
+  multistarts_deg: [0, -15, 15, -30, 30]
+  snap_step_deg: 15.0
+  snap_tolerance_deg: 2.0
+  noise_floor_mm: 0.05
+  initial_shots: 7
+  active_shots: 3
+  baseline_shots: 32
+  baseline_freeze: [L2]
+guard:
+  poses: 4
+  median_mm: 3.0
+  reduction: 0.7
+  bound_tolerance: 0.000001
+residual:
+  cap_mm: 5.0
+  holdout_fraction: 0.25
+  min_samples: 40
+  max_samples: 500
+  length_scale: 2.5
+  noise_mm: 0.12
+  signal_mm: 3.0
+  feature_scale: [90, 110, 150, 1, 1, 1, 1, 10]
+  min_improvement_mm: 0.0
+pool:
+  seed: 42
+  samples: 6000
+  size: 240
+  margin_mm: 8.0
+  jacobian_step: 0.0001
+  condition_epsilon: 0.000000001
+ik:
+  starts: 8
+  max_nfev: 120
+  tolerance_mm: 0.1
+  invalid_penalty: 10000.0
+numeric:
+  epsilon: 0.000000001
+  optimizer_tolerance: 0.00000001
+task:
+  speed: 30.0
+  settle_seconds: 0.0
+  initial_q: [0, 40, -100]
+eval:
+  seed: 20261113
+  trials: 100
+  baseline_targets: 20
+  hit_radius_mm: 10.0
+  baseline_rate: 0.95
+  no_damage_shots: 100
+  alarm_shots: 3
+  diagnosis_rate: 0.95
+  recovery_shots: 20
+  residual_shots: 300
+  parameter_tolerance: 2.0
+  target_margin_mm: 20.0
+ui:
+  host: 127.0.0.1
+  port: 8000
+  history: 200

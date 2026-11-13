@@ -1,0 +1,18 @@
+width: 1000
+height: 760
+pixels_per_mm: 2.0
+marker_pixels: 60
+marker_ids: [0, 1, 2, 3]
+marker_centers_mm: [[-190, -128.5], [190, -128.5], [190, 128.5], [-190, 128.5]]
+dictionary: DICT_4X4_50
+matrix: [[1000, 0, 500], [0, 1000, 380], [0, 0, 1]]
+distortion: [0, 0, 0, 0, 0]
+spot_sigma_px: 2.0
+spot_threshold: 12
+spot_min_pixels: 3
+spot_max_pixels: 300
+target_radius_px: 10
+target_threshold: 100
+target_min_area: 150
+target_max_area: 500
+target_circularity: 0.75

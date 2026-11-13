@@ -1,0 +1,18 @@
+seed: 42
+noise_mm: 0.12
+nongeometric: false
+backlash_mm: 0.7
+sag_mm: 1.1
+drift_mm_per_degree: 0.025
+ambient_c: 25.0
+heat_c_per_shot: 0.025
+max_heat_c: 12.0
+load: 1.0
+voltage: 7.4
+looseness_mm: 0.0
+weight_multiplier: 1.7
+loose_amplitude_mm: 16.0
+damage_translation_mm: 20.0
+damage_rotation_deg: 10.0
+extensions_mm: [20, 40]
+gear_step_deg: 15.0
