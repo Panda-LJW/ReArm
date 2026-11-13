@@ -28,6 +28,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   }
   container.dataset.renderer = renderer;
   scene.canvas.setAttribute("role", "img");
+  if (renderer === "webgl") scene.canvas.title = "拖动旋转，滚轮缩放，双击复位";
 
   const driven = config.panelMapping.map(m => config.joints.find(j => j.id === m.joint));
   // J1、J2 离得近：J1 的标签放左侧，其余放右侧，既不互相压住，也不挡左上角的状态提示

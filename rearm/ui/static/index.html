@@ -19,12 +19,12 @@
   </nav>
   <div class="spacer"></div>
   <div class="vpick">
-    <button class="vbtn" id="vbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="vlist"><span class="lbl">自我模型</span><b id="vcur">—</b><span aria-hidden="true">▾</span></button>
+    <button class="vbtn" id="vbtn" title="机械臂当前使用的自我模型版本。点开可查看历史版本、预检并切换" aria-haspopup="menu" aria-expanded="false" aria-controls="vlist"><span class="lbl">自我模型</span><b id="vcur">—</b><span aria-hidden="true">▾</span></button>
     <div class="dropdown" id="vlist" role="menu" aria-label="模型版本"></div>
   </div>
-  <button class="primary" data-cmd="selfcheck">自检</button>
+  <button class="primary" data-cmd="selfcheck" title="打 3 发检查瞄准；发现异常会自动诊断并修复">自检</button>
   <div class="menu">
-    <button id="more" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" aria-controls="morelist">⋯</button>
+    <button id="more" title="更多操作：首次标定、重训补偿、仿真调试" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" aria-controls="morelist">⋯</button>
     <div class="dropdown" id="morelist" role="menu">
       <button data-cmd="baseline" role="menuitem">首次标定</button>
       <button data-cmd="retrain" role="menuitem">重训补偿</button>
@@ -32,7 +32,7 @@
     </div>
   </div>
   <div id="modeslot"></div>
-  <button class="danger" id="estop" data-command="estop" disabled>急停</button>
+  <button class="danger" id="estop" data-command="estop" title="立即停止动作并关闭激光" disabled>急停</button>
 </header>
 
 <main>
