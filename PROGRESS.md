@@ -21,3 +21,5 @@
 - 提交限制：原 .git 只读，git add 报 index.lock Operation not permitted；每个里程碑在 /private/tmp 的独立 Git 元数据中提交，最终导出 reports/milestones.bundle。原 .git 不写入；此交付差异不隐瞒。
 
 - M2 完成，pytest 10/10 通过；默认 beta=gamma=0 时延长杆不改变光点，该不可观测性纳入验收报告。
+
+- M3 完成：自愈闭环、GP、数据筛选、时间留出、独立残差版本；pytest 15/15 通过。
