@@ -103,6 +103,8 @@ class Diagnosis:
     ranked: tuple[Hypothesis, ...]
     deltas: dict[str, float]
     gear_steps: dict[str, int]
+    changes: tuple[str, ...]
+    proposed: FitResult
     ambiguous: tuple[str, ...] = ()
 
 

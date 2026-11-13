@@ -108,7 +108,7 @@ def test_hypothesis_scoring_precedes_quantization(config,geometry,pool):
     shots=samples(config,geometry,pool,config.nominal.updated({"delta1":15}),10)
     result=Diagnoser(config,geometry,RecordingFitter()).diagnose(config.nominal,shots)
     assert result.best.name=="H1"
-    assert calls and not any(calls)
+    assert calls and not any(calls[:-1]) and calls[-1]
 
 
 def test_huber_fit_resists_single_bad_measurement(config,geometry,pool):
@@ -135,3 +135,15 @@ def test_small_continuous_shift_is_not_forced_onto_gear_grid(config,geometry,poo
     shots=samples(config,geometry,pool,truth,16)
     fit=Calibrator(config,geometry).fit(config.nominal,shots,("delta1",),snap=True)
     assert abs(fit.params.delta1-truth.delta1)<0.1
+
+
+def test_diagnosis_reports_refined_changes_not_all_allowed_parameters(config,tmp_path):
+    from rearm.app import build_app
+    app=build_app(config,tmp_path,seed=config.thresholds["eval"]["seed"]+228)
+    app.command("inject",{"kind":"j2","amount":-2})
+    app.command("selfcheck",{})
+    result=app.last_diagnosis
+    assert result.best.name=="H5:H1+H2"  # Continuous BIC evidence is preserved.
+    assert result.proposed.params.delta1==0
+    assert result.changes==("H2",)
+    assert result.gear_steps=={"delta2":-2}

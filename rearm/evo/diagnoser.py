@@ -32,11 +32,18 @@ class Diagnoser:
             ranked.append(Hypothesis(name, members, fit, float(bic)))
         ranked.sort(key=lambda h: h.bic)
         best = ranked[0]
-        deltas = {k: getattr(best.fit.params, k) - getattr(reference, k) for k in best.fit.free}
+        proposed = self.fitter.fit(reference, shots, best.fit.free, snap=True)
+        deltas = {k: getattr(proposed.params, k) - getattr(reference, k) for k in best.fit.free}
         step = self.config.thresholds["fit"]["snap_step_deg"]
-        steps = {k: int(round(v / step)) for k, v in deltas.items() if k.startswith("delta")}
+        epsilon = self.config.thresholds["numeric"]["epsilon"]
+        steps = {k: int(round(v / step)) for k, v in deltas.items() if k.startswith("delta") and abs(v) > epsilon}
+        # A hypothesis is a set of parameters allowed to change, not a claim that
+        # every one DID change. Report only groups retained by the final fit.
+        # Exact grid zeros are removed; no magnitude-based damage whitelist.
+        changes = tuple(group for group in best.groups if group == "H6" or
+                        any(abs(deltas.get(name, 0)) > epsilon for name in groups[group]))
         ambiguous = ("delta1 and psi_b are observationally equivalent",) if "delta1" in best.fit.free or "psi_b" in best.fit.free else ()
-        return Diagnosis(best, tuple(ranked), deltas, steps, ambiguous)
+        return Diagnosis(best, tuple(ranked), deltas, steps, changes, proposed, ambiguous)
 
     def next_pose(self, diagnosis: Diagnosis, pool: np.ndarray, used: np.ndarray) -> np.ndarray:
         first, second = diagnosis.ranked[:2]

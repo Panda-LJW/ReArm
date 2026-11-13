@@ -139,7 +139,7 @@ class Controller:
                 self.last_diagnosis = diagnosis
                 self.emit("diagnosis", diagnosis=jsonable(diagnosis))
                 self.transition(State.CALIBRATE)
-                fit = self.fitter.fit(old.params, shots, diagnosis.best.fit.free, snap=True)
+                fit = diagnosis.proposed
                 self.emit("calibration", mode="recovery", result=jsonable(fit))
                 self.transition(State.GUARD)
                 holdout = [self.shoot(q, True, "guard") for q in reserved]

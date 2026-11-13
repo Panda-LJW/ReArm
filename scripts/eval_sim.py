@@ -76,7 +76,7 @@ def evaluate(output: Path, trials: int | None = None, run_pytest=True):
     for case_index, case in enumerate(options["injury_cases"]):
         label=case["kind"]+("_"+str(case["amounts"][0]) if len(case["amounts"])==1 else "")
         summary={"label":label,"kind":case["kind"],"trials":trials,"alarms_in_3":0,"diagnosed_correct":0,
-                 "recovered":0,"repeat_in_3":0,"restored":0,"accepted_worse":0,"max_recovery_shots":0,"holdout_medians":[]}
+                 "recovered":0,"repeat_in_3":0,"restored":0,"accepted_worse":0,"max_recovery_shots":0,"holdout_medians":[],"hypothesis_matched":0}
         for trial in range(trials):
             seed=options["seed"]+(case_index+1)*options["trials"]+trial
             app=build_app(config,run_root/label/f"{trial:03d}",seed=seed)
@@ -94,7 +94,9 @@ def evaluate(output: Path, trials: int | None = None, run_pytest=True):
             if alarm:
                 app.recover()
                 diagnosis=app.last_diagnosis
-                diagnosed=diagnosis is not None and diagnosis.best.name==case["hypothesis"]
+                expected_groups=tuple(case["hypothesis"][3:].split("+")) if case["hypothesis"].startswith("H5:") else (case["hypothesis"],)
+                diagnosed=diagnosis is not None and diagnosis.changes==expected_groups
+                summary["hypothesis_matched"]+=int(diagnosis is not None and diagnosis.best.name==case["hypothesis"])
                 if diagnosed and case["kind"] in ("j1","j2"):
                     name="delta1" if case["kind"]=="j1" else "delta2"
                     diagnosed=diagnosis.gear_steps.get(name)==amount
@@ -218,13 +220,14 @@ def evaluate(output: Path, trials: int | None = None, run_pytest=True):
              "回退":f"重新加载 {len(snapshots)} 个已采纳版本，最大预测差 {max(prediction_errors):.12g} mm",
              "测试":f"pytest {pytest_info['count']} 项，失败 {pytest_info['failures']}，跳过 {pytest_info['skipped']}；实际执行 {pytest_info['executed']}"}
     lines += [f"| {name} | {details[name]} | {'通过' if ok else '未达标'} |" for name,ok in criteria.items()]
-    lines += ["", "## 每类伤的完整计数", "", "| 类别 | ≤3 发报警 | 类型及格数正确 | 新伤恢复 | 旧伤 3 发 | 复原识别 | 最大恢复发数 | 护栏中位数最大值 mm |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    lines += ["", "## 每类伤的完整计数", "", "| 类别 | ≤3 发报警 | 类型及格数正确 | BIC 模型名匹配 | 新伤恢复 | 旧伤 3 发 | 复原识别 | 最大恢复发数 | 护栏中位数最大值 mm |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for c in cases:
         maximum=max(c["holdout_medians"],default=float('nan'))
-        lines.append(f"| {c['label']} | {c['alarms_in_3']}/{trials} | {c['diagnosed_correct']}/{trials} | {c['recovered']}/{trials} | {c['repeat_in_3']}/{trials} | {c['restored']}/{trials} | {c['max_recovery_shots'] if c['max_recovery_shots'] else '未触发'} | {maximum:.4f} |")
+        lines.append(f"| {c['label']} | {c['alarms_in_3']}/{trials} | {c['diagnosed_correct']}/{trials} | {c['hypothesis_matched']}/{trials} | {c['recovered']}/{trials} | {c['repeat_in_3']}/{trials} | {c['restored']}/{trials} | {c['max_recovery_shots'] if c['max_recovery_shots'] else '未触发'} | {maximum:.4f} |")
     lines += ["", "## 口径和无法满足项", "",
         "- J1/J2 的 100 次均匀覆盖 −2、−1、+1、+2 格；底座平移覆盖正负 20 mm，旋转覆盖正负 10°；组合伤为 J1 +1 格与 J2 −1 格。",
         "- 每次独立初始化版本库与随机种子；诊断不读取注入标签或真实参数。先观测 3 发，再识旧 3 发，未识别才诊断和护栏。",
+        "- 诊断类型来自最终整格精修保留的非零参数组；允许变化的参数组与实际变化的参数组有别。例如 H5 放开 J1/J2，但精修后 J1 回到原值，则诊断为 J2。原始 BIC 模型名命中率单独列出，未隐藏模型选择偏差。",
         "- 延长杆两种幅度各测 100 次。默认 β=γ=0 时，末端延长完全沿光轴移动，射线与平面交点不变；因此发现、诊断、恢复和复原指标不能伪称通过。",
         "- δ1 与 ψ_b 只以 δ1+ψ_b 出现。底座纯旋转与 J1 零偏的光点完全相同；BIC 倾向自由参数更少的 H1，因此可以恢复预测，但无法可靠诊断物理伤类型。",
         "- 基线使用配置中的隐藏装配偏差进行全参数拟合；并不声称辨识出每个参数真值。普通伤试验以名义几何为已校准初始状态。",
