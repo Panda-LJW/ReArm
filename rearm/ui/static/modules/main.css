@@ -1,0 +1,14 @@
+/* 可选模块在页面里的摆放。模块自身的样式在各自目录里。 */
+
+/* 数字孪生挂在首页右栏：关节、最近事件各让出一半宽度，模型占右半并纵向贯通。 */
+.twincard{display:flex;flex-direction:column;min-height:260px;padding-bottom:0}
+.twincard h3{margin-bottom:0}
+.twincard #twin{flex:1;min-height:0;margin:0 calc(-1 * var(--pad))}
+@media(min-width:1081px){
+  body.has-twin .side{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"kpis kpis" "joints twin" "feed twin"}
+  body.has-twin .side .kpis{grid-area:kpis}
+  body.has-twin .side .jointcard{grid-area:joints}
+  body.has-twin .side .feedcard{grid-area:feed}
+  body.has-twin .side .twincard{grid-area:twin;min-height:0}
+  body.has-twin.short .side{grid-template-rows:auto minmax(0,1fr);grid-template-areas:"kpis kpis" "joints twin"}
+}

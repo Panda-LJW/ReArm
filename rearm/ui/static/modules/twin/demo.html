@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReArm 数字孪生 · 单独演示</title>
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/modules/twin/twin.css">
+<style>
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+  body{display:grid;grid-template-rows:auto 1fr;gap:12px;padding:16px;box-sizing:border-box}
+  header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;color:var(--sub);font-size:var(--fs-md)}
+  header b{color:var(--text)}
+  label{display:flex;gap:8px;align-items:center;font-family:var(--mono)}
+  #stage{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+</style>
+</head>
+<body>
+<!-- 这个页面只加载孪生和数据源两个模块，不加载主面板，用来证明模块可以独立运行。
+     ?source=sim（默认）用内置模拟数据；?source=manual 用下面的滑块；?source=device&device=ws://… 接下位机。 -->
+<header>
+  <b>数字孪生单独演示</b><span id="src"></span>
+  <span id="sliders" hidden>
+    <label>J1 <input type="range" id="q0" min="-90" max="90" value="0"></label>
+    <label>J2 <input type="range" id="q1" min="0" max="110" value="40"></label>
+    <label>J3 <input type="range" id="q2" min="-150" max="0" value="-100"></label>
+  </span>
+</header>
+<div id="stage"></div>
+<script type="module">
+import { createTwin } from "./twin.js";
+import { createSource } from "../datasource/index.js";
+const params = new URLSearchParams(location.search), kind = params.get("source") || "sim";
+const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d" });
+window.demo = { twin };
+document.getElementById("src").textContent = "数据源：" + ({ sim: "内置模拟", manual: "手动滑块", device: "下位机 " + (params.get("device") || "") }[kind] || kind);
+if (kind === "manual") {
+  const sliders = document.getElementById("sliders"); sliders.hidden = false;
+  const send = () => twin.update({ angles_deg: [0, 1, 2].map(i => Number(document.getElementById("q" + i).value)), mode: "sim", online: true, laser: false });
+  sliders.oninput = send; send();
+} else if (kind !== "none") {
+  const source = createSource(kind, kind === "device" ? { url: params.get("device") } : {});
+  source.subscribe(frame => twin.update(frame)); source.start(); window.demo.source = source;
+}
+</script>
+</body>
+</html>
