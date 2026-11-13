@@ -132,7 +132,12 @@ fire({ connected: false, state: { simulation: true, recent: [{ q: [4, 5, -6], ti
 fire({ connected: true, state: { simulation: true, recent: [] } });
 const tele = parseTelemetry(JSON.stringify({ v: 1, type: "telemetry", seq: 9, t_ms: 12345, joints: [{ id: 2, pos_deg: 40 }, { id: 1, pos_deg: 3 }, { id: 3, pos_deg: -100 }], laser: true }));
 console.log(JSON.stringify({ kinds: Object.keys(SOURCES), inside, seen, tele,
-  rejected: [parseTelemetry("not json"), parseTelemetry({ v: 2, type: "telemetry", joints: [] }), parseTelemetry({ v: 1, type: "heartbeat" }), parseTelemetry({ v: 1, type: "telemetry", joints: [{ id: 1, pos_deg: "x" }] })],
+  rejected: [parseTelemetry("not json"), parseTelemetry({ v: 2, type: "telemetry", joints: [] }), parseTelemetry({ v: 1, type: "heartbeat" }), parseTelemetry({ v: 1, type: "telemetry", joints: [{ id: 1, pos_deg: "x" }] }),
+    // 缺测（null）、缺轴、重复 id 都必须整帧作废，不能用 0 冒充
+    parseTelemetry({ v: 1, type: "telemetry", joints: [{ id: 1, pos_deg: 0 }, { id: 2, pos_deg: null }, { id: 3, pos_deg: -90 }] }),
+    parseTelemetry({ v: 1, type: "telemetry", joints: [{ id: 1, pos_deg: 0 }, { id: 3, pos_deg: -90 }] }),
+    parseTelemetry({ v: 1, type: "telemetry", joints: [{ id: 1, pos_deg: 0 }, { id: 1, pos_deg: 5 }, { id: 2, pos_deg: 40 }, { id: 3, pos_deg: -90 }] })],
+  gripper: parseTelemetry({ v: 1, type: "telemetry", t_ms: 1, joints: [{ id: 1, pos_deg: 0 }, { id: 2, pos_deg: 40 }, { id: 3, pos_deg: -90 }, { id: 7, pos_deg: 12 }] }).angles_deg,
   dirty: makeFrame({ angles_deg: [1, "a"], mode: "weird", online: true }), version: PROTOCOL_VERSION, timeout: HEARTBEAT_TIMEOUT_MS }));
 ''')
     assert out['kinds'] == ['panel', 'sim', 'device'] and out['inside']
@@ -144,7 +149,8 @@ console.log(JSON.stringify({ kinds: Object.keys(SOURCES), inside, seen, tele,
     assert (offline['mode'], offline['online'], offline['laser']) == ('offline', False, None)
     assert empty['angles_deg'] is None and empty['mode'] == 'sim'
     assert out['tele']['angles_deg'] == [3, 40, -100] and out['tele']['mode'] == 'live' and out['tele']['timestamp'] == 12.345
-    assert out['rejected'] == [None, None, None, None]
+    assert out['rejected'] == [None] * 7
+    assert out['gripper'] == [0, 40, -90]   # 夹爪 id=7 的毫米值不混进角度
     assert out['dirty'] == {**out['dirty'], 'angles_deg': None, 'mode': 'offline', 'online': False}
     assert out['version'] == 1 and out['timeout'] == 1000
 

@@ -10,8 +10,20 @@ export function parseTelemetry(message) {
   let data = message;
   if (typeof message === "string") { try { data = JSON.parse(message); } catch { return null; } }
   if (!data || data.v !== PROTOCOL_VERSION || data.type !== "telemetry" || !Array.isArray(data.joints)) return null;
-  const angles = [...data.joints].sort((a, b) => a.id - b.id).map(j => Number(j.pos_deg));
-  if (!angles.length || !angles.every(Number.isFinite)) return null;
+  // 严格校验：id 必须是不重复的整数，J1–J3 必须齐全且是有限数值；null、字符串、缺轴一律整帧作废，
+  // 不拿 0 冒充读数。作废的帧不刷新看门狗，持续无效会让显示端转为离线。id 7（夹爪）不进角度数组。
+  const byId = new Map();
+  for (const joint of data.joints) {
+    if (!joint || !Number.isInteger(joint.id) || byId.has(joint.id)) return null;
+    byId.set(joint.id, joint.pos_deg);
+  }
+  const angles = [];
+  for (let id = 1; id <= 6 && byId.has(id); id++) {
+    const value = byId.get(id);
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+    angles.push(value);
+  }
+  if (angles.length < 3) return null;
   return makeFrame({ angles_deg: angles, mode: data.sim ? "sim" : "live", laser: typeof data.laser === "boolean" ? data.laser : null, timestamp: Number(data.t_ms) / 1000 });
 }
 
