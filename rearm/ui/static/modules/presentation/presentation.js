@@ -17,7 +17,7 @@ export function initPresentation({ params = new URLSearchParams(location.search)
   function apply(next, { updateUrl = true } = {}) {
     on = !!next;
     if (on) root.dataset.mode = VALUE; else delete root.dataset.mode;
-    if (button) { button.textContent = on ? "退出路演" : "路演模式"; button.setAttribute("aria-pressed", String(on)); button.title = on ? "回到日常调试显示" : "切到大屏投影显示（字号放大）"; }
+    if (button) { button.textContent = on ? "退出路演" : "路演模式"; button.setAttribute("aria-pressed", String(on)); button.title = on ? "回到日常调试显示，并退出全屏" : "切到大屏投影显示：字号放大，并进入全屏"; }
     if (updateUrl) history.replaceState(null, "", urlFor(location.href, on));
     // 通知其它模块：变量变了，图表和模型按新字号、新配色重画；窗口尺寸相关的布局也重算一次。
     document.dispatchEvent(new CustomEvent("rearm:theme", { detail: { mode: on ? VALUE : "normal" } }));
@@ -26,7 +26,15 @@ export function initPresentation({ params = new URLSearchParams(location.search)
   if (slot) {
     button = document.createElement("button");
     button.id = "modetoggle"; button.type = "button";
-    button.onclick = () => apply(!on);
+    // 投影时地址栏和标签栏会占掉近百像素高度：点按钮进入路演的同时进入全屏，退出时一并退出。
+    // 全屏需要用户手势，且可能被浏览器拒绝；失败时只是不全屏，路演模式照常。
+    button.onclick = () => {
+      apply(!on);
+      try {
+        if (on && !document.fullscreenElement) root.requestFullscreen?.().catch(() => {});
+        else if (!on && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      } catch { /* 不支持全屏的环境 */ }
+    };
     slot.replaceChildren(button);
   }
   apply(isShow(params), { updateUrl: false });
