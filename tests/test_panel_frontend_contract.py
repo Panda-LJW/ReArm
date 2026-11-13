@@ -10,12 +10,13 @@ from tests.test_ui_architecture import request
 ROOT = Path(__file__).resolve().parents[1]
 JS = (ROOT / 'rearm/ui/static/app.js').read_text()
 CSS = (ROOT / 'rearm/ui/static/app.css').read_text()
+TOKENS = (ROOT / 'rearm/ui/static/tokens.css').read_text()
 
 
 def test_static_assets_and_path_traversal(config, tmp_path):
     c = build_app(config, tmp_path)
     app = create_server(c, c.bus, c.snapshot())
-    for name, content_type in [('app.js', b'javascript'), ('app.css', b'text/css')]:
+    for name, content_type in [('app.js', b'javascript'), ('app.css', b'text/css'), ('tokens.css', b'text/css')]:
         assert request(app, '/static/' + name)[0] == 200
         async def run():
             messages = []
@@ -83,6 +84,30 @@ def test_hash_routes_and_accessibility_contract():
     def luminance(color):
         rgb = [int(color[i:i+2], 16)/255 for i in (0, 2, 4)]
         return sum(w*(v/12.92 if v <= .04045 else ((v+.055)/1.055)**2.4) for w, v in zip((.2126,.7152,.0722), rgb))
-    mute = re.search(r'--mute:#([0-9a-f]{6})', CSS)[1]
-    panel = re.search(r'--panel:#([0-9a-f]{6})', CSS)[1]
+    mute = re.search(r'--mute:#([0-9a-f]{6})', TOKENS)[1]
+    panel = re.search(r'--panel:#([0-9a-f]{6})', TOKENS)[1]
     assert (luminance(mute)+.05)/(luminance(panel)+.05) >= 4.5
+
+
+def test_design_tokens_are_served_before_panel_styles(config, tmp_path):
+    controller = build_app(config, tmp_path)
+    app = create_server(controller, controller.bus, controller.snapshot())
+    status, body = request(app, '/static/tokens.css')
+    assert status == 200
+    assert body.decode() == TOKENS
+    sizes = dict(re.findall(r'--fs-([\w-]+):\s*(\d+)px;', TOKENS))
+    assert sizes == {
+        '2xs': '10', 'xs': '11', 'sm': '12', 'base': '13', 'md': '14',
+        'lg': '15', 'xl': '17', '2xl': '19', 'kpi': '22', 'kpi-wide': '20',
+        'chart': '10', 'chart-label': '11', 'chart-empty': '12',
+    }
+    html = request(app, '/')[1].decode()
+    assert html.index('/static/tokens.css') < html.index('/static/app.css')
+
+
+def test_panel_font_sizes_use_tokens():
+    assert not re.search(r'font-size:\s*\d', CSS)
+
+
+def test_canvas_font_sizes_are_not_hardcoded():
+    assert not re.search(r'''["']\d+px ''', JS)

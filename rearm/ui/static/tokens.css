@@ -1,0 +1,13 @@
+:root{
+  --bg:#0a0c0f;--panel:#111418;--panel2:#161a20;--head:#13171c;--hover:#1b2028;
+  --line:#20252d;--line2:#2c323c;--text:#e7eaf0;--sub:#9aa3b1;--mute:#8993a2;
+  --accent:#3d8bff;--accent-2:#6aa6ff;--accent-bg:rgba(61,139,255,.13);--on-accent:#fff;
+  --cyan:#3fc8e8;--warn:#f2a93b;--warn-bg:rgba(242,169,59,.14);--bad:#ff5d5d;--bad-bg:rgba(255,93,93,.13);
+  --obs:#ff6a4d;--pred:#5aa2ff;--grid:#1c2128;--geo:#5d6676;
+  --video:#050607;--radius:8px;
+  --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13px;--fs-md:14px;--fs-lg:15px;--fs-xl:17px;--fs-2xl:19px;--fs-kpi:22px;--fs-kpi-wide:20px;
+  --fs-chart:10px;--fs-chart-label:11px;--fs-chart-empty:12px;
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --gap:12px;--pad:14px;--header-h:52px;
+}

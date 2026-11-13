@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ReArm 控制台</title>
+<link rel="stylesheet" href="/static/tokens.css">
 <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
@@ -54,10 +55,14 @@
         <div class="card kpi"><div class="k">累计打靶</div><div class="v num" id="k-shots">0</div><div class="d" id="k-shots-d">—</div></div>
         <div class="card kpi"><div class="k">自愈</div><div class="v num" id="k-heal">0<small>次</small></div><div class="d" id="k-heal-d">—</div></div>
       </div>
-      <div class="card">
+      <div class="card jointcard">
         <h3>关节<span class="aside">读数 / 限位</span></h3>
         <div id="joints"></div>
         <div class="envrow"><span>负载 <b id="e-load">—</b></span><span>温度 <b id="e-temp">—</b></span><span>电压 <b id="e-volt">—</b></span></div>
+      </div>
+      <div class="card twincard" id="twincard" hidden>
+        <h3>数字孪生<span class="aside">reBot B601-DM · 跟随关节读数</span></h3>
+        <div id="twin"></div>
       </div>
       <div class="card feedcard" id="feedcard">
         <h3>最近事件<span class="aside">本次运行</span></h3>
@@ -127,5 +132,6 @@
 <div class="toast" id="toast" role="status"><span id="toastmsg"></span><button id="toastbtn" data-command="switch" hidden>撤销</button></div>
 
 <script src="/static/app.js" defer></script>
+<script type="module" src="/static/modules/main.js"></script>
 </body>
 </html>

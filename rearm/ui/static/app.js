@@ -1,7 +1,10 @@
 (()=>{
 const $=id=>document.getElementById(id);
 const V=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const K={line:V("--accent"),cyan:V("--cyan"),warn:V("--warn"),bad:V("--bad"),obs:V("--obs"),pred:V("--pred"),grid:V("--grid"),geo:V("--geo"),mute:V("--mute"),vline:V("--line2"),mono:V("--mono")};
+const colors=()=>({line:V("--accent"),cyan:V("--cyan"),warn:V("--warn"),bad:V("--bad"),obs:V("--obs"),pred:V("--pred"),grid:V("--grid"),geo:V("--geo"),mute:V("--mute"),vline:V("--line2"),mono:V("--mono")});
+let K=colors();
+const px=n=>parseFloat(V(n))||10;
+const chartFont=(n="--fs-chart",family=K.mono)=>px(n)+"px "+family;
 const PARAM={delta1:["δ1 J1 零点","°"],delta2:["δ2 J2 零点","°"],delta3:["δ3 J3 零点","°"],h:["h 肩高","mm"],L1:["L1 大臂","mm"],L2:["L2 小臂","mm"],e:["e 延长","mm"],beta:["β 激光俯仰","°"],gamma:["γ 激光偏摆","°"],x_b:["x_b 底座 X","mm"],y_b:["y_b 底座 Y","mm"],psi_b:["ψ_b 底座朝向","°"]};
 const CODE={H1:"J1 零点偏移",H2:"J2 零点偏移",H3:"末端延长变化",H4:"底座位姿变化",H6:"全参数重标定"};
 const BUSY=["发现异常","认旧状态","诊断","校准","护栏"];
@@ -136,7 +139,7 @@ function connectionState(ok,message="连接断开，数据已过期，正在重�
   $("dot").classList.toggle("on",ok);$("conn").textContent=ok?"实时连接":message;
   $("connectionbar").hidden=ok;$("connectionbar").textContent=message;
   if(!ok){$("chipstate").textContent="连接断开";$("chipstate").className="chip state s-bad";stopCamera()}
-  syncControls();schedule();
+  syncControls();schedule();announce();
 }
 function connect(){
   const ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");
@@ -156,6 +159,10 @@ function handle(e){
   syncControls();schedule();
 }
 function schedule(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render()})}
+/* Optional modules (digital twin, presentation mode) only ever see this event, never app internals. */
+function announce(){document.dispatchEvent(new CustomEvent("rearm:state",{detail:{state:S,connected}}))}
+document.addEventListener("rearm:theme",()=>{schedule()});
+document.addEventListener("rearm:modules-ready",announce);
 let cameraRequest=null,cameraTimer=null;
 const cameraFrame=document.createElement("canvas");
 function stopCamera(){
@@ -185,6 +192,7 @@ function refreshCamera(){
 
 /* home */
 function render(){
+  K=colors();
   if(!S)return;
   $("mode").hidden=!S.simulation;$("debugtoggle").hidden=!S.simulation;$("cam").classList.toggle("sim",!!S.simulation);
   const head=S.head||{},recent=S.recent||[],last=recent[recent.length-1],alarm=S.alarm_mm||6;
@@ -219,7 +227,7 @@ function render(){
     return `<div class="joint"><span class="n">${n}</span><div class="bar" title="限位 ${lo}° ~ ${hi}°">${p==null?"":`<i style="left:calc(${p}% - 1px)"></i>`}</div><span class="num" style="text-align:right">${v==null?"—":signed(v)+"°"}</span></div>`}).join("");
   $("e-load").textContent=last?f(last.load*100,0)+"%":"—";$("e-temp").textContent=last?f(last.temperature,1)+" °C":"—";$("e-volt").textContent=last?f(last.voltage,1)+" V":"—";
   drawErr();renderDiag();drawLearn(comp);renderVersions();renderOverview();renderFeed();
-  if(modalVersion)renderModal();updateChartLabels();
+  if(modalVersion)renderModal();updateChartLabels();announce();
 }
 function toPx(xy){const c=S.camera||{width:1000,height:760,pixels_per_mm:2};return[c.width/2+xy[0]*c.pixels_per_mm,c.height/2-xy[1]*c.pixels_per_mm]}
 function drawOverlay(recent){
@@ -236,29 +244,29 @@ function drawOverlay(recent){
 }
 function setupCanvas(cv){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=Math.max(1,r.width*d);cv.height=Math.max(1,r.height*d);const g=cv.getContext("2d");g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,r.width,r.height);return[g,r.width,r.height]}
 function nice(v){const p=10**Math.floor(Math.log10(v/4)),step=[1,2,5,10].map(m=>m*p).find(x=>v/x<=4);return[Math.ceil(v/step-1e-9)*step,step]}
-function axes(g,w,h,ymax,step,pad){g.font="10px "+K.mono;g.fillStyle=K.mute;g.strokeStyle=K.grid;g.lineWidth=1;g.textAlign="left";const d=step>=1?0:step>=.1?1:2;
-  for(let v=0;v<=ymax+1e-9;v+=step){const y=pad.t+(h-pad.t-pad.b)*(1-v/ymax);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(f(v,d),2,y+3)}}
-function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font="12px -apple-system,sans-serif";g.textAlign="left";g.fillText(msg,pad.l,h/2)}
+function axes(g,w,h,ymax,step,pad){const scale=px("--fs-chart")/10;g.font=chartFont();g.fillStyle=K.mute;g.strokeStyle=K.grid;g.lineWidth=1;g.textAlign="left";const d=step>=1?0:step>=.1?1:2;
+  for(let v=0;v<=ymax+1e-9;v+=step){const y=pad.t+(h-pad.t-pad.b)*(1-v/ymax);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(f(v,d),2*scale,y+3*scale)}}
+function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font=chartFont("--fs-chart-empty",V("--sans"));g.textAlign="left";g.fillText(msg,pad.l,h/2)}
 /* Log scale: a healthy arm sits near 1 mm and a damaged one near 100 mm, and both must stay readable. */
 function drawErr(){
-  const[g,w,h]=setupCanvas($("errchart")),rec=(S.recent||[]).slice(-120),alarm=S.alarm_mm||6,pad={l:30,r:8,t:10,b:18};
+  const[g,w,h]=setupCanvas($("errchart")),rec=(S.recent||[]).slice(-120),alarm=S.alarm_mm||6,scale=px("--fs-chart")/10,pad={l:30*scale,r:8*scale,t:10*scale,b:18*scale};
   EC=null;
   if(!rec.length)return emptyChart(g,h,pad,"点“自检”开始打靶");
   const vals=rec.map(s=>mag(s.residual)),FLOOR=.1,top=Math.max(alarm*3,...vals.filter(v=>v!=null))*1.5,lo=Math.log10(FLOOR),span=Math.log10(top)-lo;
   const X=i=>pad.l+(w-pad.l-pad.r)*(rec.length<2?.5:i/(rec.length-1)),Y=v=>pad.t+(h-pad.t-pad.b)*(1-(Math.log10(Math.max(v,FLOOR))-lo)/span),base=h-pad.b;
-  g.font="10px "+K.mono;g.lineWidth=1;g.textAlign="left";
-  for(let t=FLOOR;t<=top;t*=10){const y=Y(t);g.strokeStyle=K.grid;g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillStyle=K.mute;g.fillText(t<1?"0.1":String(Math.round(t)),2,y+3)}
-  g.strokeStyle=K.vline;g.setLineDash([2,3]);let lastLabel=-99;
+  g.font=chartFont();g.lineWidth=1;g.textAlign="left";
+  for(let t=FLOOR;t<=top;t*=10){const y=Y(t);g.strokeStyle=K.grid;g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillStyle=K.mute;g.fillText(t<1?"0.1":String(Math.round(t)),2*scale,y+3*scale)}
+  g.strokeStyle=K.vline;g.setLineDash([2,3]);let lastLabel=-99*scale;
   for(let i=1;i<rec.length;i++)if(rec[i].version_id!==rec[i-1].version_id&&rec[i].role!=="preview"&&rec[i-1].role!=="preview"){g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),base);g.stroke();
-    if(X(i)-lastLabel>44&&X(i)<w-pad.r-40){g.fillStyle=K.mute;g.fillText(rec[i].version_id,X(i)+3,pad.t+7);lastLabel=X(i)}}
+    if(X(i)-lastLabel>44*scale&&X(i)<w-pad.r-40*scale){g.fillStyle=K.mute;g.fillText(rec[i].version_id,X(i)+3*scale,pad.t+7*scale);lastLabel=X(i)}}
   g.setLineDash([5,4]);g.strokeStyle=K.warn;g.beginPath();g.moveTo(pad.l,Y(alarm));g.lineTo(w-pad.r,Y(alarm));g.stroke();g.setLineDash([]);
-  g.fillStyle=K.warn;g.textAlign="right";g.fillText("报警 "+f(alarm,0),w-pad.r,Y(alarm)-4);g.textAlign="left";
+  g.fillStyle=K.warn;g.textAlign="right";g.fillText("报警 "+f(alarm,0),w-pad.r,Y(alarm)-4*scale);g.textAlign="left";
   const grad=g.createLinearGradient(0,pad.t,0,base);grad.addColorStop(0,"rgba(61,139,255,.28)");grad.addColorStop(1,"rgba(61,139,255,0)");
   g.fillStyle=grad;g.beginPath();vals.forEach((v,i)=>{const y=v==null?base:Y(v);i?g.lineTo(X(i),y):g.moveTo(X(i),y)});g.lineTo(X(vals.length-1),base);g.lineTo(X(0),base);g.closePath();g.fill();
   g.strokeStyle=K.line;g.lineWidth=1.5;g.lineJoin="round";g.beginPath();let on=false;vals.forEach((v,i)=>{if(v==null){on=false;return}on?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v));on=true});g.stroke();
   vals.forEach((v,i)=>{if(v==null||v<=alarm)return;g.fillStyle=K.bad;g.beginPath();g.arc(X(i),Y(v),2,0,7);g.fill()});
   const seq0=(S.shots||rec.length)-rec.length+1;
-  g.fillStyle=K.mute;g.fillText("第 "+seq0+" 发",pad.l,h-3);g.textAlign="right";g.fillText("第 "+(seq0+rec.length-1)+" 发",w-pad.r,h-3);g.textAlign="left";
+  g.fillStyle=K.mute;g.fillText("第 "+seq0+" 发",pad.l,h-3*scale);g.textAlign="right";g.fillText("第 "+(seq0+rec.length-1)+" 发",w-pad.r,h-3*scale);g.textAlign="left";
   EC={rec,vals,seq0,pad,w};
   if(hoverI!=null){const i=Math.min(hoverI,rec.length-1),v=vals[i];g.strokeStyle=K.mute;g.lineWidth=1;g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),base);g.stroke();
     if(v!=null){g.fillStyle=v>alarm?K.bad:K.line;g.strokeStyle="#fff";g.beginPath();g.arc(X(i),Y(v),3.5,0,7);g.fill();g.stroke()}}
@@ -300,7 +308,7 @@ function learnPoints(){
 function drawLearn(comp){
   $("compbox").hidden=!comp;$("comphint").hidden=!!comp;
   if(comp){$("c-id").textContent=S.head.residual_id;$("c-geo").textContent=f(comp.geometry_median,2)+" mm";$("c-new").textContent=f(comp.new_median,2)+" mm"}
-  const[g,w,h]=setupCanvas($("learnchart")),pts=learnPoints(),pad={l:30,r:10,t:8,b:18},split=pts.some(p=>Math.abs(p.geo-p.model)>1e-9);
+  const[g,w,h]=setupCanvas($("learnchart")),pts=learnPoints(),scale=px("--fs-chart")/10,pad={l:30*scale,r:10*scale,t:8*scale,b:18*scale},split=pts.some(p=>Math.abs(p.geo-p.model)>1e-9);
   $("lg-geo").hidden=!split;
   if(!pts.length)return emptyChart(g,h,pad,"还没有带验证数据的版本");
   const[ymax,step]=nice(Math.max(.5,...pts.map(p=>Math.max(p.model,p.geo)))*1.05);axes(g,w,h,ymax,step,pad);
@@ -308,9 +316,9 @@ function drawLearn(comp){
   const line=(key,col,dash)=>{g.strokeStyle=col;g.setLineDash(dash);g.lineWidth=1.8;g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(i),Y(p[key])):g.moveTo(X(i),Y(p[key])));g.stroke();g.setLineDash([]);
     pts.forEach((p,i)=>{g.fillStyle=col;g.beginPath();g.arc(X(i),Y(p[key]),2.6,0,7);g.fill()})};
   if(split)line("geo",K.geo,[4,3]);line("model",K.line,[]);
-  const lastP=pts[pts.length-1];g.font="10px "+K.mono;g.fillStyle=K.line;g.textAlign="right";g.fillText(f(lastP.model,2),w-pad.r,Y(lastP.model)-7);
-  g.fillStyle=K.mute;g.font="11px -apple-system,sans-serif";const stepX=Math.ceil(pts.length/6);
-  pts.forEach((p,i)=>{if(i%stepX===0||i===pts.length-1){g.textAlign=i===0?"left":i===pts.length-1?"right":"center";g.fillText(p.id,X(i),h-3)}});g.textAlign="left";
+  const lastP=pts[pts.length-1];g.font=chartFont();g.fillStyle=K.line;g.textAlign="right";g.fillText(f(lastP.model,2),w-pad.r,Y(lastP.model)-7*scale);
+  g.fillStyle=K.mute;g.font=chartFont("--fs-chart-label",V("--sans"));const stepX=Math.ceil(pts.length/6);
+  pts.forEach((p,i)=>{if(i%stepX===0||i===pts.length-1){g.textAlign=i===0?"left":i===pts.length-1?"right":"center";g.fillText(p.id,X(i),h-3*scale)}});g.textAlign="left";
 }
 
 /* versions */
@@ -407,11 +415,11 @@ function renderOverview(){
   if($("page-overview").classList.contains("on"))drawHeal(hist);
 }
 function drawHeal(hist){
-  const[g,w,h]=setupCanvas($("healchart")),pad={l:30,r:8,t:18,b:6};
+  const[g,w,h]=setupCanvas($("healchart")),scale=px("--fs-chart")/10,pad={l:30*scale,r:8*scale,t:18*scale,b:6*scale};
   if(!hist.length)return emptyChart(g,h,pad,"还没有恢复记录");
   const[ymax,step]=nice(Math.max(4,...hist.map(r=>r.shots)));axes(g,w,h,ymax,step,pad);const n=hist.length,slot=(w-pad.l-pad.r)/n,bw=Math.min(28,slot*.7);
   hist.forEach((r,i)=>{const x=pad.l+slot*(i+.5),y=pad.t+(h-pad.t-pad.b)*(1-r.shots/ymax);g.fillStyle=r.kind==="recognition"?K.cyan:r.kind==="rejected"?K.bad:K.line;g.fillRect(x-bw/2,y,bw,h-pad.b-y);
-    if(slot>22){g.fillStyle=K.mute;g.font="10px "+K.mono;g.textAlign="center";g.fillText(r.shots,x,y-4)}});g.textAlign="left";
+    if(slot>22*scale){g.fillStyle=K.mute;g.font=chartFont();g.textAlign="center";g.fillText(r.shots,x,y-4*scale)}});g.textAlign="left";
 }
 
 /* fault codes */
