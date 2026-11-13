@@ -1,0 +1,95 @@
+/* 视觉主题“仪表”：工业控制台的克制风格。依据见 docs/overnight/视觉参考.md 的六条规则。
+   一、变量层：底色近黑、层级只靠明度；颜色只表达语义；数据最亮、容器最暗。
+   二、外观细节：细线、小圆角、去掉发光与毛玻璃；标签加字距；画面区加角标刻度。
+   不改布局、不改交互、不新增状态颜色。删除本目录或加 ?theme=classic 即回到原主题。 */
+
+/* —— 一、变量 —— */
+:root{
+  --bg:#06080a;--panel:#0b0e11;--panel2:#10141a;--head:#0b0e11;--hover:#161b22;
+  --line:#1a1f26;--line2:#2a313b;--grid:#151a20;
+  --text:#e9edf3;--sub:#a3acb9;--mute:#8d97a6;
+  /* 蓝色只用于“可操作 / 当前选中”；数据曲线用接近白色的冷灰，是画面里最亮的线 */
+  --accent:#4a90f5;--accent-2:#7aaef8;--accent-bg:rgba(74,144,245,.10);
+  --data:#dfe6f0;--data-fill:rgba(223,230,240,.07);--data-fill-end:rgba(223,230,240,.07);
+  --geo:#6b7584;--video:#030405;--radius:3px;
+  --twin-body:#2e353f;--twin-plate:#c2cad6;--twin-joint:#dfe6f0;--twin-edge:#8d97a6;--twin-grid:#1f252d;--twin-pedestal:#12161b;
+  --twin-skin-dark:#3b434f;--twin-skin-darker:#252b33;--twin-skin-metal:#d3dae4;--twin-skin-trim:#7d8796;
+}
+html[data-mode="show"]{--line:#232a33;--line2:#3a434f;--grid:#1e242c;--data:#f2f5f9}
+
+/* —— 二、外观细节 —— */
+body{font-feature-settings:"tnum" 1,"zero" 1}
+
+/* 顶栏：实底细线，不用毛玻璃；品牌标记去发光 */
+header{background:var(--bg);backdrop-filter:none}
+.brand{letter-spacing:.06em}
+.brand:before{border-radius:0;box-shadow:none;width:8px;height:8px;background:var(--text)}
+.dot.on{box-shadow:none}
+nav button{letter-spacing:.04em}
+nav button.on{border-bottom-color:var(--text)}
+
+/* 按钮：细线描边、小圆角；只有主操作是实心蓝 */
+button{border-radius:var(--radius);background:transparent;border-color:var(--line2)}
+button:hover{background:var(--hover);border-color:var(--mute)}
+button.primary{background:var(--accent);border-color:var(--accent)}
+button.danger{background:var(--bad);border-color:var(--bad)}
+input,select{border-radius:var(--radius)}
+.pill,.tag,.fix{border-radius:2px}
+
+/* 卡片：容器退后——没有填充的标题条，只有一条细线；标题是带字距的小标签 */
+.card{background:var(--panel);border-color:var(--line)}
+.card h3{background:none;border-bottom-color:var(--line);letter-spacing:.08em;color:var(--sub)}
+.card h3:before{width:6px;height:6px;border-radius:0;background:none;border:1px solid var(--mute)}
+html[data-mode="show"] body .card h3:before{width:.45em;height:.45em;background:none;border:2px solid var(--sub)}
+.card h3 .aside{letter-spacing:.02em}
+
+/* 数据格：标签小而有字距，数字大而亮；格与格之间只有细线 */
+.kpis,.tiles{background:var(--line);border-color:var(--line)}
+.kpi .k,.tile .k{letter-spacing:.08em;color:var(--sub)}
+.kpi .v,.tile .v{color:var(--text);font-weight:500}
+html[data-mode="show"] .kpis .card{border-top:1px solid var(--line2)}
+html[data-mode="show"] .kpi .v,html[data-mode="show"] .tile .v{font-weight:600}
+
+/* 画面区（摄像头、孪生）：去掉暗角渐变，四角加取景刻度。
+   下面的 linear-gradient 两端同色，只是用来画 1px 实线角标，不产生渐变效果。 */
+.cam{border-color:var(--line2)}
+.cam:after{background:
+  linear-gradient(var(--sub),var(--sub)) left 8px top 8px/14px 1px no-repeat,linear-gradient(var(--sub),var(--sub)) left 8px top 8px/1px 14px no-repeat,
+  linear-gradient(var(--sub),var(--sub)) right 8px top 8px/14px 1px no-repeat,linear-gradient(var(--sub),var(--sub)) right 8px top 8px/1px 14px no-repeat,
+  linear-gradient(var(--sub),var(--sub)) left 8px bottom 8px/14px 1px no-repeat,linear-gradient(var(--sub),var(--sub)) left 8px bottom 8px/1px 14px no-repeat,
+  linear-gradient(var(--sub),var(--sub)) right 8px bottom 8px/14px 1px no-repeat,linear-gradient(var(--sub),var(--sub)) right 8px bottom 8px/1px 14px no-repeat;
+  opacity:.55;z-index:1}
+.chip,.twin-status,.twin-label{backdrop-filter:none;background:rgba(6,8,10,.86);border-radius:2px;border-color:var(--line2)}
+.chip.state,.camera-status{left:14px;top:14px}.chip.ver{right:14px;top:14px}.chip.err{right:14px;bottom:14px}.chip.legend{left:14px;bottom:14px}
+.camera-status .chip{left:auto;top:auto}
+.twin-status{left:14px;top:14px}
+
+/* 关节读数条：细轨、清楚的刻度、亮色游标（不是蓝色，不发光） */
+.bar{height:2px;background:var(--line2);border-radius:0}
+.bar:after{top:-4px;bottom:-4px;background:repeating-linear-gradient(90deg,var(--mute) 0 1px,transparent 1px 10%);opacity:.5}
+.bar i{background:var(--text);box-shadow:none;border-radius:0;width:2px;height:16px;top:-7px}
+html[data-mode="show"] .bar{height:3px}
+html[data-mode="show"] .bar i{width:4px;height:26px;top:-12px;border-radius:0}
+
+/* 表格与列表：最佳候选用左侧细线和亮字标出，不铺色块 */
+tr.best td{background:none;color:var(--text);font-weight:600}
+tr.best td:first-child{box-shadow:inset 2px 0 var(--text)}
+.fix{background:none;border-color:var(--line2);color:var(--text)}
+.hbar .t{border-radius:0;height:4px}.hbar .t i{background:var(--data)}
+html[data-mode="show"] .hbar .t{height:8px;border-radius:0}
+.tag.cur{background:none;color:var(--accent-2);border-color:var(--accent)}
+.tag.cy{background:none;border-color:var(--cyan)}
+.tag.bad{background:none;border-color:var(--bad)}
+.steps div{border-radius:2px}
+.steps div.on{background:none}
+
+/* 浮层：实底、细线、阴影收敛；遮罩不用模糊 */
+.dropdown,.modal,.toast,.tip,.debug .card{border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,.6)}
+.modal{border-radius:4px}
+.mask{backdrop-filter:none;background:rgba(0,0,0,.72)}
+.box{border-radius:var(--radius);background:var(--panel2)}
+.verdict{border-radius:2px}
+.banner{border-radius:var(--radius)}
+
+/* 滚动条更细 */
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{border-radius:0}

@@ -1,7 +1,7 @@
 (()=>{
 const $=id=>document.getElementById(id);
 const V=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const colors=()=>({line:V("--accent"),cyan:V("--cyan"),warn:V("--warn"),bad:V("--bad"),obs:V("--obs"),pred:V("--pred"),grid:V("--grid"),geo:V("--geo"),mute:V("--mute"),vline:V("--line2"),mono:V("--mono")});
+const colors=()=>({line:V("--data"),cyan:V("--cyan"),warn:V("--warn"),bad:V("--bad"),obs:V("--obs"),pred:V("--pred"),grid:V("--grid"),geo:V("--geo"),mute:V("--mute"),vline:V("--line2"),mono:V("--mono")});
 let K=colors();
 /* Tokens may be clamp()/calc() expressions once a theme overrides them, so resolve them through a probe element. */
 const probe=document.createElement("i");probe.style.cssText="position:absolute;visibility:hidden;pointer-events:none";
@@ -268,7 +268,7 @@ function drawErr(){
   /* A panel-coloured plate keeps the label readable when the error trace runs through it. */
   const alarmText="报警 "+f(alarm,0),aw=g.measureText(alarmText).width;g.fillStyle=V("--panel");g.fillRect(w-pad.r-aw-4*scale,Y(alarm)-15*scale,aw+4*scale,12*scale);
   g.fillStyle=K.warn;g.textAlign="right";g.fillText(alarmText,w-pad.r,Y(alarm)-4*scale);g.textAlign="left";
-  const grad=g.createLinearGradient(0,pad.t,0,base);grad.addColorStop(0,"rgba(61,139,255,.28)");grad.addColorStop(1,"rgba(61,139,255,0)");
+  const grad=g.createLinearGradient(0,pad.t,0,base);grad.addColorStop(0,V("--data-fill"));grad.addColorStop(1,V("--data-fill-end"));
   g.fillStyle=grad;g.beginPath();vals.forEach((v,i)=>{const y=v==null?base:Y(v);i?g.lineTo(X(i),y):g.moveTo(X(i),y)});g.lineTo(X(vals.length-1),base);g.lineTo(X(0),base);g.closePath();g.fill();
   g.strokeStyle=K.line;g.lineWidth=1.5;g.lineJoin="round";g.beginPath();let on=false;vals.forEach((v,i)=>{if(v==null){on=false;return}on?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v));on=true});g.stroke();
   vals.forEach((v,i)=>{if(v==null||v<=alarm)return;g.fillStyle=K.bad;g.beginPath();g.arc(X(i),Y(v),2,0,7);g.fill()});

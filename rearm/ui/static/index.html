@@ -76,7 +76,7 @@
     <div class="card">
       <h3>瞄准误差<span class="aside">每一发 · mm · 对数刻度</span></h3>
       <div class="chartbox"><canvas id="errchart" role="img" aria-label="瞄准误差：暂无数据"></canvas></div>
-      <div class="legendline"><span style="--c:var(--accent)">误差</span><span style="--c:var(--warn)">报警阈值</span><span style="--c:var(--line2)">版本切换</span></div>
+      <div class="legendline"><span style="--c:var(--data)">误差</span><span style="--c:var(--warn)">报警阈值</span><span style="--c:var(--line2)">版本切换</span></div>
     </div>
     <div class="card">
       <h3><span class="tabs" id="dtabs"><button data-t="diag" class="on">诊断候选</button><button data-t="feed">最近事件</button></span><span id="diagtitle">诊断候选</span><span class="aside" id="diagaside"></span></h3>
@@ -86,7 +86,7 @@
     <div class="card">
       <h3>学习效果<span class="aside">各版本验证误差 · mm</span></h3>
       <div class="chartbox"><canvas id="learnchart" role="img" aria-label="学习效果：暂无数据"></canvas></div>
-      <div class="legendline"><span style="--c:var(--accent)">当前模型</span><span style="--c:var(--geo)" id="lg-geo">只用几何</span></div>
+      <div class="legendline"><span style="--c:var(--data)">当前模型</span><span style="--c:var(--geo)" id="lg-geo">只用几何</span></div>
       <div class="hint" id="comphint">还没学细节补偿。数据够了，到 ⋯ 点“重训补偿”。</div>
       <div class="comp" id="compbox">
         <div>补偿模型<b id="c-id">未学习</b></div>

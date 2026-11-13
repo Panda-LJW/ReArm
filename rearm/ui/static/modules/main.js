@@ -19,6 +19,13 @@ async function optional(name, mount) {
 
 await loadCss("main.css");
 
+// 视觉主题：只覆盖 design tokens 和少量外观细节。?theme=classic 可临时关掉，便于对比。
+await optional("theme", async () => {
+  if (params.get("theme") === "classic") throw new Error("已按地址栏参数关闭");
+  if (!await loadCss("theme/theme.css")) throw new Error("样式文件不存在");
+  document.dispatchEvent(new CustomEvent("rearm:theme", { detail: { theme: "instrument" } }));
+});
+
 // 专注阅读：状态的图标编码、动效收敛、按阶段弱化次要区域。纯样式模块。
 await optional("focus", async () => {
   if (!await loadCss("focus/focus.css")) throw new Error("样式文件不存在");
