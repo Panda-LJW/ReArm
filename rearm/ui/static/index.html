@@ -52,8 +52,8 @@ main{max-width:1480px;margin:0 auto;padding:14px 20px 28px}
 .card h3 .aside{margin-left:auto;font-weight:400;color:var(--mute);font-size:11px;letter-spacing:0}
 .row1{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
 .row2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
-.cam{position:relative;background:var(--video);border-radius:var(--radius);overflow:hidden;aspect-ratio:1000/760;border:1px solid var(--line)}
-.cam img,.cam svg{position:absolute;inset:0;width:100%;height:100%}
+.cam{position:relative;background:var(--video);border-radius:var(--radius);overflow:hidden;aspect-ratio:var(--cam-ar,1000/760);border:1px solid var(--line)}
+.cam img,.cam svg{position:absolute;inset:0;width:100%;height:100%}.cam img{object-fit:contain}
 .cam.sim img{filter:brightness(.42) contrast(1.25) saturate(0)}
 .cam:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
 .chip{position:absolute;z-index:2;padding:4px 9px;border-radius:5px;font-size:12px;font-weight:500;background:rgba(8,10,12,.78);border:1px solid rgba(255,255,255,.08);color:var(--text);backdrop-filter:blur(4px)}
@@ -111,6 +111,34 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);color:var(--text);border-radius:8px;padding:10px 14px;display:none;gap:12px;align-items:center;z-index:60;box-shadow:0 14px 40px rgba(0,0,0,.6);max-width:calc(100vw - 32px)}
 .toast.open{display:flex}.toast button{background:transparent;color:var(--accent-2);border-color:var(--line2)}
 .err-msg{color:var(--bad);font-size:12px;margin-top:6px}
+
+.chartbox{position:relative;height:180px}.chartbox canvas{position:absolute;inset:0;width:100%;height:100%}
+.debug{position:fixed;right:16px;bottom:16px;z-index:40;margin:0;max-width:calc(100vw - 32px)}.debug .card{box-shadow:0 18px 40px rgba(0,0,0,.6);border-style:solid;border-color:var(--line2);background:var(--panel2)}
+.debug .x{border:none;background:none;color:var(--mute);padding:2px 6px;margin-left:auto}
+.docgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}.docgrid .doc{max-width:none}
+.doc h1{margin-top:12px}.doc h3{margin:18px 0 6px;padding:0;background:none;border:none;border-radius:0;color:var(--text);font-size:13px;font-weight:600}.doc h3:before{display:none}.doc h2:first-child{margin-top:12px}
+/* one-screen layout on desktop */
+@media(min-width:1081px){
+  main{max-width:none;height:max(660px,calc(100vh - 52px));display:flex;flex-direction:column;padding:12px 16px}
+  .page.on{display:grid;flex:1;min-height:0;gap:12px}
+  #page-home.on{grid-template-rows:minmax(0,1.55fr) minmax(0,1fr)}
+  .row1,.row2{min-height:0;margin:0;grid-template-rows:minmax(0,1fr)}
+  .row1{grid-template-columns:auto minmax(380px,1fr)}
+  .cam{height:100%;width:auto;max-width:calc(100vw - 440px)}
+  .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.kpis .card{padding:10px 12px}.kpi .v{font-size:20px;margin-top:2px}
+  .joint{margin:6px 0}.envrow{margin-top:8px;padding-top:8px}
+  .side{overflow:hidden}.feedcard{min-height:0;overflow:hidden}
+  .side{height:auto;min-height:0}
+  .row2 .card{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .row2 .chartbox,.ov2 .chartbox{flex:1;height:auto;min-height:60px}
+  #diag{flex:1;min-height:0;overflow:auto;margin-right:-8px;padding-right:8px}
+  .comp{margin-top:8px;padding-top:8px}
+  #page-overview.on{grid-template-rows:auto minmax(0,1fr)}
+  .ov2{margin:0;min-height:0}.ov2 .card{display:flex;flex-direction:column;min-height:0}
+  #faultbars{flex:1;min-height:0;overflow:auto}
+  #page-codes.on{grid-template-rows:minmax(0,1fr)}
+  .docgrid{min-height:0;height:100%}.docgrid .doc{overflow:auto;min-height:0}
+}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}::-webkit-scrollbar-track{background:transparent}
 @media(max-width:1080px){.row1{grid-template-columns:1fr}.side{height:auto;min-height:0}.feed{max-height:280px}.row2{grid-template-columns:1fr 1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:720px){header{flex-wrap:wrap;height:auto;padding:8px 16px;gap:8px}nav{order:3;width:100%;margin:0}nav button{padding:8px 10px}
@@ -147,7 +175,7 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
   <div class="row1">
     <div class="cam" id="cam">
       <img id="camimg" alt="俯拍摄像头画面">
-      <svg id="overlay" viewBox="0 0 1000 760" preserveAspectRatio="none"></svg>
+      <svg id="overlay" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="chip state s-ok" id="chipstate">待连接</div>
       <div class="chip ver" id="chipver">—</div>
       <div class="chip err s-ok" id="chiperr">—</div>
@@ -175,7 +203,7 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
   <div class="row2">
     <div class="card">
       <h3>瞄准误差<span class="aside">每一发 · mm</span></h3>
-      <canvas id="errchart"></canvas>
+      <div class="chartbox"><canvas id="errchart"></canvas></div>
       <div class="legendline"><span style="--c:var(--accent)">误差</span><span style="--c:var(--warn)">报警阈值</span><span style="--c:var(--line2)">版本切换</span></div>
     </div>
     <div class="card">
@@ -184,7 +212,7 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
     </div>
     <div class="card">
       <h3>学习效果<span class="aside">已启用版本 · 留出误差中位数 mm</span></h3>
-      <canvas id="learnchart"></canvas>
+      <div class="chartbox"><canvas id="learnchart"></canvas></div>
       <div class="legendline"><span style="--c:var(--accent)">当前模型</span><span style="--c:var(--geo)">只用几何</span></div>
       <div class="comp">
         <div>补偿模型<b id="c-id">未学习</b></div>
@@ -194,9 +222,22 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
     </div>
   </div>
 
+</section>
+
+<section class="page" id="page-overview">
+  <div class="tiles" id="tiles"></div>
+  <div class="ov2">
+    <div class="card"><h3>各故障码出现次数<span class="aside">自愈成功时的诊断结论</span></h3><div id="faultbars"></div></div>
+    <div class="card"><h3>每次恢复用了几发<span class="aside">从报警到恢复</span></h3><div class="chartbox"><canvas id="healchart"></canvas></div></div>
+  </div>
+</section>
+
+<section class="page" id="page-codes"><div class="docgrid" id="doc"><div class="card doc"><div class="empty">正在加载故障码说明…</div></div></div></section>
+</main>
+
   <div class="debug" id="debug">
     <div class="card">
-      <b>仿真调试</b><span style="color:var(--sub)">只在仿真里可用：故意“弄伤”机械臂来测试自愈</span>
+      <b>仿真调试</b><span style="color:var(--sub);font-size:12px">只在仿真里可用：故意“弄伤”机械臂来测试自愈</span><button class="x" id="debugclose" aria-label="关闭">✕</button>
       <select id="damage">
         <option value="j1:1">J1 错位 +1 格</option><option value="j1:-1">J1 错位 −1 格</option>
         <option value="j2:1">J2 错位 +1 格</option><option value="j2:2">J2 错位 +2 格</option>
@@ -207,18 +248,6 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
       <button id="inject">注入</button>
     </div>
   </div>
-</section>
-
-<section class="page" id="page-overview">
-  <div class="tiles" id="tiles"></div>
-  <div class="ov2">
-    <div class="card"><h3>各故障码出现次数<span class="aside">自愈成功时的诊断结论</span></h3><div id="faultbars"></div></div>
-    <div class="card"><h3>每次恢复用了几发<span class="aside">从报警到恢复</span></h3><canvas id="healchart"></canvas></div>
-  </div>
-</section>
-
-<section class="page" id="page-codes"><div class="card doc" id="doc"><div class="empty">正在加载故障码说明…</div></div></section>
-</main>
 
 <div class="mask" id="mask"><div class="modal" role="dialog" aria-modal="true" id="modal"></div></div>
 <div class="toast" id="toast"><span id="toastmsg"></span><button id="toastbtn" hidden>撤销</button></div>
@@ -343,7 +372,7 @@ function render(){
 function toPx(xy){const c=S.camera||{width:1000,height:760,pixels_per_mm:2};return[c.width/2+xy[0]*c.pixels_per_mm,c.height/2-xy[1]*c.pixels_per_mm]}
 function drawOverlay(recent){
   const c=S.camera||{width:1000,height:760,pixels_per_mm:2},svg=$("overlay");
-  svg.setAttribute("viewBox",`0 0 ${c.width} ${c.height}`);$("cam").style.aspectRatio=`${c.width}/${c.height}`;
+  svg.setAttribute("viewBox",`0 0 ${c.width} ${c.height}`);$("cam").style.setProperty("--cam-ar",`${c.width}/${c.height}`);
   const b=S.board_mm||[420,297],[x0,y0]=toPx([-b[0]/2,b[1]/2]);
   let h=`<rect x="${x0}" y="${y0}" width="${b[0]*c.pixels_per_mm}" height="${b[1]*c.pixels_per_mm}" fill="none" stroke="${K.vline}" stroke-width="2" stroke-dasharray="8 6" opacity=".7"/>`;
   for(const s of recent.slice(-15,-1))if(s.observed){const[x,y]=toPx(s.observed);h+=`<circle cx="${x}" cy="${y}" r="4" fill="${K.obs}" opacity=".35"/>`}
@@ -493,7 +522,8 @@ function md(src){
     else{if(l.trim())out+=`<p>${inline(l)}</p>`;i++}}
   return out;
 }
-async function loadDoc(){if(docLoaded)return;try{const r=await fetch("/api/fault-codes");if(!r.ok)throw 0;$("doc").innerHTML=md(await r.text());docLoaded=true}catch{$("doc").innerHTML='<div class="empty">故障码文档加载失败</div>'}}
+async function loadDoc(){if(docLoaded)return;try{const r=await fetch("/api/fault-codes");if(!r.ok)throw 0;const src=await r.text(),parts=src.split(/\n(?=## )/),left=parts.slice(0,2).join("\n"),right=parts.slice(2).join("\n");
+    $("doc").innerHTML=`<div class="card doc">${md(left)}</div><div class="card doc">${md(right)}</div>`;docLoaded=true}catch{$("doc").innerHTML='<div class="card doc"><div class="empty">故障码文档加载失败</div></div>'}}
 
 /* wiring */
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
@@ -506,7 +536,8 @@ $("mask").onclick=e=>{if(e.target===$("mask"))closeModal()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
 document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=async()=>{$("morelist").classList.remove("open");const label=b.textContent;b.textContent="执行中…";
   try{await command(b.dataset.cmd)}catch(e){toast("操作失败："+tr(e.message))}finally{b.textContent=label}});
-$("debugtoggle").onclick=()=>{$("morelist").classList.remove("open");$("debug").classList.toggle("on");if($("debug").classList.contains("on"))$("debug").scrollIntoView({behavior:"smooth",block:"nearest"})};
+$("debugtoggle").onclick=()=>{$("morelist").classList.remove("open");$("debug").classList.toggle("on")};
+$("debugclose").onclick=()=>$("debug").classList.remove("on");
 $("inject").onclick=async()=>{const[kind,amount]=$("damage").value.split(":");try{await command("inject",{kind,amount:Number(amount)});toast(`已注入：${$("damage").selectedOptions[0].text}。点“自检”看它自愈`)}catch(e){toast("操作失败："+tr(e.message))}};
 addEventListener("resize",schedule);
 fetch("/api/state").then(r=>r.json()).then(s=>{S=Object.assign(s,S||{});render();refreshCamera()}).catch(()=>{});
