@@ -166,3 +166,20 @@ const rad = d => d * Math.PI / 180, panel = [[-90, 90], [0, 110], [-150, 0]];
 console.log(JSON.stringify(C.panelMapping.map((m, i) => { const j = C.joints.find(x => x.id === m.joint); const v = panel[i].map(d => m.sign * rad(d) + m.offset); return [Math.min(...v) >= j.limit[0] - 2e-3, Math.max(...v) <= j.limit[1] + 2e-3]; })));
 ''')  # 容差 0.002 rad：URDF 把 π 写成 3.14
     assert out == [[True, True]] * 3
+
+
+def test_mock_device_telemetry_is_accepted_by_the_device_source():
+    import importlib.util
+    import time
+    spec = importlib.util.spec_from_file_location('mock_device', ROOT / 'scripts/mock_device.py')
+    mock = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mock)
+    message = mock.telemetry(7, time.monotonic() - 2.0)
+    assert '\n' not in message and len(message.encode()) <= 1024
+    out = node('import { parseTelemetry } from "./datasource/device-source.js";\n'
+               f'console.log(JSON.stringify(parseTelemetry({json.dumps(message)})));')
+    assert out['mode'] == 'sim' and out['online'] is True and len(out['angles_deg']) == 3
+    for value, (lo, hi) in zip(out['angles_deg'], [(-90, 90), (0, 110), (-150, 0)]):
+        assert lo <= value <= hi
+    # 只监听回环地址，不对外开放。
+    assert 'asyncio.run(main("127.0.0.1"' in (ROOT / 'scripts/mock_device.py').read_text()
