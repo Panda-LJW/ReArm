@@ -81,13 +81,13 @@
     <div class="card">
       <h3><span class="tabs" id="dtabs"><button data-t="diag" class="on">诊断候选</button><button data-t="feed">最近事件</button></span><span id="diagtitle">诊断候选</span><span class="aside" id="diagaside"></span></h3>
       <div id="feedslot"></div>
-      <div id="diag"><div class="empty">还没有诊断。发现异常后，这里会列出所有候选故障码及拟合数据。</div></div>
+      <div id="diag"><div class="empty">暂无诊断。发现异常后，这里列出候选故障。</div></div>
     </div>
     <div class="card">
-      <h3>学习效果<span class="aside">已启用版本 · 留出误差中位数 mm</span></h3>
+      <h3>学习效果<span class="aside">各版本验证误差 · mm</span></h3>
       <div class="chartbox"><canvas id="learnchart" role="img" aria-label="学习效果：暂无数据"></canvas></div>
       <div class="legendline"><span style="--c:var(--accent)">当前模型</span><span style="--c:var(--geo)" id="lg-geo">只用几何</span></div>
-      <div class="hint" id="comphint">还没学细节补偿。打靶数据攒够后，到右上角 ⋯ 里点“重训补偿”。</div>
+      <div class="hint" id="comphint">还没学细节补偿。数据够了，到 ⋯ 点“重训补偿”。</div>
       <div class="comp" id="compbox">
         <div>补偿模型<b id="c-id">未学习</b></div>
         <div>只用几何<b class="num" id="c-geo">—</b></div>
@@ -103,7 +103,7 @@
   <div class="ov2">
     <div class="card"><h3>历次自愈记录<span class="aside">本次运行 · 最新在上</span></h3><div id="history"></div></div>
     <div class="ovside">
-      <div class="card"><h3>各故障码出现次数<span class="aside">自愈成功时的诊断结论</span></h3><div id="faultbars"></div></div>
+      <div class="card"><h3>各故障码出现次数<span class="aside">自愈成功的诊断</span></h3><div id="faultbars"></div></div>
       <div class="card"><h3>每次自愈用了几发<span class="aside">从报警到结束</span></h3><div class="chartbox"><canvas id="healchart" role="img" aria-label="自愈发数：暂无数据"></canvas></div>
         <div class="legendline"><span style="--c:var(--cyan)">认出旧伤</span><span style="--c:var(--accent)">诊断修复</span><span style="--c:var(--bad)">被护栏拦下</span></div></div>
     </div>
@@ -116,7 +116,7 @@
   <div class="debug" id="debug">
     <div class="card">
       <div id="debugtitle"><b>仿真调试</b><span>拖动标题移动</span><button class="x" id="debugclose" aria-label="关闭">✕</button></div>
-      <span class="debugnote">只在仿真里可用：故意“弄伤”机械臂来测试自愈</span>
+      <span class="debugnote">仅仿真：故意“弄伤”机械臂，测试自愈</span>
       <select id="damage">
         <option value="j1:1">J1 错位 +1 格</option><option value="j1:-1">J1 错位 −1 格</option>
         <option value="j2:1">J2 错位 +1 格</option><option value="j2:2">J2 错位 +2 格</option>

@@ -202,6 +202,8 @@ function render(){
   const st=!connected?"连接断开":S.estop?"已急停":S.state||"—",cs=$("chipstate");
   cs.className="chip state "+(st==="正常"?"s-ok":["已拒绝","已急停","连接断开"].includes(st)?"s-bad":st==="重训残差"?"s-info":"s-busy");
   cs.textContent=st+(BUSY.includes(st)&&S.heal_start!=null?` · 已打 ${Math.max(0,S.shots-S.heal_start)} 发`:"");
+  /* One coarse phase for the whole page, so styling can calm or stress regions without knowing the state machine. */
+  document.body.dataset.phase=!connected?"stale":S.estop?"stop":st==="正常"?"ok":st==="已拒绝"?"bad":"busy";
   $("estopbar").hidden=!S.estop;
   $("stopdetail").textContent=S.estop_error?tr(S.estop_error):"已禁止动作与出光";
   $("chiplaser").textContent=!connected?"激光 未知":S.laser_on?"激光 开":"激光 关";
@@ -213,13 +215,14 @@ function render(){
   ce.textContent=last?(err==null?"未看到光点":"误差 "+f(err,2)+" mm"):"等待第一发";
   drawOverlay(recent);
   $("k-err").innerHTML=err==null?"—":`<span class="${err>alarm?"badc":""}">${f(err,2)}</span><small>mm</small>`;
-  $("k-err-d").textContent=`报警阈值 ${f(alarm,0)} mm`+(last?` · ${roleName(last.role)}`:"");
+  $("k-err-d").textContent=(err!=null&&err>alarm?`▲ 超过阈值 ${f(alarm,0)} mm`:`阈值 ${f(alarm,0)} mm`)+(last?` · ${roleName(last.role)}`:"");
+  $("k-err").parentNode.dataset.level=err==null?"none":err>alarm?"bad":"ok";
   const comp=compensation();
   if(comp){const gain=(comp.geometry_median-comp.new_median)/comp.geometry_median*100;
     $("k-comp").innerHTML=`<span class="goodc">−${f(gain,0)}</span><small>%</small>`;$("k-comp-d").textContent=`${f(comp.geometry_median,2)} → ${f(comp.new_median,2)} mm（${head.residual_id}）`}
   else{const learned=(S.versions||[]).some(v=>v.residual_id!=="zero");
     $("k-comp").innerHTML=`<span style="color:var(--mute)">${learned?"需重训":"未学习"}</span>`;
-    $("k-comp-d").textContent=learned?"几何参数已更新，旧补偿停用，需重训":"在右上角 ⋯ 里重训补偿后生效"}
+    $("k-comp-d").textContent=learned?"几何已变，补偿需重训":"到 ⋯ 点“重训补偿”"}
   const st2=S.stats||{};
   $("k-shots").textContent=S.shots||0;$("k-shots-d").textContent="运行 "+dur(st2.uptime_s)+" · 报警 "+(S.alarms||0)+" 次";
   $("k-heal").innerHTML=`${(st2.recoveries||0)+(st2.recognitions||0)}<small>次</small>`;
@@ -253,7 +256,7 @@ function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font=chartFont("--fs-chart
 function drawErr(){
   const[g,w,h]=setupCanvas($("errchart")),rec=(S.recent||[]).slice(-120),alarm=S.alarm_mm||6,scale=px("--fs-chart")/10,pad={l:30*scale,r:8*scale,t:10*scale,b:18*scale};
   EC=null;
-  if(!rec.length)return emptyChart(g,h,pad,"点“自检”开始打靶");
+  if(!rec.length)return emptyChart(g,h,pad,"点“自检”开始");
   const vals=rec.map(s=>mag(s.residual)),FLOOR=.1,top=Math.max(alarm*3,...vals.filter(v=>v!=null))*1.5,lo=Math.log10(FLOOR),span=Math.log10(top)-lo;
   const X=i=>pad.l+(w-pad.l-pad.r)*(rec.length<2?.5:i/(rec.length-1)),Y=v=>pad.t+(h-pad.t-pad.b)*(1-(Math.log10(Math.max(v,FLOOR))-lo)/span),base=h-pad.b;
   g.font=chartFont();g.lineWidth=1;g.textAlign="left";
@@ -285,7 +288,7 @@ function hoverErr(e){
 function renderDiag(){
   const d=S.diagnosis;if(!d){$("diagaside").textContent="";return}
   const key=[d.best.name,d.ranked.length,d.ranked[0].bic,diagOpen,minorOpen].join("|");if(key===diagKey)return;diagKey=key;
-  $("diagaside").textContent="按 BIC 排序，越小越可信";
+  $("diagaside").textContent="BIC 越小越可信";
   const best=d.ranked[0].bic,{major,minor}=deltaParts(d),concl=d.changes&&d.changes.length===1?d.changes[0]:d.best.name;
   const shown=diagOpen?d.ranked:d.ranked.slice(0,6);
   const free=r=>r.fit.free.length>4?`${r.fit.free.length} 个参数`:r.fit.free.map(k=>(PARAM[k]||[k])[0].split(" ")[0]).join(", ");
@@ -293,7 +296,7 @@ function renderDiag(){
   const minorText=minor.map(p=>p.short).join("，");
   $("diag").innerHTML=`<div class="concl">${esc(concl)} · ${esc(codeName(concl))}</div>
     ${major.length?`<div class="fixes">${major.map(p=>`<span class="fix num">${esc(p.full)}</span>`).join("")}${minor.length?`<button class="morefix" id="minorbtn" title="${esc(minorText)}">${minorOpen?"收起微调":`另有 ${minor.length} 项微调`}</button>`:""}</div>`:'<div class="note">无参数变化</div>'}
-    ${minorOpen&&minor.length?`<div class="note num">${esc(minorText)}</div>`:""}${(d.ambiguous||[]).length?'<div class="note">注意：J1 零点与底座朝向无法仅凭落点区分</div>':""}
+    ${minorOpen&&minor.length?`<div class="note num">${esc(minorText)}</div>`:""}${(d.ambiguous||[]).length?'<div class="note">注意：J1 零点和底座朝向，只看落点分不开</div>':""}
     <div style="overflow-x:auto"><table class="diagt"><colgroup><col class="c1"><col class="c2"><col><col><col></colgroup><thead><tr><th>码</th><th>放开参数</th><th class="r">RMS mm</th><th class="r">BIC</th><th class="r">ΔBIC</th></tr></thead><tbody>${rows}</tbody></table></div>${d.ranked.length>6?`<button class="foldbtn" id="diagfold">${diagOpen?"收起":`展开全部 ${d.ranked.length} 个候选`}</button>`:""}`;
   if($("diagfold"))$("diagfold").onclick=()=>{diagOpen=!diagOpen;renderDiag()};
   if($("minorbtn"))$("minorbtn").onclick=()=>{minorOpen=!minorOpen;renderDiag()};
@@ -413,7 +416,7 @@ function renderOverview(){
   if(key!==histKey){histKey=key;$("history").innerHTML=hist.length?`<table><thead><tr><th>时间</th><th>结果</th><th>诊断结论</th><th class="r">用了几发</th><th class="r">自愈前 mm</th><th class="r">自愈后 mm</th><th class="r">启用版本</th></tr></thead><tbody>${[...hist].reverse().map(r=>{const[k,c]=KIND[r.kind]||[r.kind,"ok"];
       const what=r.code?`${r.code} · ${codeName(r.code)}`:r.kind==="recognition"?"以前见过的状态，直接切回":"观测不足，无法诊断";
       return `<tr><td class="num">${clock(r.timestamp)}</td><td><span class="tag ${c}">${k}</span></td><td>${esc(what)}</td><td class="r num">${r.shots}</td><td class="r num">${f(r.before_mm,2)}</td><td class="r num">${f(r.after_mm,2)}</td><td class="r num">${esc(r.version_id||"—")}</td></tr>`}).join("")}</tbody></table>`
-    :'<div class="empty">还没有自愈记录。到右上角“⋯ → 仿真调试”注入一处伤，再点“自检”试试。</div>'}
+    :'<div class="empty">还没有自愈记录。<br>试试：⋯ → 仿真调试 → 注入一处伤 → 自检。</div>'}
   const faults=Object.entries(st.faults||{}).sort((a,b)=>b[1]-a[1]),mx=Math.max(1,...faults.map(x=>x[1]));
   $("faultbars").innerHTML=faults.length?faults.map(([c,n])=>`<div class="hbar"><span>${esc(c)} ${esc(CODE[c]||"组合")}</span><div class="t"><i style="width:${n/mx*100}%"></i></div><span class="num">${n}</span></div>`).join(""):'<div class="empty">还没有诊断修复记录</div>';
   if($("page-overview").classList.contains("on"))drawHeal(hist);
@@ -499,7 +502,7 @@ $("debugtitle").onpointerdown=e=>{if(e.target.closest("button"))return;const r=$
 $("debugtitle").onpointermove=e=>{if(!drag)return;$("debug").style.left=e.clientX-drag.x+"px";$("debug").style.top=e.clientY-drag.y+"px";placeDebug()};
 $("debugtitle").onpointerup=$("debugtitle").onpointercancel=()=>{drag=null};
 addEventListener("resize",()=>{if($("debug").classList.contains("on"))placeDebug()});
-$("inject").onclick=async()=>{const[kind,amount]=$("damage").value.split(":");try{await command("inject",{kind,amount:Number(amount)});toast(`已注入：${$("damage").selectedOptions[0].text}。点“自检”看它自愈`)}catch(e){toast(tr(e.message))}};
+$("inject").onclick=async()=>{const[kind,amount]=$("damage").value.split(":");try{await command("inject",{kind,amount:Number(amount)});toast(`已注入：${$("damage").selectedOptions[0].text}。点“自检”看自愈`)}catch(e){toast(tr(e.message))}};
 $("errchart").onmousemove=hoverErr;
 $("errchart").onmouseleave=()=>{hoverI=null;$("tip").style.display="none";if(S)drawErr()};
 /* Short desktop screens: fold the event feed into the diagnosis card as a second tab. */

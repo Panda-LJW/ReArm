@@ -18,6 +18,13 @@ async function optional(name, mount) {
 
 await loadCss("main.css");
 
+// 专注阅读：状态的图标编码、动效收敛、按阶段弱化次要区域。纯样式模块。
+await optional("focus", async () => {
+  const response = await fetch(new URL("focus/focus.css", base), { method: "HEAD" });
+  if (!response.ok) throw new Error("样式文件不存在");
+  await loadCss("focus/focus.css");
+});
+
 // 数字孪生：数据源 → 孪生。两者只通过 JointFrame 相连。
 await optional("twin", async () => {
   const slot = document.getElementById("twin"), card = document.getElementById("twincard");

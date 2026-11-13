@@ -35,6 +35,8 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
 
   // 当前显示的读数向目标读数平滑靠拢；没有目标前停在配置的初始姿态。
   let shown = null, goal = null, mode = "waiting", laser = false, raf = 0, disposed = false, dirty = true;
+  // 系统设置了“减少动态效果”时不做过渡，直接到位
+  const calm = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const restView = [0, 40, -100];
 
   function draw() {
@@ -42,7 +44,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     let moving = false;
     if (goal) {
       if (!shown) shown = [...goal];
-      shown = shown.map((v, i) => { const d = goal[i] - v; if (Math.abs(d) < 0.02) return goal[i]; moving = true; return v + d * 0.18; });
+      shown = shown.map((v, i) => { const d = goal[i] - v; if (calm || Math.abs(d) < 0.02) return goal[i]; moving = true; return v + d * 0.18; });
     }
     const pose = shown || restView, offline = mode === "offline" || mode === "waiting";
     scene.setPose(panelToUrdf(config, pose), { laserOn: laser && !offline, dimmed: offline });
