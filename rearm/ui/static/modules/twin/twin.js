@@ -30,7 +30,8 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   scene.canvas.setAttribute("role", "img");
 
   const driven = config.panelMapping.map(m => config.joints.find(j => j.id === m.joint));
-  const labels = driven.map(j => { const el = document.createElement("div"); el.className = "twin-label"; labelsEl.appendChild(el); return el; });
+  // J1、J2 离得近：J1 的标签放左侧，其余放右侧，既不互相压住，也不挡左上角的状态提示
+  const labels = driven.map((j, i) => { const el = document.createElement("div"); el.className = "twin-label"; el.dataset.side = i === 0 ? "left" : "right"; labelsEl.appendChild(el); return el; });
 
   // 当前显示的读数向目标读数平滑靠拢；没有目标前停在配置的初始姿态。
   let shown = null, goal = null, mode = "waiting", laser = false, raf = 0, disposed = false, dirty = true;
@@ -49,7 +50,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     labels.forEach((el, i) => {
       const at = scene.project(driven[i].id);
       el.hidden = !at; if (!at) return;
-      el.style.transform = `translate(${Math.round(at[0])}px, ${Math.round(at[1])}px)`;
+      el.style.left = Math.round(at[0]) + "px"; el.style.top = Math.round(at[1]) + "px";
       el.textContent = shown ? `${driven[i].label.split(" ")[0]} ${signed(shown[i])}` : driven[i].label.split(" ")[0];
     });
     scene.canvas.setAttribute("aria-label", shown ? `机械臂三维姿态：${driven.map((j, i) => `${j.label} ${shown[i].toFixed(1)} 度`).join("，")}。数据状态：${MODE[mode].text}` : `机械臂三维模型，${MODE[mode].text}`);

@@ -1,0 +1,117 @@
+/* 路演模式（<html data-mode="show">）：按“会场最后一排看投影”的标准放大。
+   第一部分只覆盖 design tokens；第二部分是首页为突出四个数据格而做的栅格调整；
+   第三部分收掉次要信息。日常模式完全不受影响。 */
+
+/* —— 1. 变量：最小字号 18px，1080p 及以上按屏高再放大；提高文字与分隔线对比度 —— */
+html[data-mode="show"]{
+  --fs-min:clamp(18px,1.85vh,26px);
+  --fs-2xs:var(--fs-min);--fs-xs:var(--fs-min);--fs-sm:var(--fs-min);--fs-base:var(--fs-min);
+  --fs-md:calc(var(--fs-min) * 1.1);--fs-lg:calc(var(--fs-min) * 1.15);--fs-xl:calc(var(--fs-min) * 1.25);--fs-2xl:calc(var(--fs-min) * 1.4);
+  --fs-kpi:clamp(40px,6.6vh,84px);--fs-kpi-wide:var(--fs-kpi);
+  --fs-chart:var(--fs-min);--fs-chart-label:var(--fs-min);--fs-chart-empty:var(--fs-min);
+  --header-h:clamp(56px,6.2vh,76px);--gap:clamp(8px,1.1vh,14px);--pad:clamp(12px,1.5vh,20px);
+  --text:#f5f7fb;--sub:#c9d0db;--mute:#b3bcc9;--line:#2b313b;--line2:#404958;--grid:#262c35;
+}
+
+/* —— 2. 首页栅格：四个数据格通栏置顶；下面依次是靶面画面、机械臂模型、关节与事件 —— */
+@media(min-width:1081px){
+  html[data-mode="show"] main{padding:var(--gap) calc(var(--gap) * 1.4)}
+  html[data-mode="show"] #page-home.on{grid-template-rows:minmax(0,1.9fr) minmax(0,1fr)}
+  html[data-mode="show"] body.short #page-home.on{grid-template-rows:minmax(0,1.62fr) minmax(0,1fr)}
+  html[data-mode="show"] .row1{grid-template-columns:auto minmax(0,1fr) minmax(0,1.1fr);grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"kpis kpis kpis" "cam twin joints" "cam twin feed";gap:var(--gap)}
+  html[data-mode="show"] .side{display:contents}
+  html[data-mode="show"] .kpis{grid-area:kpis}
+  html[data-mode="show"] .cam{grid-area:cam;max-width:38vw}
+  html[data-mode="show"] .twincard{grid-area:twin}
+  html[data-mode="show"] .jointcard{grid-area:joints}
+  html[data-mode="show"] .feedcard{grid-area:feed}
+  html[data-mode="show"] body.short .row1{grid-template-rows:auto minmax(0,1fr);grid-template-areas:"kpis kpis kpis" "cam twin joints"}
+  /* 没有孪生模块时，关节与事件各占一列 */
+  html[data-mode="show"] body:not(.has-twin) .row1{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);grid-template-areas:"kpis kpis kpis" "cam joints feed" "cam joints feed"}
+  html[data-mode="show"] body.short:not(.has-twin) .row1{grid-template-areas:"kpis kpis kpis" "cam joints joints"}
+  html[data-mode="show"] .jointcard,html[data-mode="show"] .feedcard{min-height:0;overflow:hidden}
+}
+
+/* 四个数据格：视觉焦点。大号数字，说明文字允许折两行，不截断。 */
+html[data-mode="show"] .kpis .card{padding:calc(var(--pad) * .7) var(--pad) calc(var(--pad) * .8);border-top:3px solid var(--line2)}
+html[data-mode="show"] .kpi .k{color:var(--sub);letter-spacing:.5px}
+html[data-mode="show"] .kpi .v{line-height:1.08;margin-top:2px;font-weight:600;letter-spacing:-1.5px}
+html[data-mode="show"] .kpi .v small{font-size:var(--fs-xl);color:var(--sub);margin-left:8px;letter-spacing:0}
+html[data-mode="show"] .kpi .d{color:var(--sub);white-space:normal;overflow:visible;line-height:1.25;margin-top:4px}
+html[data-mode="show"] .kpi .v .goodc{color:var(--cyan)}
+html[data-mode="show"] .tile .v{font-size:calc(var(--fs-kpi) * .72);line-height:1.1;font-weight:600}
+html[data-mode="show"] .tile .v small{font-size:var(--fs-xl)}
+html[data-mode="show"] .tile .d{white-space:normal;overflow:visible;line-height:1.25}
+
+/* —— 3. 收掉次要信息，给大字腾地方 —— */
+html[data-mode="show"] .brand small,html[data-mode="show"] .vbtn .lbl,html[data-mode="show"] .chip.ver,
+html[data-mode="show"] #comphint,html[data-mode="show"] #compbox,html[data-mode="show"] #diagfold,html[data-mode="show"] #minorbtn,html[data-mode="show"] #diag .note,
+html[data-mode="show"] .twincard h3 .aside,html[data-mode="show"] .jointcard h3 .aside,html[data-mode="show"] .feedcard h3 .aside{display:none}
+html[data-mode="show"] body.short .chip.legend,html[data-mode="show"] body.short .card h3 .aside,html[data-mode="show"] body.short #diag table{display:none}
+html[data-mode="show"] .card h3{padding:calc(var(--pad) * .55) var(--pad);color:var(--text);margin-bottom:calc(var(--pad) * .6)}
+html[data-mode="show"] .card h3 .aside{color:var(--sub)}
+html[data-mode="show"] .card h3:before{width:4px;height:var(--fs-min);background:var(--accent)}
+html[data-mode="show"] header{gap:clamp(10px,1.1vw,20px);padding:0 calc(var(--gap) * 1.4)}
+html[data-mode="show"] .brand{font-size:var(--fs-xl)}
+html[data-mode="show"] nav button{padding:0 clamp(8px,.9vw,16px);height:var(--header-h);color:var(--sub)}
+html[data-mode="show"] .vbtn{min-width:0}
+html[data-mode="show"] .pill,html[data-mode="show"] .tag{padding:1px 8px}
+html[data-mode="show"] button{padding:.3em .8em}
+html[data-mode="show"] .dropdown{width:min(560px,90vw);max-height:70vh}
+html[data-mode="show"] .menu .dropdown{width:max-content}
+html[data-mode="show"] .vrow{grid-template-columns:auto 1fr auto}
+
+/* 摄像头上的芯片 */
+html[data-mode="show"] .chip{padding:.25em .6em}
+html[data-mode="show"] .chip:before{width:.5em;height:.5em;margin-right:.4em}
+html[data-mode="show"] .camera-status{max-width:calc(100% - 20px)}
+
+/* 关节：读数放大，刻度条加粗 */
+html[data-mode="show"] .joint{grid-template-columns:auto 1fr auto;gap:calc(var(--pad) * .8);margin:calc(var(--pad) * .5) 0}
+html[data-mode="show"] .joint .n{color:var(--text)}
+html[data-mode="show"] .joint .num{font-size:var(--fs-xl);min-width:5.2em}
+html[data-mode="show"] .bar{height:8px;border-radius:4px}
+html[data-mode="show"] .bar i{width:4px;height:24px;top:-8px;border-radius:2px}
+html[data-mode="show"] .envrow{gap:calc(var(--pad) * 1.2);color:var(--sub);margin-top:calc(var(--pad) * .5);padding-top:calc(var(--pad) * .5)}
+
+/* 事件：时间列加宽，圆点放大 */
+html[data-mode="show"] .ev{grid-template-columns:auto .6em 1fr;gap:.7em;padding:.35em 0;color:var(--text)}
+html[data-mode="show"] .ev time{color:var(--sub)}
+html[data-mode="show"] .ev i{width:.55em;height:.55em}
+
+/* 诊断：只留 码 / RMS / ΔBIC 三列，结论放大 */
+html[data-mode="show"] .concl{font-size:var(--fs-xl);font-weight:600}
+html[data-mode="show"] .diagt{table-layout:auto}
+html[data-mode="show"] .diagt col{width:auto!important}
+html[data-mode="show"] .diagt th:nth-child(2),html[data-mode="show"] .diagt td:nth-child(2),
+html[data-mode="show"] .diagt th:nth-child(4),html[data-mode="show"] .diagt td:nth-child(4){display:none}
+html[data-mode="show"] .diagt col:nth-child(2),html[data-mode="show"] .diagt col:nth-child(4){display:none}
+html[data-mode="show"] th{color:var(--sub)}
+html[data-mode="show"] th,html[data-mode="show"] td{padding:.3em .4em}
+html[data-mode="show"] .fix{padding:.05em .45em}
+html[data-mode="show"] .fixes{margin:.2em 0 .4em;gap:.3em}
+html[data-mode="show"] .legendline{gap:1.2em;color:var(--sub)}
+html[data-mode="show"] .legendline span:before{width:1.2em;height:3px}
+html[data-mode="show"] .tabs{gap:1em}
+html[data-mode="show"] .empty{color:var(--sub);padding:1em .3em}
+
+/* 数据总览：六格改成三列两行，表格不换行改为可横向滚动 */
+@media(min-width:1081px){
+  html[data-mode="show"] .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  html[data-mode="show"] .tiles .card{padding:calc(var(--pad) * .6) var(--pad)}
+  html[data-mode="show"] .ov2{grid-template-columns:minmax(0,2.3fr) minmax(0,1fr)}
+  html[data-mode="show"] #faultbars{max-height:none}
+  html[data-mode="show"] body.short .ovside{grid-template-rows:minmax(0,1fr)}
+  html[data-mode="show"] body.short .ovside .card:last-child{display:none}
+}
+html[data-mode="show"] .hbar{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto}
+html[data-mode="show"] .hbar .t{height:10px;border-radius:5px}
+html[data-mode="show"] #history td{padding:.4em .4em}
+/* 时间列让给更重要的结果和数字 */
+html[data-mode="show"] #history th:first-child,html[data-mode="show"] #history td:first-child{display:none}
+html[data-mode="show"] #history td:nth-child(3){white-space:normal}
+
+/* 开关按钮自身 */
+#modetoggle{white-space:nowrap}
+html[data-mode="show"] #modetoggle{border-color:var(--accent);color:var(--accent-2)}

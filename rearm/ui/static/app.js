@@ -3,7 +3,9 @@ const $=id=>document.getElementById(id);
 const V=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colors=()=>({line:V("--accent"),cyan:V("--cyan"),warn:V("--warn"),bad:V("--bad"),obs:V("--obs"),pred:V("--pred"),grid:V("--grid"),geo:V("--geo"),mute:V("--mute"),vline:V("--line2"),mono:V("--mono")});
 let K=colors();
-const px=n=>parseFloat(V(n))||10;
+/* Tokens may be clamp()/calc() expressions once a theme overrides them, so resolve them through a probe element. */
+const probe=document.createElement("i");probe.style.cssText="position:absolute;visibility:hidden;pointer-events:none";
+const px=n=>{if(!probe.isConnected)document.body.appendChild(probe);probe.style.fontSize=`var(${n})`;return parseFloat(getComputedStyle(probe).fontSize)||10};
 const chartFont=(n="--fs-chart",family=K.mono)=>px(n)+"px "+family;
 const PARAM={delta1:["δ1 J1 零点","°"],delta2:["δ2 J2 零点","°"],delta3:["δ3 J3 零点","°"],h:["h 肩高","mm"],L1:["L1 大臂","mm"],L2:["L2 小臂","mm"],e:["e 延长","mm"],beta:["β 激光俯仰","°"],gamma:["γ 激光偏摆","°"],x_b:["x_b 底座 X","mm"],y_b:["y_b 底座 Y","mm"],psi_b:["ψ_b 底座朝向","°"]};
 const CODE={H1:"J1 零点偏移",H2:"J2 零点偏移",H3:"末端延长变化",H4:"底座位姿变化",H6:"全参数重标定"};
@@ -260,7 +262,9 @@ function drawErr(){
   for(let i=1;i<rec.length;i++)if(rec[i].version_id!==rec[i-1].version_id&&rec[i].role!=="preview"&&rec[i-1].role!=="preview"){g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),base);g.stroke();
     if(X(i)-lastLabel>44*scale&&X(i)<w-pad.r-40*scale){g.fillStyle=K.mute;g.fillText(rec[i].version_id,X(i)+3*scale,pad.t+7*scale);lastLabel=X(i)}}
   g.setLineDash([5,4]);g.strokeStyle=K.warn;g.beginPath();g.moveTo(pad.l,Y(alarm));g.lineTo(w-pad.r,Y(alarm));g.stroke();g.setLineDash([]);
-  g.fillStyle=K.warn;g.textAlign="right";g.fillText("报警 "+f(alarm,0),w-pad.r,Y(alarm)-4*scale);g.textAlign="left";
+  /* A panel-coloured plate keeps the label readable when the error trace runs through it. */
+  const alarmText="报警 "+f(alarm,0),aw=g.measureText(alarmText).width;g.fillStyle=V("--panel");g.fillRect(w-pad.r-aw-4*scale,Y(alarm)-15*scale,aw+4*scale,12*scale);
+  g.fillStyle=K.warn;g.textAlign="right";g.fillText(alarmText,w-pad.r,Y(alarm)-4*scale);g.textAlign="left";
   const grad=g.createLinearGradient(0,pad.t,0,base);grad.addColorStop(0,"rgba(61,139,255,.28)");grad.addColorStop(1,"rgba(61,139,255,0)");
   g.fillStyle=grad;g.beginPath();vals.forEach((v,i)=>{const y=v==null?base:Y(v);i?g.lineTo(X(i),y):g.moveTo(X(i),y)});g.lineTo(X(vals.length-1),base);g.lineTo(X(0),base);g.closePath();g.fill();
   g.strokeStyle=K.line;g.lineWidth=1.5;g.lineJoin="round";g.beginPath();let on=false;vals.forEach((v,i)=>{if(v==null){on=false;return}on?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v));on=true});g.stroke();
