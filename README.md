@@ -45,6 +45,17 @@
 | `rearm/ui/static/index.html` | 页面结构与无障碍标记 |
 | `rearm/ui/static/app.css` | 深色主题、桌面/矮屏/手机布局 |
 | `rearm/ui/static/app.js` | hash 导航、局部渲染、命令确认、重连、中文错误与图表 |
+| `rearm/ui/static/tokens.css` | design tokens：颜色、字号、间距变量。主题和路演模式只覆盖这里的变量 |
+| `rearm/ui/static/modules/main.js` | 可选模块的装配处；任何一个模块缺失或出错都不影响主面板 |
+| `rearm/ui/static/modules/twin/` | 机械臂 3D 数字孪生：`arm-config.js` 参数、`kinematics.js` 正运动学、`scene.js` 渲染、`meshes/` 外形 |
+| `rearm/ui/static/modules/datasource/` | 孪生的数据源层：面板数据、内置模拟、下位机，统一输出 JointFrame |
+| `rearm/ui/static/modules/presentation/` | 路演模式（大屏投影）：`?mode=show` 或顶栏按钮 |
+| `rearm/ui/static/modules/focus/` | 专注阅读：状态的图标编码、动效收敛、按阶段引导注意力 |
+| `rearm/ui/static/vendor/` | 固定版本的 three.js 0.160.0（MIT），随仓库保存，不走 CDN |
+
+常用地址参数：`?mode=show` 路演模式；`?twin=sim` 孪生用内置模拟数据；`?twin=device&device=ws://主机:端口` 孪生接下位机遥测（联调前可用 `scripts/mock_device.py` 模拟）；`?twin=off` 关闭孪生；`?skin=simple` 只用简化外形。孪生可单独打开：`/static/modules/twin/demo.html`。
+
+下位机接口草案见 `docs/下位机接口文档.md`。界面验收脚本见 `scripts/ui_check/README.md`。2026-11-14 夜间无人值守改动的说明见 `docs/overnight/晨间验收报告.md`。
 
 首页和 `/static/` 资源使用 `Cache-Control: no-cache`，静态路由拒绝目录穿越。`POST /api/command/estop` 和 `POST /api/command/reset_estop` 分别急停与解除；`/api/state` 和 WebSocket 快照携带 `estop`、`laser_on`、`busy`、`active_command`、`heal_start`。
 
