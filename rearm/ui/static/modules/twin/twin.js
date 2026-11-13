@@ -13,7 +13,7 @@ const MODE = {
 };
 const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1) + "°";
 
-export async function createTwin(container, { config = ARM_CONFIG, forceFallback = false } = {}) {
+export async function createTwin(container, { config = ARM_CONFIG, forceFallback = false, skin = true } = {}) {
   container.classList.add("twin");
   container.innerHTML = `<div class="twin-stage"></div><div class="twin-status" role="status"></div><div class="twin-labels" aria-hidden="true"></div><div class="twin-note"></div>`;
   const stage = container.querySelector(".twin-stage"), statusEl = container.querySelector(".twin-status"), labelsEl = container.querySelector(".twin-labels"), noteEl = container.querySelector(".twin-note");
@@ -82,6 +82,10 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   observer.observe(stage);
 
   renderStatus(); schedule();
+  // 真实外形是锦上添花：后台加载，成功就换上，失败（文件缺失、无 WebGL）保持简化外形。
+  let skinState = "simple";
+  if (skin && scene.loadSkin) scene.loadSkin(new URL("./meshes/b601.json", import.meta.url)).then(() => { skinState = "mesh"; container.dataset.skin = "mesh"; schedule(); }, () => { skinState = "simple"; });
+  container.dataset.skin = skinState;
   return {
     renderer,
     // 喂一帧关节数据。字段缺失时保持原值，所以数据源可以只发变化的部分。
@@ -94,7 +98,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       schedule();
     },
     // 供测试和调试读取当前显示状态
-    state: () => ({ mode, shown: shown ? [...shown] : null, goal: goal ? [...goal] : null, laser, renderer, dirty }),
+    state: () => ({ mode, shown: shown ? [...shown] : null, goal: goal ? [...goal] : null, laser, renderer, dirty, skin: skinState }),
     refreshTheme() { scene.applyTheme(); schedule(); },
     dispose() { disposed = true; cancelAnimationFrame(raf); observer.disconnect(); scene.dispose(); container.replaceChildren(); container.classList.remove("twin"); },
   };

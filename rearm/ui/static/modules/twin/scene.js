@@ -10,6 +10,8 @@ function palette(el) {
     joint: cssVar(el, "--twin-joint", "#3d8bff"), finger: cssVar(el, "--twin-finger", "#e7eaf0"),
     edge: cssVar(el, "--twin-edge", "#7c8798"), grid: cssVar(el, "--twin-grid", "#2c323c"),
     laser: cssVar(el, "--twin-laser", "#ff6a4d"), pedestal: cssVar(el, "--twin-pedestal", "#1b2028"),
+    skinDark: cssVar(el, "--twin-skin-dark", "#39414e"), skinDarker: cssVar(el, "--twin-skin-darker", "#262c35"),
+    skinMetal: cssVar(el, "--twin-skin-metal", "#cdd4de"), skinTrim: cssVar(el, "--twin-skin-trim", "#8f99a8"),
   };
 }
 
@@ -30,6 +32,11 @@ export function createScene(container, config) {
 
   const materials = {}, edgeMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55 });
   for (const name of ["body", "plate", "joint", "finger", "pedestal"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: name === "plate" ? 0.55 : 0.2 });
+  // 真实外形（压缩网格）用的材质：平面着色，省掉法线数据，也让机加工件的棱面更清楚
+  for (const name of ["skinDark", "skinDarker", "skinMetal", "skinTrim", "skinPlate", "skinFinger"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: /Metal|Plate/.test(name) ? 0.5 : 0.15, flatShading: true });
+  // 网格文件里的材质名 → 上面的材质。实物配色与官方不同（照片为白色夹指），这里按中性色处理。
+  const SKIN = { matte_black: "skinDark", hardware_black: "skinDarker", anodized_grey: "skinPlate", carriage_grey: "skinPlate", metal: "skinMetal", rack_metal: "skinMetal", silver_trim: "skinMetal", seeed_yellow: "skinTrim", travel_stop_yellow: "skinTrim", finger_black: "skinFinger" };
+  const THEME = { skinPlate: "plate", skinFinger: "finger" };
   const gridMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 });
   const laserMaterial = new THREE.LineBasicMaterial({ transparent: true });
   const spotMaterial = new THREE.MeshBasicMaterial({ transparent: true });
@@ -37,6 +44,7 @@ export function createScene(container, config) {
   // 小工具：造一个带描边的零件并挂到 group 上。
   function part(group, geometry, material, at = [0, 0, 0], rotate = null) {
     const mesh = new THREE.Mesh(geometry, materials[material]);
+    mesh.userData.simple = material !== "pedestal"; // 简化外形的零件；换上真实外形后隐藏
     mesh.position.set(...at);
     if (rotate) mesh.rotation.set(...rotate);
     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 30), edgeMaterial));
@@ -116,7 +124,7 @@ export function createScene(container, config) {
 
   function applyTheme() {
     const p = palette(container);
-    for (const name of Object.keys(materials)) materials[name].color.set(p[name]);
+    for (const name of Object.keys(materials)) materials[name].color.set(p[THEME[name] || name]);
     edgeMaterial.color.set(p.edge); gridMaterial.color.set(p.grid); laserMaterial.color.set(p.laser); spotMaterial.color.set(p.laser);
   }
 
@@ -153,6 +161,28 @@ export function createScene(container, config) {
     return [(v.x + 1) / 2 * canvas.clientWidth, (1 - v.y) / 2 * canvas.clientHeight];
   }
 
+  // 换上真实外形：读清单和二进制顶点，挂到各自的连杆坐标系下。失败就保持简化外形。
+  let skinned = false;
+  async function loadSkin(manifestUrl) {
+    const manifest = await (await fetch(manifestUrl)).json();
+    const buffer = await (await fetch(new URL("b601.bin", manifestUrl))).arrayBuffer();
+    const added = [];
+    for (const item of manifest.parts) {
+      const group = item.frame === "base" ? world : links[item.frame];
+      if (!group || !SKIN[item.material]) continue;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(buffer, item.positions.offset, item.positions.count), 3));
+      geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(buffer, item.indices.offset, item.indices.count), 1));
+      const mesh = new THREE.Mesh(geometry, materials[SKIN[item.material]]);
+      if (item.side) mesh.position.y = (item.side === "left" ? 1 : -1) * shape.finger.opening / 2;
+      added.push([group, mesh]);
+    }
+    if (!added.length) throw new Error("外形文件里没有可用的零件");
+    world.traverse(o => { if (o.userData.simple) o.visible = false; });
+    for (const [group, mesh] of added) group.add(mesh);
+    skinned = true;
+  }
+
   function resize() {
     const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
     renderer.setSize(w, h, false); camera.aspect = w / h;
@@ -163,7 +193,7 @@ export function createScene(container, config) {
 
   applyTheme(); resize();
   return {
-    canvas, setPose, project, resize, render, applyTheme,
+    canvas, setPose, project, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
     orbit(dAzimuth, dElevation) { view.azimuth += dAzimuth; view.elevation = Math.min(1.35, Math.max(-0.1, view.elevation + dElevation)); },
     zoom(factor) { view.distance = Math.min(3, Math.max(0.7, view.distance * factor)); },
     resetView() { Object.assign(view, home); },

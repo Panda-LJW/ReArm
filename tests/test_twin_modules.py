@@ -189,3 +189,24 @@ def test_mock_device_telemetry_is_accepted_by_the_device_source():
         assert lo <= value <= hi
     # 只监听回环地址，不对外开放。
     assert 'asyncio.run(main("127.0.0.1"' in (ROOT / 'scripts/mock_device.py').read_text()
+
+
+def test_mesh_skin_manifest_matches_binary_and_is_optional():
+    meshes = MODULES / 'twin/meshes'
+    manifest = json.loads((meshes / 'b601.json').read_text())
+    size = (meshes / 'b601.bin').stat().st_size
+    assert size < 3_000_000 and manifest['triangles'] < 120_000   # 轻量：整套外形不到 3 MB
+    frames = {'base', 'tool'} | {f'joint{i}' for i in range(1, 7)}
+    end = 0
+    for part in manifest['parts']:
+        assert part['frame'] in frames
+        for key, width in (('positions', 4), ('indices', 4)):
+            block = part[key]
+            assert block['offset'] == end and block['count'] % 3 == 0
+            end = block['offset'] + block['count'] * width
+    assert end == size
+    assert {p['frame'] for p in manifest['parts']} == frames      # 每个连杆都有外形
+    assert 'CERN-OHL-W-2.0' in (meshes / 'NOTICE.md').read_text()
+    # 外形加载失败时保持简化外形，不影响姿态显示。
+    twin = (MODULES / 'twin/twin.js').read_text()
+    assert 'scene.loadSkin(' in twin and '() => { skinState = "simple"; }' in twin

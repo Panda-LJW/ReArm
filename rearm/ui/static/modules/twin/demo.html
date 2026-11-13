@@ -31,7 +31,7 @@
 import { createTwin } from "./twin.js";
 import { createSource } from "../datasource/index.js";
 const params = new URLSearchParams(location.search), kind = params.get("source") || "sim";
-const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d" });
+const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple" });
 window.demo = { twin };
 document.getElementById("src").textContent = "数据源：" + ({ sim: "内置模拟", manual: "手动滑块", device: "下位机 " + (params.get("device") || "") }[kind] || kind);
 if (kind === "manual") {

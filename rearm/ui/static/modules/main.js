@@ -32,7 +32,7 @@ await optional("twin", async () => {
   const [{ createTwin }, { sourceFromParams }] = await Promise.all([import("./twin/twin.js"), import("./datasource/index.js"), loadCss("twin/twin.css")]);
   card.hidden = false; document.body.classList.add("has-twin");
   try {
-    const twin = await createTwin(slot), source = sourceFromParams(params);
+    const twin = await createTwin(slot, { skin: params.get("skin") !== "simple" }), source = sourceFromParams(params);
     source.subscribe(frame => twin.update(frame));
     source.start();
     document.addEventListener("rearm:theme", () => twin.refreshTheme());
