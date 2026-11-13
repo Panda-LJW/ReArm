@@ -2,6 +2,7 @@ width: 1000
 height: 760
 pixels_per_mm: 2.0
 marker_pixels: 60
+marker_size_mm: 30.0
 marker_ids: [0, 1, 2, 3]
 marker_centers_mm: [[-190, -128.5], [190, -128.5], [190, 128.5], [-190, 128.5]]
 dictionary: DICT_4X4_50
