@@ -1,0 +1,22 @@
+// End-to-end: mock device (WS) → device-source → twin, on the standalone demo page and inside the panel.
+import { createRequire } from "module";
+import { readdirSync } from "fs";
+import { homedir } from "os";
+const require = createRequire(import.meta.url);
+const npx = homedir() + "/.npm/_npx";
+const pc = readdirSync(npx).map(d => `${npx}/${d}/node_modules/playwright-core`).find(p => { try { require.resolve(p); return true } catch { return false } });
+const { chromium } = require(pc);
+const [chrome, base, ws] = process.argv.slice(2);
+const browser = await chromium.launch({ executablePath: chrome, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const p = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
+await p.goto(`${base}/static/modules/twin/demo.html?source=device&device=${encodeURIComponent(ws)}`); await p.waitForTimeout(1500);
+const a = await p.evaluate(() => window.demo.twin.state()); await p.waitForTimeout(2200);
+const b = await p.evaluate(() => window.demo.twin.state());
+console.log("demo+device:", a.mode, a.goal?.map(v => +v.toFixed(1)), "→", b.goal?.map(v => +v.toFixed(1)), "moved", JSON.stringify(a.goal) !== JSON.stringify(b.goal));
+await p.goto(`${base}/?twin=device&device=${encodeURIComponent(ws)}#home`); await p.waitForTimeout(2500);
+const c = await p.evaluate(() => ({ s: window.__rearmTwin.twin.state(), kind: window.__rearmTwin.source.kind, chip: document.querySelector(".twin-status").textContent, panelJ1: document.querySelector("#joints .joint .num").textContent }));
+console.log("panel+device:", c.kind, c.s.mode, c.chip, c.s.goal?.map(v => +v.toFixed(1)), "panel J1 readout stays from panel data:", c.panelJ1);
+console.log("waiting for the mock to exit …"); await p.waitForTimeout(7000);
+const d = await p.evaluate(() => ({ s: window.__rearmTwin.twin.state(), chip: document.querySelector(".twin-status").textContent, note: document.querySelector(".twin-note").textContent }));
+console.log("after device gone:", d.s.mode, d.chip, "|", d.note, "| last pose kept:", d.s.shown?.map(v => +v.toFixed(1)));
+await browser.close();
