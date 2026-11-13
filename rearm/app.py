@@ -87,3 +87,22 @@ def build_app(config: Settings | None = None, data_dir="runtime", sim=True, seed
         CalibrationGuard(config, geometry), ResidualDataset(config, geometry), TemporalTrainer(config),
         NumericalIK(config, geometry), pool, probe_pool, residual_loader, lambda: GPResidual(config),
         lambda residual: SelfModel(geometry, residual), residual_saver, inject)
+
+
+def serve_ui():
+    import argparse
+    import uvicorn
+    from dataclasses import replace
+    from rearm.ui.server import create_server
+    parser = argparse.ArgumentParser(description="Local ReArm control panel")
+    parser.add_argument("--sim", action="store_true", required=True)
+    parser.add_argument("--data-dir", default="runtime")
+    parser.add_argument("--nongeometric", action="store_true", help="enable backlash, sag and thermal drift")
+    args = parser.parse_args()
+    config = load_config(Path(__file__).resolve().parents[1] / "config")
+    if args.nongeometric:
+        config = replace(config, sim=config.sim | {"nongeometric": True})
+    controller = build_app(config, data_dir=args.data_dir, sim=args.sim)
+    state = controller.snapshot() | {"history_limit": controller.config.thresholds["ui"]["history"]}
+    server = create_server(controller, controller.bus, state)
+    uvicorn.run(server, host=controller.config.thresholds["ui"]["host"], port=controller.config.thresholds["ui"]["port"])

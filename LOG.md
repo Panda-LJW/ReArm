@@ -31,3 +31,13 @@
 - 验证：全套当前 23 passed，其中视觉验证透视点误差 <=0.6 mm、非零畸变点恢复和相机生命周期；真机未联调。
 - 遗留：正式 100 次每类验收和浏览器画面检查。
 - 回滚：回退 M4 提交。
+
+## 2026-11-13 M5 面板、命令与验收器 [M5-20261113]
+- 目标：完成 FastAPI/WebSocket 原生单页面板、五个 CLI、固定种子全量评估与证据输出。
+- 文件：ui/*、scripts/*、app.py、tests/test_ui_architecture.py、tests/test_config_contracts.py、配置校验与阈值。
+- 决策：UI 订阅事件更新，动作通过 Protocol 入口；关闭远程 CDN 文档页；eval 的未报警样本保留在分母，失败返回 1；审计姿势独立于拟合和四发护栏。
+- 验证：HTTP 和 WebSocket ASGI 测试通过；CLI 姿势池生成 240+84 个姿势，demo 恢复发数 14/3/3；采集 300 发报警 0 次，GP 留出 1.4635→0.1535 mm（该 CLI 运行）。
+- 排障：ASGI 测试接收器在旧 spec 分支忙循环，修为准确声明 spec 2.4；正式服务代码未需绕过。
+- 环境限制：127.0.0.1:8000 监听被 sandbox 拒绝；CUA 返回 browser access host unavailable。已保存实测状态和离线预览 HTML，但画面未验证，不宣称浏览器联调完成。
+- 遗留：正式每类 100 次评估、README 和最终审查。
+- 回滚：回退 M5 提交；保留 M1–M4 与用户 docs。

@@ -11,9 +11,8 @@ class AnomalyDetector:
     def update(self, shot: Shot) -> bool:
         error = np.inf if shot.residual is None else float(np.linalg.norm(shot.residual))
         self.errors.append(error)
-        # Require a complete run of suspect observations: a solitary outlier is discarded.
+        # A complete median window suppresses one isolated outlier without hiding a persistent shift.
         return (len(self.errors) == self.errors.maxlen
-                and all(e > self.config["alarm_mm"] for e in self.errors)
                 and np.median(self.errors) > self.config["alarm_mm"])
 
     def reset(self) -> None:

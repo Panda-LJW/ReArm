@@ -120,6 +120,7 @@ class Controller:
                 self.detector.reset()
                 self.transition(State.NORMAL)
                 self.last_recovery_shots = self.sequence-start
+                self.emit("snapshot", snapshot=self.snapshot())
                 return
             self.transition(State.DIAGNOSE)
             fit_options = self.config.thresholds["fit"]
@@ -194,7 +195,8 @@ class Controller:
             return jsonable({"state": self.state, "head": self.store.head(), "versions": self.store.list(),
                 "recent": list(self.recent), "diagnosis": self.last_diagnosis,
                 "guard": self.last_guard, "training": self.last_training,
-                "alarms": self.alarms, "shots": self.sequence, "simulation": self.damage_callback is not None})
+                "alarms": self.alarms, "shots": self.sequence, "history_limit": self.config.thresholds["ui"]["history"],
+                "simulation": self.damage_callback is not None})
 
     def command(self, name, payload):
         with self.lock:

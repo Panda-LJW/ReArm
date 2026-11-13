@@ -43,7 +43,10 @@ class SimArm:
         c = self.config.sim
         if c["nongeometric"]:
             # Backlash is signed by approach; sag depends on reach and live load.
-            reach = np.cos(np.deg2rad(self.q[1]))
+            theta2 = np.deg2rad(self.q[1] + self.true_params.delta2)
+            total = theta2 + np.deg2rad(self.q[2] + self.true_params.delta3)
+            reach = (self.true_params.L1 * np.cos(theta2) + (self.true_params.L2 + self.true_params.e)
+                     * np.cos(total)) / (self.true_params.L1 + self.true_params.L2 + self.true_params.e)
             spot += np.array([c["backlash_mm"] * state.direction[0],
                 c["backlash_mm"] * state.direction[1] + c["sag_mm"] * self.load * (1 + reach)
                 + c["drift_mm_per_degree"] * (state.temperature - c["ambient_c"])])
