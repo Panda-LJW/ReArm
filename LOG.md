@@ -41,3 +41,11 @@
 - 环境限制：127.0.0.1:8000 监听被 sandbox 拒绝；CUA 返回 browser access host unavailable。已保存实测状态和离线预览 HTML，但画面未验证，不宣称浏览器联调完成。
 - 遗留：正式每类 100 次评估、README 和最终审查。
 - 回滚：回退 M5 提交；保留 M1–M4 与用户 docs。
+
+## 2026-11-13 M6 诊断统计修正与验收复跑 [M6-20261113]
+- 目标：核查首轮完整验收中 J1 诊断 94/100 的真实失败，保留首轮证据。
+- 文件：diagnoser.py、thresholds.yaml、config.py、tests/test_evo.py、tests/test_residual_controller.py、README.md、reports/initial_evaluation/*。
+- 根因与决策：连续参数 BIC 不应对部分假设预先量化；统一使用传感器测量方差的已知方差高斯 BIC（SSE/sigma²+k log n），sigma=0.12 mm 与配置测量标准差相同。20 发预算内增加初始诊断信息，不更改任何验收界限；基线靶点扩大到整个 A3 靶面，无边缘排除。
+- 验证：首轮 800 次完整结果保存在 initial_evaluation/；连续 BIC 单独复测 J1 91/100，扩充观测后 93/100，未冒充达标。共享测量方差在同一批留存观测上回算 95/100，最终端到端全量正在重跑，以其结果为准。
+- 遗留：物理不可观测/不可辨识部分仍须如实披露；浏览器画面仍未验证。
+- 回滚：M5 为首轮实现回滚点；M6 保留原实测证据和诊断实验记录。

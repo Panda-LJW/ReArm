@@ -19,10 +19,16 @@ class Diagnoser:
         if n < 2:
             raise ValueError("no measured points for diagnosis")
         ranked = []
-        floor = self.config.thresholds["fit"]["noise_floor_mm"] ** 2
+        # All hypotheses explain the SAME sensor, hence share its configured
+        # measurement variance. Gaussian known-variance BIC (constant omitted):
+        # -2 log L + k log n = SSE / sigma^2 + k log n.
+        variance = self.config.thresholds["fit"]["measurement_sigma_mm"] ** 2
         for name, members, free in models:
-            fit = self.fitter.fit(reference, shots, free, snap=True)
-            bic = n * np.log(max(fit.sse / n, floor)) + len(free) * np.log(n)
+            # BIC compares continuous fits with k continuous degrees of freedom.
+            # Snapping before scoring unfairly constrains H1/H2 while leaving H4
+            # free to fit measurement noise. Quantize only the selected calibration.
+            fit = self.fitter.fit(reference, shots, free, snap=False)
+            bic = fit.sse / variance + len(free) * np.log(n)
             ranked.append(Hypothesis(name, members, fit, float(bic)))
         ranked.sort(key=lambda h: h.bic)
         best = ranked[0]

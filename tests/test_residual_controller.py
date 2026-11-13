@@ -77,3 +77,16 @@ def test_zero_save_load(tmp_path):
     zero.save(tmp_path / "zero.json")
     zero.load(tmp_path / "zero.json")
     np.testing.assert_equal(zero.predict(np.zeros(8))[0], [0, 0])
+
+
+def test_retraining_without_improvement_keeps_head(config,tmp_path):
+    config=replace(config,sim=config.sim|{"noise_mm":0,"nongeometric":False})
+    app=build_app(config,tmp_path)
+    original=app.store.head().id
+    for q in app.probe_pool:
+        app.shoot(q)
+    report=app.retrain()
+    assert report.old_median==report.new_median==0
+    assert not report.accepted
+    assert app.store.head().id==original
+    assert list((tmp_path/"residuals").glob("*.npz"))==[]

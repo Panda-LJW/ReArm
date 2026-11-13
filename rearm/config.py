@@ -34,7 +34,7 @@ def load_config(root: str | Path = "config") -> Settings:
     required = {
         "detector": ("window", "alarm_mm"), "recognizer": ("probes", "rms_mm", "runner_up_ratio"),
         "fit": ("huber_mm", "regularization", "max_nfev", "multistarts_deg", "snap_step_deg",
-                "snap_tolerance_deg", "snap_accept_mm", "restart_stop_rms_mm", "noise_floor_mm",
+                "snap_tolerance_deg", "snap_accept_mm", "restart_stop_rms_mm", "noise_floor_mm", "measurement_sigma_mm",
                 "initial_shots", "active_shots", "baseline_shots", "baseline_freeze"),
         "guard": ("poses", "median_mm", "reduction", "bound_tolerance"),
         "residual": ("cap_mm", "holdout_fraction", "min_samples", "max_samples", "length_scale",
@@ -59,7 +59,7 @@ def load_config(root: str | Path = "config") -> Settings:
         check_finite(value, name)
     for section, keys in {
         "detector": ("window", "alarm_mm"), "recognizer": ("probes", "rms_mm"),
-        "fit": ("max_nfev", "huber_mm", "initial_shots", "baseline_shots", "snap_step_deg"),
+        "fit": ("max_nfev", "huber_mm", "initial_shots", "baseline_shots", "snap_step_deg", "measurement_sigma_mm"),
         "guard": ("poses", "median_mm"), "residual": ("cap_mm", "min_samples", "max_samples", "length_scale", "noise_mm", "signal_mm"),
         "pool": ("samples", "size", "jacobian_step", "condition_epsilon"),
         "ik": ("starts", "max_nfev", "tolerance_mm"), "numeric": ("epsilon", "optimizer_tolerance"),
