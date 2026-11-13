@@ -54,13 +54,14 @@ main{max-width:1480px;margin:0 auto;padding:14px 20px 28px}
 .row2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
 .cam{position:relative;background:var(--video);border-radius:var(--radius);overflow:hidden;aspect-ratio:var(--cam-ar,1000/760);border:1px solid var(--line)}
 .cam img,.cam svg{position:absolute;inset:0;width:100%;height:100%}.cam img{object-fit:contain}
-.cam.sim img{filter:brightness(.42) contrast(1.25) saturate(0)}
+.cam.sim img{filter:brightness(.58) contrast(1.15) saturate(0)}
 .cam:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
 .chip{position:absolute;z-index:2;padding:4px 9px;border-radius:5px;font-size:12px;font-weight:500;background:rgba(8,10,12,.78);border:1px solid rgba(255,255,255,.08);color:var(--text);backdrop-filter:blur(4px)}
 .chip.state{left:10px;top:10px}.chip.ver{right:10px;top:10px;font-weight:400;color:var(--sub);font-family:var(--mono)}
 .chip.err{right:10px;bottom:10px;font-family:var(--mono)}.chip.legend{left:10px;bottom:10px;font-weight:400;font-size:11px;color:var(--sub)}
 .chip:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--mute)}
 .chip.ver:before,.chip.legend:before{display:none}
+.chip.legend i{font-style:normal;margin:0 5px 0 12px}.chip.legend i:first-child{margin-left:0;color:var(--pred);font-weight:700}.chip.legend i.ld{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--obs);vertical-align:1px}.chip.legend i.dim{opacity:.4}
 .s-ok:before{background:var(--cyan)}.s-busy{color:var(--warn)}.s-busy:before{background:var(--warn);animation:pulse 1s infinite}.s-bad{color:var(--bad)}.s-bad:before{background:var(--bad)}.s-info:before{background:var(--accent)}
 @keyframes pulse{50%{opacity:.25}}
 .side{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;min-width:0;height:0;min-height:100%}
@@ -91,10 +92,19 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
 .ev time{color:var(--mute);font-family:var(--mono);font-size:11px}.ev i{width:6px;height:6px;border-radius:50%;background:var(--mute);display:inline-block}
 .ev i.ok{background:var(--cyan)}.ev i.bad{background:var(--bad)}.ev i.busy{background:var(--warn)}.ev i.info{background:var(--accent)}
 .debug{margin-top:12px;display:none}.debug.on{display:block}.debug .card{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-style:dashed;padding:12px 14px}
-.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-.tiles .card{border:none;border-radius:0;padding:16px}
-.tile .k{color:var(--mute);font-size:11px;letter-spacing:.3px}.tile .v{font-size:26px;font-weight:500;margin-top:6px;font-family:var(--mono);letter-spacing:-.5px}.tile .v small{font-size:12px;color:var(--mute);font-weight:400;margin-left:4px;font-family:inherit}.tile .d{font-size:11px;color:var(--mute);margin-top:2px}
-.ov2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.tiles .card{border:none;border-radius:0;padding:12px 14px}
+.tile .k{color:var(--mute);font-size:11px;letter-spacing:.3px}.tile .v{font-size:22px;font-weight:500;margin-top:6px;font-family:var(--mono);letter-spacing:-.5px}.tile .v small{font-size:12px;color:var(--mute);font-weight:400;margin-left:4px;font-family:inherit}.tile .d{font-size:11px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov2{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:12px;margin-top:12px}.ovside{display:grid;gap:12px;min-width:0;align-content:start}
+#history{overflow:auto}#history th{position:sticky;top:0;background:var(--panel);z-index:1}#history td{padding:8px 6px}
+.tag.cy{background:rgba(63,200,232,.12);color:var(--cyan)}
+[hidden]{display:none!important}
+.fixes{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px;align-items:center}.fix{padding:2px 8px;border-radius:4px;background:var(--accent-bg);border:1px solid rgba(61,139,255,.3);font-size:12px;white-space:nowrap}
+.morefix{border:none;background:none;padding:2px 4px;color:var(--sub);font-size:12px;text-decoration:underline dotted;text-underline-offset:3px}.morefix:hover{background:none;color:var(--text)}
+.tip{position:fixed;display:none;pointer-events:none;z-index:30;background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:5px 9px;font-size:11px;color:var(--sub);line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5);white-space:nowrap}.tip b{color:var(--text);font-weight:500;font-family:var(--mono);margin-right:6px}
+.tabs{display:none;gap:12px}.tabs button{border:none;background:none;padding:0;border-radius:0;color:var(--mute);font-size:12px;letter-spacing:.3px}.tabs button.on{color:var(--text)}.tabs button:hover{background:none;color:var(--text)}
+#feedslot{display:none;flex-direction:column;flex:1;min-height:0}
+.hint{color:var(--mute);font-size:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .hbar{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;margin:9px 0;color:var(--sub)}.hbar .t{height:6px;background:var(--grid);border-radius:3px;overflow:hidden}.hbar .t i{display:block;height:100%;background:var(--accent)}
 .doc{max-width:980px;padding:6px 24px 20px}.doc h1{font-size:19px;margin:14px 0 12px;font-weight:600}.doc h2{font-size:15px;margin:24px 0 8px;font-weight:600}.doc h3{font-size:13px;margin:16px 0 6px}
 .doc table{margin:6px 0 10px}.doc td{white-space:normal;color:var(--sub)}.doc td:first-child{color:var(--text);font-family:var(--mono);font-size:12px}.doc p,.doc li{color:var(--sub)}.doc b{color:var(--text)}
@@ -135,14 +145,19 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
   .comp{margin-top:8px;padding-top:8px}
   #page-overview.on{grid-template-rows:auto minmax(0,1fr)}
   .ov2{margin:0;min-height:0}.ov2 .card{display:flex;flex-direction:column;min-height:0}
-  #faultbars{flex:1;min-height:0;overflow:auto}
+  #faultbars{max-height:132px;overflow:auto}#history{flex:1;min-height:0;margin-right:-8px;padding-right:8px}
+  .ovside{min-height:0;grid-template-rows:auto minmax(0,1fr);align-content:stretch}
+  body.short #page-home.on{grid-template-rows:minmax(0,1.3fr) minmax(0,1fr)}
+  body.short .feedcard{display:none}body.short .side{grid-template-rows:auto minmax(0,1fr)}
+  body.short .tabs{display:flex}body.short #diagtitle{display:none}
+  body.short.tab-feed #diag{display:none}body.short.tab-feed #feedslot{display:flex}
   #page-codes.on{grid-template-rows:minmax(0,1fr)}
   .docgrid{min-height:0;height:100%}.docgrid .doc{overflow:auto;min-height:0}
 }
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}::-webkit-scrollbar-track{background:transparent}
-@media(max-width:1080px){.row1{grid-template-columns:1fr}.side{height:auto;min-height:0}.feed{max-height:280px}.row2{grid-template-columns:1fr 1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1080px){.row1{grid-template-columns:1fr}.side{height:auto;min-height:0}.feed{max-height:280px}.row2{grid-template-columns:1fr 1fr}.tiles{grid-template-columns:repeat(3,1fr)}.ov2{grid-template-columns:1fr}}
 @media(max-width:720px){header{flex-wrap:wrap;height:auto;padding:8px 16px;gap:8px}nav{order:3;width:100%;margin:0}nav button{padding:8px 10px}
-  main{padding:12px 16px}.row2,.ov2{grid-template-columns:1fr}.vbtn{min-width:0}.vbtn .lbl{display:none}.dropdown{width:min(380px,calc(100vw - 32px))}.brand small{display:none}.hbar{grid-template-columns:110px 1fr 32px}.chip.legend{display:none}#conn{display:none}.side{grid-template-rows:auto}}
+  main{padding:12px 16px}.row2,.ov2{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}.vbtn{min-width:0}.vbtn .lbl{display:none}.dropdown{width:min(380px,calc(100vw - 32px))}.brand small{display:none}.hbar{grid-template-columns:110px 1fr 32px}.chip.legend{display:none}#conn{display:none}.side{grid-template-rows:auto}}
 </style>
 </head>
 <body>
@@ -179,7 +194,7 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
       <div class="chip state s-ok" id="chipstate">待连接</div>
       <div class="chip ver" id="chipver">—</div>
       <div class="chip err s-ok" id="chiperr">—</div>
-      <div class="chip legend">✕ 预测落点　● 实测落点　· 近期落点</div>
+      <div class="chip legend"><i>✕</i>预测落点<i class="ld"></i>实测落点<i class="ld dim"></i>近期落点</div>
     </div>
     <div class="side">
       <div class="kpis">
@@ -193,7 +208,7 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
         <div id="joints"></div>
         <div class="envrow"><span>负载 <b id="e-load">—</b></span><span>温度 <b id="e-temp">—</b></span><span>电压 <b id="e-volt">—</b></span></div>
       </div>
-      <div class="card feedcard">
+      <div class="card feedcard" id="feedcard">
         <h3>最近事件<span class="aside">本次运行</span></h3>
         <div class="feed" id="feed"><div class="empty">还没有事件</div></div>
       </div>
@@ -202,19 +217,21 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
 
   <div class="row2">
     <div class="card">
-      <h3>瞄准误差<span class="aside">每一发 · mm</span></h3>
+      <h3>瞄准误差<span class="aside">每一发 · mm · 对数刻度</span></h3>
       <div class="chartbox"><canvas id="errchart"></canvas></div>
       <div class="legendline"><span style="--c:var(--accent)">误差</span><span style="--c:var(--warn)">报警阈值</span><span style="--c:var(--line2)">版本切换</span></div>
     </div>
     <div class="card">
-      <h3>诊断候选<span class="aside" id="diagaside"></span></h3>
+      <h3><span class="tabs" id="dtabs"><button data-t="diag" class="on">诊断候选</button><button data-t="feed">最近事件</button></span><span id="diagtitle">诊断候选</span><span class="aside" id="diagaside"></span></h3>
+      <div id="feedslot"></div>
       <div id="diag"><div class="empty">还没有诊断。发现异常后，这里会列出所有候选故障码及拟合数据。</div></div>
     </div>
     <div class="card">
       <h3>学习效果<span class="aside">已启用版本 · 留出误差中位数 mm</span></h3>
       <div class="chartbox"><canvas id="learnchart"></canvas></div>
-      <div class="legendline"><span style="--c:var(--accent)">当前模型</span><span style="--c:var(--geo)">只用几何</span></div>
-      <div class="comp">
+      <div class="legendline"><span style="--c:var(--accent)">当前模型</span><span style="--c:var(--geo)" id="lg-geo">只用几何</span></div>
+      <div class="hint" id="comphint">还没学细节补偿。打靶数据攒够后，到右上角 ⋯ 里点“重训补偿”。</div>
+      <div class="comp" id="compbox">
         <div>补偿模型<b id="c-id">未学习</b></div>
         <div>只用几何<b class="num" id="c-geo">—</b></div>
         <div>几何 + 补偿<b class="num" id="c-new">—</b></div>
@@ -227,8 +244,12 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
 <section class="page" id="page-overview">
   <div class="tiles" id="tiles"></div>
   <div class="ov2">
-    <div class="card"><h3>各故障码出现次数<span class="aside">自愈成功时的诊断结论</span></h3><div id="faultbars"></div></div>
-    <div class="card"><h3>每次恢复用了几发<span class="aside">从报警到恢复</span></h3><div class="chartbox"><canvas id="healchart"></canvas></div></div>
+    <div class="card"><h3>历次自愈记录<span class="aside">本次运行 · 最新在上</span></h3><div id="history"></div></div>
+    <div class="ovside">
+      <div class="card"><h3>各故障码出现次数<span class="aside">自愈成功时的诊断结论</span></h3><div id="faultbars"></div></div>
+      <div class="card"><h3>每次自愈用了几发<span class="aside">从报警到结束</span></h3><div class="chartbox"><canvas id="healchart"></canvas></div>
+        <div class="legendline"><span style="--c:var(--cyan)">认出旧伤</span><span style="--c:var(--accent)">诊断修复</span><span style="--c:var(--bad)">被护栏拦下</span></div></div>
+    </div>
   </div>
 </section>
 
@@ -250,6 +271,7 @@ tr.best td{background:var(--accent-bg);color:var(--text)}tr.best td:first-child{
   </div>
 
 <div class="mask" id="mask"><div class="modal" role="dialog" aria-modal="true" id="modal"></div></div>
+<div class="tip" id="tip"></div>
 <div class="toast" id="toast"><span id="toastmsg"></span><button id="toastbtn" hidden>撤销</button></div>
 
 <script>
@@ -273,21 +295,28 @@ function evText(e){const d=e.data||{};switch(e.kind){
   case"manual_switch":return["info",`手动${d.undo?"撤销":"切换"} ${d.from} → ${d.to}${d.forced?"（强制）":""}`];}
   return["",e.kind]}
 function renderFeed(){const ev=(S.events||[]).filter(e=>e.kind!=="rollback").slice(-40).reverse();
-  $("feed").innerHTML=ev.length?ev.map(e=>{const[c,t]=evText(e);return `<div class="ev"><time>${new Date(e.timestamp*1000).toLocaleTimeString("zh-CN",{hour12:false})}</time><i class="${c}"></i><span>${esc(t)}</span></div>`}).join(""):'<div class="empty">还没有事件</div>'}
-let diagOpen=false,S=null,busy=false,healStart=null,imgPending=false,imgQueued=false,undoTimer=null,modalVersion=null,modalErr="",docLoaded=false,raf=0;
+  const key=ev.length+":"+(ev.length?ev[0].timestamp:0);if(key===feedKey)return;feedKey=key;
+  $("feed").innerHTML=ev.length?ev.map(e=>{const[c,t]=evText(e);return `<div class="ev"><time>${clock(e.timestamp)}</time><i class="${c}"></i><span>${esc(t)}</span></div>`}).join(""):'<div class="empty">还没有事件</div>'}
+let diagOpen=false,minorOpen=false,diagKey="",feedKey="",histKey="",hoverI=null,EC=null,S=null,busy=false,healStart=null,imgPending=false,imgQueued=false,undoTimer=null,modalVersion=null,modalErr="",docLoaded=false,raf=0;
 
 const f=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toFixed(d);
 const mag=r=>r?Math.hypot(r[0],r[1]):null;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const codeName=n=>!n?"":n.startsWith("H5:")?"两组同时："+n.slice(3).split("+").map(c=>CODE[c]||c).join(" + "):(CODE[n]||n);
-const signed=(v,d=1)=>(v>0?"+":"")+f(v,d);
+const signed=(v,d=1)=>{if(v==null||!isFinite(v))return"—";const t=Math.abs(v).toFixed(d);return(+t===0?"":v>0?"+":"−")+t};
+const clock=t=>new Date(t*1000).toLocaleTimeString("zh-CN",{hour12:false});
 const roleName=r=>({task:"常规",baseline_fit:"标定拟合",baseline_holdout:"标定验证",recognition:"认旧探测",diagnostic:"诊断",active_diagnostic:"主动诊断",guard:"护栏验证",preview:"预检"}[r]||r);
 function dur(s){if(s==null)return"—";s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h} 时 ${m} 分`:m?`${m} 分 ${s%60} 秒`:`${s} 秒`}
 
-function deltaText(d){
-  return Object.entries(d.deltas||{}).filter(([k,x])=>Math.abs(x)>1e-6).map(([k,x])=>{const g=(d.gear_steps||{})[k],p=PARAM[k]||[k,""];
-    return `${p[0].split(" ")[0]} ${signed(x,2)}${p[1]}${g?`（${signed(g,0)} 格）`:""}`}).join("，");
+/* Split a correction into the few changes that matter and the small tweaks around them. */
+function deltaParts(d){
+  const all=Object.entries(d.deltas||{}).filter(([k,x])=>Math.abs(x)>1e-6).map(([k,x])=>{const g=(d.gear_steps||{})[k],p=PARAM[k]||[k,""],deg=p[1]==="°";
+    const val=`${signed(x,2)}${deg?"°":" "+p[1]}${g?`（${signed(g,0)} 格）`:""}`;
+    return{score:Math.abs(x)/(deg?2:5)+(g?100:0),short:p[0].split(" ")[0]+" "+val,full:p[0]+" "+val}}).sort((a,b)=>b.score-a.score);
+  let major=all.filter(p=>p.score>=1);if(!major.length)major=all.slice(0,1);
+  return{major,minor:all.filter(p=>!major.includes(p))};
 }
+function deltaText(d){const{major,minor}=deltaParts(d);return major.map(p=>p.short).join("，")+(minor.length?` 等 ${major.length+minor.length} 项`:"")}
 function versionWhat(v){
   const m=v.meta||{};
   if(m.kind==="initial")return"初始名义参数";
@@ -358,7 +387,7 @@ function render(){
     $("k-comp").innerHTML=`<span class="goodc">−${f(gain,0)}</span><small>%</small>`;$("k-comp-d").textContent=`${f(comp.geometry_median,2)} → ${f(comp.new_median,2)} mm（${head.residual_id}）`}
   else{const learned=(S.versions||[]).some(v=>v.residual_id!=="zero");
     $("k-comp").innerHTML=`<span style="color:var(--mute)">${learned?"需重训":"未学习"}</span>`;
-    $("k-comp-d").textContent=learned?"几何参数刚更新，旧补偿已停用；⋯ → 重训补偿":"⋯ → 重训补偿 后开始生效"}
+    $("k-comp-d").textContent=learned?"几何参数已更新，旧补偿停用，需重训":"在右上角 ⋯ 里重训补偿后生效"}
   const st2=S.stats||{};
   $("k-shots").textContent=S.shots||0;$("k-shots-d").textContent="运行 "+dur(st2.uptime_s)+" · 报警 "+(S.alarms||0)+" 次";
   $("k-heal").innerHTML=`${(st2.recoveries||0)+(st2.recognitions||0)}<small>次</small>`;
@@ -383,33 +412,56 @@ function drawOverlay(recent){
   svg.innerHTML=h;
 }
 function setupCanvas(cv){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=Math.max(1,r.width*d);cv.height=Math.max(1,r.height*d);const g=cv.getContext("2d");g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,r.width,r.height);return[g,r.width,r.height]}
-function axes(g,w,h,ymax,pad){g.font="10px "+K.mono;g.fillStyle=K.mute;g.strokeStyle=K.grid;g.lineWidth=1;
-  for(let i=0;i<=3;i++){const y=pad.t+(h-pad.t-pad.b)*(1-i/3);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(f(ymax*i/3,ymax<3?1:0),2,y+4)}}
-function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font="12px -apple-system,sans-serif";g.fillText(msg,pad.l,h/2)}
+function nice(v){const p=10**Math.floor(Math.log10(v/4)),step=[1,2,5,10].map(m=>m*p).find(x=>v/x<=4);return[Math.ceil(v/step-1e-9)*step,step]}
+function axes(g,w,h,ymax,step,pad){g.font="10px "+K.mono;g.fillStyle=K.mute;g.strokeStyle=K.grid;g.lineWidth=1;g.textAlign="left";const d=step>=1?0:step>=.1?1:2;
+  for(let v=0;v<=ymax+1e-9;v+=step){const y=pad.t+(h-pad.t-pad.b)*(1-v/ymax);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(f(v,d),2,y+3)}}
+function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font="12px -apple-system,sans-serif";g.textAlign="left";g.fillText(msg,pad.l,h/2)}
+/* Log scale: a healthy arm sits near 1 mm and a damaged one near 100 mm, and both must stay readable. */
 function drawErr(){
-  const[g,w,h]=setupCanvas($("errchart")),rec=(S.recent||[]).slice(-120),alarm=S.alarm_mm||6,pad={l:30,r:6,t:8,b:16};
+  const[g,w,h]=setupCanvas($("errchart")),rec=(S.recent||[]).slice(-120),alarm=S.alarm_mm||6,pad={l:30,r:8,t:10,b:18};
+  EC=null;
   if(!rec.length)return emptyChart(g,h,pad,"点“自检”开始打靶");
-  const vals=rec.map(s=>mag(s.residual)),ymax=Math.max(alarm*1.4,...vals.filter(v=>v!=null))*1.08;
-  axes(g,w,h,ymax,pad);const X=i=>pad.l+(w-pad.l-pad.r)*(rec.length<2?.5:i/(rec.length-1)),Y=v=>pad.t+(h-pad.t-pad.b)*(1-v/ymax);
-  g.strokeStyle=K.vline;g.setLineDash([2,3]);
-  for(let i=1;i<rec.length;i++)if(rec[i].version_id!==rec[i-1].version_id&&rec[i].role!=="preview"&&rec[i-1].role!=="preview"){g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),h-pad.b);g.stroke()}
+  const vals=rec.map(s=>mag(s.residual)),FLOOR=.1,top=Math.max(alarm*3,...vals.filter(v=>v!=null))*1.5,lo=Math.log10(FLOOR),span=Math.log10(top)-lo;
+  const X=i=>pad.l+(w-pad.l-pad.r)*(rec.length<2?.5:i/(rec.length-1)),Y=v=>pad.t+(h-pad.t-pad.b)*(1-(Math.log10(Math.max(v,FLOOR))-lo)/span),base=h-pad.b;
+  g.font="10px "+K.mono;g.lineWidth=1;g.textAlign="left";
+  for(let t=FLOOR;t<=top;t*=10){const y=Y(t);g.strokeStyle=K.grid;g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillStyle=K.mute;g.fillText(t<1?"0.1":String(Math.round(t)),2,y+3)}
+  g.strokeStyle=K.vline;g.setLineDash([2,3]);let lastLabel=-99;
+  for(let i=1;i<rec.length;i++)if(rec[i].version_id!==rec[i-1].version_id&&rec[i].role!=="preview"&&rec[i-1].role!=="preview"){g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),base);g.stroke();
+    if(X(i)-lastLabel>44&&X(i)<w-pad.r-40){g.fillStyle=K.mute;g.fillText(rec[i].version_id,X(i)+3,pad.t+7);lastLabel=X(i)}}
   g.setLineDash([5,4]);g.strokeStyle=K.warn;g.beginPath();g.moveTo(pad.l,Y(alarm));g.lineTo(w-pad.r,Y(alarm));g.stroke();g.setLineDash([]);
-  const grad=g.createLinearGradient(0,pad.t,0,h-pad.b);grad.addColorStop(0,"rgba(61,139,255,.28)");grad.addColorStop(1,"rgba(61,139,255,0)");
-  g.fillStyle=grad;g.beginPath();vals.forEach((v,i)=>{const y=Y(v??0);i?g.lineTo(X(i),y):g.moveTo(X(i),y)});g.lineTo(X(vals.length-1),h-pad.b);g.lineTo(X(0),h-pad.b);g.closePath();g.fill();
+  g.fillStyle=K.warn;g.textAlign="right";g.fillText("报警 "+f(alarm,0),w-pad.r,Y(alarm)-4);g.textAlign="left";
+  const grad=g.createLinearGradient(0,pad.t,0,base);grad.addColorStop(0,"rgba(61,139,255,.28)");grad.addColorStop(1,"rgba(61,139,255,0)");
+  g.fillStyle=grad;g.beginPath();vals.forEach((v,i)=>{const y=v==null?base:Y(v);i?g.lineTo(X(i),y):g.moveTo(X(i),y)});g.lineTo(X(vals.length-1),base);g.lineTo(X(0),base);g.closePath();g.fill();
   g.strokeStyle=K.line;g.lineWidth=1.5;g.lineJoin="round";g.beginPath();let on=false;vals.forEach((v,i)=>{if(v==null){on=false;return}on?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v));on=true});g.stroke();
   vals.forEach((v,i)=>{if(v==null||v<=alarm)return;g.fillStyle=K.bad;g.beginPath();g.arc(X(i),Y(v),2,0,7);g.fill()});
-  g.fillStyle=K.mute;g.fillText(`最近 ${rec.length} 发`,w-pad.r-62,h-3);
+  const seq0=(S.shots||rec.length)-rec.length+1;
+  g.fillStyle=K.mute;g.fillText("第 "+seq0+" 发",pad.l,h-3);g.textAlign="right";g.fillText("第 "+(seq0+rec.length-1)+" 发",w-pad.r,h-3);g.textAlign="left";
+  EC={rec,vals,seq0,pad,w};
+  if(hoverI!=null){const i=Math.min(hoverI,rec.length-1),v=vals[i];g.strokeStyle=K.mute;g.lineWidth=1;g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),base);g.stroke();
+    if(v!=null){g.fillStyle=v>alarm?K.bad:K.line;g.strokeStyle="#fff";g.beginPath();g.arc(X(i),Y(v),3.5,0,7);g.fill();g.stroke()}}
+}
+function hoverErr(e){
+  if(!EC)return;const cv=$("errchart"),r=cv.getBoundingClientRect(),n=EC.rec.length,tip=$("tip");
+  const i=n<2?0:Math.max(0,Math.min(n-1,Math.round((e.clientX-r.left-EC.pad.l)/(EC.w-EC.pad.l-EC.pad.r)*(n-1))));
+  hoverI=i;drawErr();const s=EC.rec[i],v=EC.vals[i];
+  tip.innerHTML=`<b>第 ${EC.seq0+i} 发</b>${v==null?"未看到光点":f(v,2)+" mm"}<br>${esc(roleName(s.role))} · ${esc(s.version_id)} · ${clock(s.timestamp)}`;
+  tip.style.display="block";tip.style.left=Math.max(8,Math.min(innerWidth-tip.offsetWidth-8,e.clientX+14))+"px";tip.style.top=Math.max(8,e.clientY-tip.offsetHeight-10)+"px";
 }
 function renderDiag(){
   const d=S.diagnosis;if(!d){$("diagaside").textContent="";return}
+  const key=[d.best.name,d.ranked.length,d.ranked[0].bic,diagOpen,minorOpen].join("|");if(key===diagKey)return;diagKey=key;
   $("diagaside").textContent="按 BIC 排序，越小越可信";
-  const best=d.ranked[0].bic,fix=deltaText(d),concl=d.changes&&d.changes.length===1?d.changes[0]:d.best.name;
+  const best=d.ranked[0].bic,{major,minor}=deltaParts(d),concl=d.changes&&d.changes.length===1?d.changes[0]:d.best.name;
   const shown=diagOpen?d.ranked:d.ranked.slice(0,6);
-  const rows=shown.map((r,i)=>`<tr class="${i===0?"best":""}"><td title="${esc(codeName(r.name))}">${esc(r.name)}</td><td title="${esc(r.fit.free.join(", "))}">${esc(r.fit.free.map(k=>(PARAM[k]||[k])[0].split(" ")[0]).join(", "))}</td><td class="r num">${f(r.fit.rms,2)}</td><td class="r num">${f(r.bic,1)}</td><td class="r num">${i===0?"—":"+"+f(r.bic-best,1)}</td></tr>`).join("");
+  const free=r=>r.fit.free.length>4?`${r.fit.free.length} 个参数`:r.fit.free.map(k=>(PARAM[k]||[k])[0].split(" ")[0]).join(", ");
+  const rows=shown.map((r,i)=>`<tr class="${i===0?"best":""}"><td title="${esc(codeName(r.name))}">${esc(r.name)}</td><td title="${esc(r.fit.free.map(k=>(PARAM[k]||[k])[0]).join("、"))}">${esc(free(r))}</td><td class="r num">${f(r.fit.rms,2)}</td><td class="r num">${f(r.bic,1)}</td><td class="r num">${i===0?"—":"+"+f(r.bic-best,1)}</td></tr>`).join("");
+  const minorText=minor.map(p=>p.short).join("，");
   $("diag").innerHTML=`<div class="concl">${esc(concl)} · ${esc(codeName(concl))}</div>
-    <div class="note">${fix?"修正："+esc(fix):"无参数变化"}${(d.ambiguous||[]).length?"<br>注意：J1 零点与底座朝向无法仅凭落点区分":""}</div>
+    ${major.length?`<div class="fixes">${major.map(p=>`<span class="fix num">${esc(p.full)}</span>`).join("")}${minor.length?`<button class="morefix" id="minorbtn" title="${esc(minorText)}">${minorOpen?"收起微调":`另有 ${minor.length} 项微调`}</button>`:""}</div>`:'<div class="note">无参数变化</div>'}
+    ${minorOpen&&minor.length?`<div class="note num">${esc(minorText)}</div>`:""}${(d.ambiguous||[]).length?'<div class="note">注意：J1 零点与底座朝向无法仅凭落点区分</div>':""}
     <div style="overflow-x:auto"><table class="diagt"><colgroup><col class="c1"><col class="c2"><col><col><col></colgroup><thead><tr><th>码</th><th>放开参数</th><th class="r">RMS mm</th><th class="r">BIC</th><th class="r">ΔBIC</th></tr></thead><tbody>${rows}</tbody></table></div>${d.ranked.length>6?`<button class="foldbtn" id="diagfold">${diagOpen?"收起":`展开全部 ${d.ranked.length} 个候选`}</button>`:""}`;
   if($("diagfold"))$("diagfold").onclick=()=>{diagOpen=!diagOpen;renderDiag()};
+  if($("minorbtn"))$("minorbtn").onclick=()=>{minorOpen=!minorOpen;renderDiag()};
 }
 function compensation(){
   const head=S.head;if(!head||head.residual_id==="zero")return null;
@@ -423,16 +475,19 @@ function learnPoints(){
     return null}).filter(Boolean);
 }
 function drawLearn(comp){
-  $("c-id").textContent=comp?S.head.residual_id:"未学习";$("c-geo").textContent=comp?f(comp.geometry_median,2)+" mm":"—";$("c-new").textContent=comp?f(comp.new_median,2)+" mm":"—";
-  const[g,w,h]=setupCanvas($("learnchart")),pts=learnPoints(),pad={l:30,r:8,t:8,b:18};
+  $("compbox").hidden=!comp;$("comphint").hidden=!!comp;
+  if(comp){$("c-id").textContent=S.head.residual_id;$("c-geo").textContent=f(comp.geometry_median,2)+" mm";$("c-new").textContent=f(comp.new_median,2)+" mm"}
+  const[g,w,h]=setupCanvas($("learnchart")),pts=learnPoints(),pad={l:30,r:10,t:8,b:18},split=pts.some(p=>Math.abs(p.geo-p.model)>1e-9);
+  $("lg-geo").hidden=!split;
   if(!pts.length)return emptyChart(g,h,pad,"还没有带验证数据的版本");
-  const ymax=Math.max(1,...pts.map(p=>Math.max(p.model,p.geo)))*1.15;axes(g,w,h,ymax,pad);
+  const[ymax,step]=nice(Math.max(.5,...pts.map(p=>Math.max(p.model,p.geo)))*1.05);axes(g,w,h,ymax,step,pad);
   const X=i=>pad.l+(w-pad.l-pad.r)*(pts.length<2?.5:i/(pts.length-1)),Y=v=>pad.t+(h-pad.t-pad.b)*(1-v/ymax);
   const line=(key,col,dash)=>{g.strokeStyle=col;g.setLineDash(dash);g.lineWidth=1.8;g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(i),Y(p[key])):g.moveTo(X(i),Y(p[key])));g.stroke();g.setLineDash([]);
     pts.forEach((p,i)=>{g.fillStyle=col;g.beginPath();g.arc(X(i),Y(p[key]),2.6,0,7);g.fill()})};
-  line("geo",K.geo,[4,3]);line("model",K.line,[]);
-  g.fillStyle=K.mute;g.font="11px -apple-system,sans-serif";const step=Math.ceil(pts.length/6);
-  pts.forEach((p,i)=>{if(i%step===0||i===pts.length-1)g.fillText(p.id,Math.max(pad.l,Math.min(X(i)-14,w-40)),h-3)});
+  if(split)line("geo",K.geo,[4,3]);line("model",K.line,[]);
+  const lastP=pts[pts.length-1];g.font="10px "+K.mono;g.fillStyle=K.line;g.textAlign="right";g.fillText(f(lastP.model,2),w-pad.r,Y(lastP.model)-7);
+  g.fillStyle=K.mute;g.font="11px -apple-system,sans-serif";const stepX=Math.ceil(pts.length/6);
+  pts.forEach((p,i)=>{if(i%stepX===0||i===pts.length-1){g.textAlign=i===0?"left":i===pts.length-1?"right":"center";g.fillText(p.id,X(i),h-3)}});g.textAlign="left";
 }
 
 /* versions */
@@ -490,23 +545,29 @@ function offerUndo(from,to){
 function toast(msg){clearInterval(undoTimer);clearTimeout(undoTimer);$("toastbtn").hidden=true;$("toastmsg").textContent=msg;$("toast").classList.add("open");undoTimer=setTimeout(()=>$("toast").classList.remove("open"),4500)}
 
 /* overview */
+const KIND={recognition:["认出旧伤","cy"],repair:["诊断修复","cur"],rejected:["被护栏拦下","bad"]};
 function renderOverview(){
-  const st=S.stats||{},shots=st.recovery_shots||[],pts=learnPoints(),best=pts.length?Math.min(...pts.map(p=>p.model)):null;
+  const st=S.stats||{},hist=st.history||[],shots=hist.filter(r=>r.kind!=="rejected").map(r=>r.shots),pts=learnPoints(),best=pts.length?Math.min(...pts.map(p=>p.model)):null;
   const acc=(S.versions||[]).filter(v=>v.accepted).length,rej=(S.versions||[]).length-acc,avg=shots.length?shots.reduce((a,b)=>a+b,0)/shots.length:null;
-  const tiles=[["累计打靶",S.shots||0,"发","运行 "+dur(st.uptime_s)],["自愈成功",(st.recoveries||0)+(st.recognitions||0),"次",`诊断修复 ${st.recoveries||0} · 认出旧伤 ${st.recognitions||0}`],
-    ["平均恢复",avg==null?"—":f(avg,1),avg==null?"":"发",shots.length?`最快 ${Math.min(...shots)} 发`:"还没有恢复记录"],["最佳精度",best==null?"—":f(best,2),best==null?"":"mm","历次版本验证误差的最小值"],
-    ["异常报警",S.alarms||0,"次","连续 3 发超过阈值"],["拦下的修复",st.rejections||0,"次","护栏拒绝的不可靠候选"],["已启用版本",acc,"个",`另有 ${rej} 个未通过验证`],["手动切换",st.manual_switches||0,"次","经预检确认的版本切换"]];
-  $("tiles").innerHTML=tiles.map(([k,v,u,d])=>`<div class="card tile"><div class="k">${k}</div><div class="v num">${v}<small>${u}</small></div><div class="d">${esc(d)}</div></div>`).join("");
+  const tiles=[["自愈成功",(st.recoveries||0)+(st.recognitions||0),"次",`诊断修复 ${st.recoveries||0} · 认出旧伤 ${st.recognitions||0}`],
+    ["平均恢复",avg==null?"—":f(avg,1),avg==null?"":"发",shots.length?`最快 ${Math.min(...shots)} 发 · 最慢 ${Math.max(...shots)} 发`:"还没有恢复记录"],["最佳精度",best==null?"—":f(best,2),best==null?"":"mm","历次版本验证误差的最小值"],
+    ["异常报警",S.alarms||0,"次",`累计打靶 ${S.shots||0} 发 · 运行 ${dur(st.uptime_s)}`],["拦下的修复",st.rejections||0,"次","护栏拒绝的不可靠候选"],["已启用版本",acc,"个",`未通过 ${rej} 个 · 手动切换 ${st.manual_switches||0} 次`]];
+  $("tiles").innerHTML=tiles.map(([k,v,u,d])=>`<div class="card tile"><div class="k">${k}</div><div class="v num">${v}<small>${u}</small></div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
+  const key=hist.length+":"+(hist.length?hist[hist.length-1].timestamp:0);
+  if(key!==histKey){histKey=key;$("history").innerHTML=hist.length?`<table><thead><tr><th>时间</th><th>结果</th><th>诊断结论</th><th class="r">用了几发</th><th class="r">自愈前 mm</th><th class="r">自愈后 mm</th><th class="r">启用版本</th></tr></thead><tbody>${[...hist].reverse().map(r=>{const[k,c]=KIND[r.kind]||[r.kind,"ok"];
+      const what=r.code?`${r.code} · ${codeName(r.code)}`:r.kind==="recognition"?"以前见过的状态，直接切回":"观测不足，无法诊断";
+      return `<tr><td class="num">${clock(r.timestamp)}</td><td><span class="tag ${c}">${k}</span></td><td>${esc(what)}</td><td class="r num">${r.shots}</td><td class="r num">${f(r.before_mm,2)}</td><td class="r num">${f(r.after_mm,2)}</td><td class="r num">${esc(r.version_id||"—")}</td></tr>`}).join("")}</tbody></table>`
+    :'<div class="empty">还没有自愈记录。到右上角“⋯ → 仿真调试”注入一处伤，再点“自检”试试。</div>'}
   const faults=Object.entries(st.faults||{}).sort((a,b)=>b[1]-a[1]),mx=Math.max(1,...faults.map(x=>x[1]));
-  $("faultbars").innerHTML=faults.length?faults.map(([c,n])=>`<div class="hbar"><span>${esc(c)} ${esc(CODE[c]||"组合")}</span><div class="t"><i style="width:${n/mx*100}%"></i></div><span class="num">${n}</span></div>`).join(""):'<div class="empty">还没有自愈记录。到“⋯ → 仿真调试”注入一处伤试试。</div>';
-  if($("page-overview").classList.contains("on"))drawHeal(shots);
+  $("faultbars").innerHTML=faults.length?faults.map(([c,n])=>`<div class="hbar"><span>${esc(c)} ${esc(CODE[c]||"组合")}</span><div class="t"><i style="width:${n/mx*100}%"></i></div><span class="num">${n}</span></div>`).join(""):'<div class="empty">还没有诊断修复记录</div>';
+  if($("page-overview").classList.contains("on"))drawHeal(hist);
 }
-function drawHeal(shots){
-  const[g,w,h]=setupCanvas($("healchart")),pad={l:30,r:8,t:8,b:18};
-  if(!shots.length)return emptyChart(g,h,pad,"还没有恢复记录");
-  const ymax=Math.max(20,...shots)*1.1;axes(g,w,h,ymax,pad);const n=shots.length,bw=Math.min(28,(w-pad.l-pad.r)/n*.7);
-  shots.forEach((s,i)=>{const x=pad.l+(w-pad.l-pad.r)*(i+.5)/n,y=pad.t+(h-pad.t-pad.b)*(1-s/ymax);g.fillStyle=s<=3?K.cyan:K.line;g.fillRect(x-bw/2,y,bw,h-pad.b-y)});
-  g.fillStyle=K.mute;g.font="11px -apple-system,sans-serif";g.fillStyle=K.cyan;g.fillText("■ 认出旧伤（秒愈）",pad.l,h-3);g.fillStyle=K.line;g.fillText("■ 诊断修复",pad.l+120,h-3);
+function drawHeal(hist){
+  const[g,w,h]=setupCanvas($("healchart")),pad={l:30,r:8,t:18,b:6};
+  if(!hist.length)return emptyChart(g,h,pad,"还没有恢复记录");
+  const[ymax,step]=nice(Math.max(4,...hist.map(r=>r.shots)));axes(g,w,h,ymax,step,pad);const n=hist.length,slot=(w-pad.l-pad.r)/n,bw=Math.min(28,slot*.7);
+  hist.forEach((r,i)=>{const x=pad.l+slot*(i+.5),y=pad.t+(h-pad.t-pad.b)*(1-r.shots/ymax);g.fillStyle=r.kind==="recognition"?K.cyan:r.kind==="rejected"?K.bad:K.line;g.fillRect(x-bw/2,y,bw,h-pad.b-y);
+    if(slot>22){g.fillStyle=K.mute;g.font="10px "+K.mono;g.textAlign="center";g.fillText(r.shots,x,y-4)}});g.textAlign="left";
 }
 
 /* fault codes */
@@ -539,6 +600,14 @@ document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=async()=>{$("moreli
 $("debugtoggle").onclick=()=>{$("morelist").classList.remove("open");$("debug").classList.toggle("on")};
 $("debugclose").onclick=()=>$("debug").classList.remove("on");
 $("inject").onclick=async()=>{const[kind,amount]=$("damage").value.split(":");try{await command("inject",{kind,amount:Number(amount)});toast(`已注入：${$("damage").selectedOptions[0].text}。点“自检”看它自愈`)}catch(e){toast("操作失败："+tr(e.message))}};
+$("errchart").onmousemove=hoverErr;
+$("errchart").onmouseleave=()=>{hoverI=null;$("tip").style.display="none";if(S)drawErr()};
+/* Short desktop screens: fold the event feed into the diagnosis card as a second tab. */
+const shortMQ=matchMedia("(min-width:1081px) and (max-height:800px)");
+function layout(){const short=shortMQ.matches;document.body.classList.toggle("short",short);const feed=$("feed"),to=short?$("feedslot"):$("feedcard");if(feed.parentNode!==to)to.appendChild(feed)}
+shortMQ.addEventListener("change",()=>{layout();schedule()});layout();
+$("dtabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;const feed=b.dataset.t==="feed";document.body.classList.toggle("tab-feed",feed);
+  $("dtabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));$("diagaside").hidden=feed};
 addEventListener("resize",schedule);
 fetch("/api/state").then(r=>r.json()).then(s=>{S=Object.assign(s,S||{});render();refreshCamera()}).catch(()=>{});
 connect();

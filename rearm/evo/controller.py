@@ -38,8 +38,15 @@ class Controller:
         self.last_recognition_shots = 0
         self.started = time.time()
         self.stats = {"recoveries": 0, "recognitions": 0, "rejections": 0, "manual_switches": 0,
-                      "recovery_shots": [], "faults": {}}
+                      "recovery_shots": [], "faults": {}, "history": []}
         self.last_preview = self.last_switch = None
+
+    def record_recovery(self, kind, probes, shots, version_id=None, code=None, after_mm=None):
+        # One row per self-healing attempt for the panel's history table.
+        errors = [float(np.linalg.norm(s.residual)) for s in probes if s.residual is not None]
+        self.stats["history"] = (self.stats["history"] + [{"timestamp": time.time(), "kind": kind, "code": code,
+            "version_id": version_id, "shots": shots, "before_mm": float(np.median(errors)) if errors else None,
+            "after_mm": None if after_mm is None else float(after_mm)}])[-self.config.thresholds["ui"]["history"]:]
 
     def emit(self, kind: str, **data):
         self.bus.publish(Event(kind, time.time(), data))
@@ -126,6 +133,7 @@ class Controller:
                 self.last_recovery_shots = self.sequence-start
                 self.stats["recognitions"] += 1
                 self.stats["recovery_shots"].append(self.last_recovery_shots)
+                self.record_recovery("recognition", probes, self.last_recovery_shots, match[0], after_mm=match[1])
                 self.emit("snapshot", snapshot=self.snapshot())
                 return
             self.transition(State.DIAGNOSE)
@@ -160,13 +168,16 @@ class Controller:
                     self.stats["recovery_shots"].append(self.sequence-start)
                     code = diagnosis.best.name.split(":")[0]
                     self.stats["faults"][code] = self.stats["faults"].get(code, 0) + 1
+                    self.record_recovery("repair", probes, self.sequence-start, self.store.head().id, diagnosis.best.name, report.candidate_median)
                     self.transition(State.NORMAL)
                 else:
                     self.stats["rejections"] += 1
                     self.store.reject(fit.params, meta, report.reasons or ("optimizer failed",))
+                    self.record_recovery("rejected", probes, self.sequence-start, None, diagnosis.best.name, report.candidate_median)
                     self.transition(State.REJECTED)
             except ValueError as error:
                 self.store.reject(old.params, {"kind": "insufficient_observations"}, (str(error),))
+                self.record_recovery("rejected", probes, self.sequence-start)
                 self.transition(State.REJECTED)
             self.detector.reset()
             self.last_recovery_shots = self.sequence-start

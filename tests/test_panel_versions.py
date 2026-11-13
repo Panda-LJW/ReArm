@@ -61,5 +61,8 @@ def test_panel_endpoints_camera_fault_codes_and_event_feed(config, tmp_path):
     assert "damage_injected" in kinds and "alarm" in kinds and "version_committed" in kinds
     assert view["camera"] == {"width": 1}, "static display settings survive snapshots"
     assert view["stats"]["recoveries"] == 1
+    record = view["stats"]["history"][-1]
+    assert record["kind"] == "repair" and record["version_id"] == view["head"]["id"]
+    assert record["shots"] == view["stats"]["recovery_shots"][-1] and record["after_mm"] < record["before_mm"]
     no_camera = create_server(controller, controller.bus, initial)
     assert request(no_camera, "/api/camera.jpg")[0] == 404
