@@ -150,7 +150,7 @@ function connect(){
   ws.onclose=()=>{connectionState(false);setTimeout(connect,retryDelay);retryDelay=Math.min(10000,retryDelay*2)};
 }
 function handle(e){
-  if(e.kind==="snapshot"){S=Object.assign(S||{},e.data.snapshot);refreshCamera()}
+  if(e.kind==="snapshot"){S=Object.assign(S||{},e.data.snapshot);noteUptime();refreshCamera()}
   else if(!S)return;
   else if(["state","operation","estop","estop_reset","safety","laser"].includes(e.kind))Object.assign(S,e.data);
   else if(e.kind==="shot"){S.recent=[...(S.recent||[]),e.data.shot].slice(-(S.history_limit||200));S.shots=(S.shots||0)+1;refreshCamera()}
@@ -161,6 +161,17 @@ function handle(e){
   syncControls();schedule();
 }
 function schedule(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render()})}
+/* The backend only reports uptime with a snapshot, which may be minutes old. Its start time lets the page
+   keep the figure current; without it (older backend) tick on from the last reported value. */
+let uptimeBase=null,uptimeAt=0,uptimeFrozen=null;
+function noteUptime(){const u=S?.stats?.uptime_s;if(u==null)return;if(u!==uptimeBase){uptimeBase=u;uptimeAt=performance.now()}}
+function uptime(){
+  if(uptimeBase==null)return null;
+  if(!connected)return uptimeFrozen??uptimeBase;
+  const started=S?.stats?.started_at;
+  return uptimeFrozen=started?Math.max(uptimeBase,Date.now()/1000-started):uptimeBase+(performance.now()-uptimeAt)/1000;
+}
+setInterval(()=>{if(connected&&S&&!document.hidden)schedule()},1000);
 /* Optional modules (digital twin, presentation mode) only ever see this event, never app internals. */
 function announce(){document.dispatchEvent(new CustomEvent("rearm:state",{detail:{state:S,connected}}))}
 document.addEventListener("rearm:theme",()=>{schedule()});
@@ -224,7 +235,7 @@ function render(){
     $("k-comp").innerHTML=`<span style="color:var(--mute)">${learned?"需重训":"未学习"}</span>`;
     $("k-comp-d").textContent=learned?"几何已变，补偿需重训":"到 ⋯ 点“重训补偿”"}
   const st2=S.stats||{};
-  $("k-shots").textContent=S.shots||0;$("k-shots-d").textContent="运行 "+dur(st2.uptime_s)+" · 报警 "+(S.alarms||0)+" 次";
+  $("k-shots").textContent=S.shots||0;$("k-shots-d").textContent="运行 "+dur(uptime())+" · 报警 "+(S.alarms||0)+" 次";
   $("k-heal").innerHTML=`${(st2.recoveries||0)+(st2.recognitions||0)}<small>次</small>`;
   $("k-heal-d").textContent=`诊断修复 ${st2.recoveries||0} · 认出旧伤 ${st2.recognitions||0}`;
   const lim=S.joint_limits||[[-90,90],[0,110],[-150,0]],q=last?last.q:null;
@@ -410,7 +421,7 @@ function renderOverview(){
   const acc=(S.versions||[]).filter(v=>v.accepted).length,rej=(S.versions||[]).length-acc,avg=shots.length?shots.reduce((a,b)=>a+b,0)/shots.length:null;
   const tiles=[["自愈成功",(st.recoveries||0)+(st.recognitions||0),"次",`诊断修复 ${st.recoveries||0} · 认出旧伤 ${st.recognitions||0}`],
     ["平均恢复",avg==null?"—":f(avg,1),avg==null?"":"发",shots.length?`最快 ${Math.min(...shots)} 发 · 最慢 ${Math.max(...shots)} 发`:"还没有恢复记录"],["最佳精度",best==null?"—":f(best,2),best==null?"":"mm","历次版本验证误差的最小值"],
-    ["异常报警",S.alarms||0,"次",`累计打靶 ${S.shots||0} 发 · 运行 ${dur(st.uptime_s)}`],["拦下的修复",st.rejections||0,"次","护栏拒绝的不可靠候选"],["已启用版本",acc,"个",`未通过 ${rej} 个 · 手动切换 ${st.manual_switches||0} 次`]];
+    ["异常报警",S.alarms||0,"次",`累计打靶 ${S.shots||0} 发 · 运行 ${dur(uptime())}`],["拦下的修复",st.rejections||0,"次","护栏拒绝的不可靠候选"],["已启用版本",acc,"个",`未通过 ${rej} 个 · 手动切换 ${st.manual_switches||0} 次`]];
   $("tiles").innerHTML=tiles.map(([k,v,u,d])=>`<div class="card tile"><div class="k">${k}</div><div class="v num">${v}<small>${u}</small></div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join("");
   const key=hist.length+":"+(hist.length?hist[hist.length-1].timestamp:0);
   if(key!==histKey){histKey=key;$("history").innerHTML=hist.length?`<table><thead><tr><th>时间</th><th>结果</th><th>诊断结论</th><th class="r">用了几发</th><th class="r">自愈前 mm</th><th class="r">自愈后 mm</th><th class="r">启用版本</th></tr></thead><tbody>${[...hist].reverse().map(r=>{const[k,c]=KIND[r.kind]||[r.kind,"ok"];
@@ -513,6 +524,6 @@ $("dtabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;const fee
   $("dtabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));$("diagaside").hidden=feed};
 addEventListener("resize",()=>{layout();schedule()});
 connectionState(false,"正在连接，数据尚未就绪");
-fetch("/api/state").then(r=>{if(!r.ok)throw new Error();return r.json()}).then(s=>{if(!wsSnapshot){S=s;render()}}).catch(()=>{if(!connected)connectionState(false,"首次状态加载失败，正在重连；数据尚未就绪")});
+fetch("/api/state").then(r=>{if(!r.ok)throw new Error();return r.json()}).then(s=>{if(!wsSnapshot){S=s;noteUptime();render()}}).catch(()=>{if(!connected)connectionState(false,"首次状态加载失败，正在重连；数据尚未就绪")});
 connect();
 })();

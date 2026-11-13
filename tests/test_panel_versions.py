@@ -66,3 +66,12 @@ def test_panel_endpoints_camera_fault_codes_and_event_feed(config, tmp_path):
     assert record["shots"] == view["stats"]["recovery_shots"][-1] and record["after_mm"] < record["before_mm"]
     no_camera = create_server(controller, controller.bus, initial)
     assert request(no_camera, "/api/camera.jpg")[0] == 404
+
+
+def test_snapshot_reports_start_time_so_the_panel_can_keep_uptime_current(config, tmp_path):
+    import time
+    from rearm.app import build_app
+    controller = build_app(config, tmp_path)
+    stats = controller.snapshot()['stats']
+    assert abs(stats['started_at'] - time.time()) < 60
+    assert 0 <= stats['uptime_s'] < 60

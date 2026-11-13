@@ -354,7 +354,8 @@ class Controller:
                 "guard": self.last_guard, "training": self.last_training,
                 "alarms": self.alarms, "shots": self.sequence, "history_limit": self.config.thresholds["ui"]["history"],
                 "simulation": self.damage_callback is not None,
-                "stats": self.stats | {"uptime_s": time.time() - self.started, "alarms": self.alarms, "shots": self.sequence},
+                "stats": self.stats | {"uptime_s": time.time() - self.started, "started_at": self.started,
+                                       "alarms": self.alarms, "shots": self.sequence},
                 "preview": self.last_preview, "last_switch": self.last_switch})
 
     def command(self, name, payload):
