@@ -22,6 +22,7 @@ from rearm.residual.trainer import TemporalTrainer
 from rearm.residual.zero import ZeroResidual
 from rearm.sim.damage import damaged_params
 from rearm.sim.sim_arm import SimArm
+from rearm.sim.sim_camera import SimCamera
 from rearm.task.shooter import Shooter
 from rearm.types import Damage, Settings
 
@@ -103,6 +104,16 @@ def serve_ui():
     if args.nongeometric:
         config = replace(config, sim=config.sim | {"nongeometric": True})
     controller = build_app(config, data_dir=args.data_dir, sim=args.sim)
-    state = controller.snapshot() | {"history_limit": controller.config.thresholds["ui"]["history"]}
-    server = create_server(controller, controller.bus, state)
+    # Simulated overhead camera: shows the last measured laser spot on the marked board.
+    camera = SimCamera(config)
+    def follow_spot(event):
+        if event.kind == "shot":
+            camera.spot = event.data["shot"]["observed"]
+    controller.bus.subscribe(follow_spot)
+    ui = controller.config.thresholds["ui"]
+    state = controller.snapshot() | {"history_limit": ui["history"],
+        "camera": {k: config.camera[k] for k in ("width", "height", "pixels_per_mm")},
+        "board_mm": config.board_mm.tolist(), "joint_limits": config.joint_limits.tolist(), "alarm_mm": config.thresholds["detector"]["alarm_mm"],
+        "preview_valid_s": ui["preview_valid_s"], "undo_s": ui["undo_s"]}
+    server = create_server(controller, controller.bus, state, camera, ui["camera_jpeg_quality"])
     uvicorn.run(server, host=controller.config.thresholds["ui"]["host"], port=controller.config.thresholds["ui"]["port"])

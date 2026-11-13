@@ -36,6 +36,10 @@ class Controller:
         self.lock = RLock()
         self.last_recovery_shots = 0
         self.last_recognition_shots = 0
+        self.started = time.time()
+        self.stats = {"recoveries": 0, "recognitions": 0, "rejections": 0, "manual_switches": 0,
+                      "recovery_shots": [], "faults": {}}
+        self.last_preview = self.last_switch = None
 
     def emit(self, kind: str, **data):
         self.bus.publish(Event(kind, time.time(), data))
@@ -120,6 +124,8 @@ class Controller:
                 self.detector.reset()
                 self.transition(State.NORMAL)
                 self.last_recovery_shots = self.sequence-start
+                self.stats["recognitions"] += 1
+                self.stats["recovery_shots"].append(self.last_recovery_shots)
                 self.emit("snapshot", snapshot=self.snapshot())
                 return
             self.transition(State.DIAGNOSE)
@@ -150,8 +156,13 @@ class Controller:
                 if report.accepted and fit.success:
                     # A changed geometry invalidates the residual coordinates; preserve old GP in its version.
                     self.store.commit(fit.params, "zero", meta)
+                    self.stats["recoveries"] += 1
+                    self.stats["recovery_shots"].append(self.sequence-start)
+                    code = diagnosis.best.name.split(":")[0]
+                    self.stats["faults"][code] = self.stats["faults"].get(code, 0) + 1
                     self.transition(State.NORMAL)
                 else:
+                    self.stats["rejections"] += 1
                     self.store.reject(fit.params, meta, report.reasons or ("optimizer failed",))
                     self.transition(State.REJECTED)
             except ValueError as error:
@@ -190,13 +201,65 @@ class Controller:
             self.transition(State.NORMAL)
             self.emit("snapshot", snapshot=self.snapshot())
 
+    def preview(self, version_id):
+        """Fire the fixed probe poses and compare a stored version with the current one, without switching."""
+        with self.lock:
+            if self.state not in (State.NORMAL, State.REJECTED):
+                raise ValueError("machine busy; preview needs an idle arm")
+            head, candidate = self.store.head(), self.store.get(version_id)
+            current_model, candidate_model = self.model(head), self.model(candidate)
+            rows = []
+            for q in self.probe_pool[:self.config.thresholds["recognizer"]["probes"]]:
+                shot = self.shooter.shoot(q, candidate, candidate_model, True, "preview")
+                self.shot_log.append(shot)
+                current = current_model.predict(head.params, np.asarray(shot.q), shot.features())[0]
+                observed = None if shot.observed is None else np.asarray(shot.observed)
+                rows.append({"q": shot.q, "observed": shot.observed, "candidate": shot.predicted,
+                             "current": current.tolist(),
+                             "candidate_mm": None if observed is None else float(np.linalg.norm(observed - shot.predicted)),
+                             "current_mm": None if observed is None else float(np.linalg.norm(observed - current))})
+            measured = [r for r in rows if r["candidate_mm"] is not None]
+            limit = self.config.thresholds["guard"]["median_mm"]
+            candidate_median = float(np.median([r["candidate_mm"] for r in measured])) if measured else None
+            current_median = float(np.median([r["current_mm"] for r in measured])) if measured else None
+            self.last_preview = {"version_id": version_id, "from": head.id, "time": time.time(), "shots": rows,
+                                 "candidate_median": candidate_median, "current_median": current_median,
+                                 "limit_mm": limit, "passed": candidate_median is not None and candidate_median <= limit}
+            self.emit("preview", preview=self.last_preview)
+            return self.last_preview
+
+    def switch(self, version_id, confirm, component="both", force=False, operator="panel"):
+        """Manual version change: needs a fresh passing preview (or force), and can be undone briefly."""
+        with self.lock:
+            ui = self.config.thresholds["ui"]
+            if confirm != version_id:
+                raise ValueError("confirmation does not match the selected version")
+            head = self.store.head()
+            undo = (self.last_switch is not None and self.last_switch["to"] == head.id
+                    and self.last_switch["from"] == version_id and time.time() - self.last_switch["time"] <= ui["undo_s"])
+            preview = self.last_preview
+            fresh = (preview is not None and preview["version_id"] == version_id and preview["from"] == head.id
+                     and time.time() - preview["time"] <= ui["preview_valid_s"])
+            if not undo and not fresh:
+                raise ValueError("run a fresh preview of this version before switching")
+            if not undo and not preview["passed"] and not force:
+                raise ValueError("preview did not pass; switching needs force")
+            self.rollback(version_id, component)
+            self.stats["manual_switches"] += 1
+            self.last_switch = {"from": head.id, "to": version_id, "time": time.time(), "operator": operator,
+                                "undo": undo, "forced": bool(force and not undo and not preview["passed"])}
+            self.last_preview = None
+            self.emit("manual_switch", **self.last_switch)
+
     def snapshot(self):
         with self.lock:
             return jsonable({"state": self.state, "head": self.store.head(), "versions": self.store.list(),
                 "recent": list(self.recent), "diagnosis": self.last_diagnosis,
                 "guard": self.last_guard, "training": self.last_training,
                 "alarms": self.alarms, "shots": self.sequence, "history_limit": self.config.thresholds["ui"]["history"],
-                "simulation": self.damage_callback is not None})
+                "simulation": self.damage_callback is not None,
+                "stats": self.stats | {"uptime_s": time.time() - self.started, "alarms": self.alarms, "shots": self.sequence},
+                "preview": self.last_preview, "last_switch": self.last_switch})
 
     def command(self, name, payload):
         with self.lock:
@@ -207,8 +270,11 @@ class Controller:
                 self.baseline()
             elif name == "retrain":
                 self.retrain()
-            elif name == "rollback":
-                self.rollback(payload["version_id"], payload.get("component", "both"))
+            elif name == "preview":
+                self.preview(payload["version_id"])
+            elif name == "switch":
+                self.switch(payload["version_id"], payload.get("confirm"), payload.get("component", "both"),
+                            bool(payload.get("force")), str(payload.get("operator", "panel")))
             elif name == "inject":
                 if self.damage_callback is None:
                     raise ValueError("damage injection is simulation-only")

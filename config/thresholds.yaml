@@ -82,3 +82,6 @@ ui:
   host: 127.0.0.1
   port: 8000
   history: 200
+  preview_valid_s: 300
+  undo_s: 30
+  camera_jpeg_quality: 80

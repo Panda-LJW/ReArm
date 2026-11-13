@@ -4,20 +4,27 @@ from copy import deepcopy
 from pathlib import Path
 from threading import RLock
 from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
-from rearm.interfaces import CommandController, EventBus
+from fastapi.responses import FileResponse, Response
+import cv2
+from rearm.interfaces import CommandController, EventBus, FrameSource
 from rearm.types import Event, jsonable
 
 
-def create_server(controller: CommandController, bus: EventBus, initial: dict) -> FastAPI:
+def create_server(controller: CommandController, bus: EventBus, initial: dict,
+                  camera: FrameSource | None = None, jpeg_quality: int | None = None) -> FastAPI:
     app = FastAPI(title="ReArm", docs_url=None, redoc_url=None)
     view, lock, listeners = deepcopy(initial), RLock(), []
+    # Recent notable events for the panel feed; kept across snapshots.
+    feed_kinds = {"alarm", "switch", "version_committed", "rejected", "rollback", "retrained", "damage_injected", "manual_switch"}
+    view["events"] = []
 
     def consume(event: Event):
         nonlocal view
         with lock:
             if event.kind == "snapshot":
-                view = deepcopy(event.data["snapshot"])
+                snapshot = deepcopy(event.data["snapshot"])
+                # Keep static display settings (camera geometry, limits) that snapshots do not carry.
+                view = {k: v for k, v in initial.items() if k not in snapshot} | snapshot | {"events": view.get("events", [])}
             elif event.kind == "state":
                 view["state"] = event.data["state"]
             elif event.kind == "shot":
@@ -25,6 +32,10 @@ def create_server(controller: CommandController, bus: EventBus, initial: dict) -
                 view["shots"] = view.get("shots", 0) + 1
             elif event.kind == "diagnosis":
                 view["diagnosis"] = event.data["diagnosis"]
+            elif event.kind in feed_kinds:
+                view["events"] = (view["events"] + [jsonable(event)])[-initial["history_limit"]:]
+            elif event.kind == "preview":
+                view["preview"] = event.data["preview"]
             for loop, queue in tuple(listeners):
                 def deliver(q=queue, message=jsonable(event)):
                     if q.full():
@@ -38,6 +49,22 @@ def create_server(controller: CommandController, bus: EventBus, initial: dict) -
     @app.get("/")
     def index():
         return FileResponse(Path(__file__).parent / "static" / "index.html")
+
+    @app.get("/api/camera.jpg")
+    def camera_frame():
+        if camera is None:
+            raise HTTPException(status_code=404, detail="no camera attached")
+        ok, encoded = cv2.imencode(".jpg", camera.read(), [cv2.IMWRITE_JPEG_QUALITY, jpeg_quality])
+        if not ok:
+            raise HTTPException(status_code=500, detail="frame encoding failed")
+        return Response(encoded.tobytes(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/fault-codes")
+    def fault_codes():
+        path = Path(__file__).resolve().parents[2] / "docs" / "故障码.md"
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="fault code document missing")
+        return Response(path.read_text(encoding="utf-8"), media_type="text/markdown; charset=utf-8")
 
     @app.get("/api/state")
     def state():
