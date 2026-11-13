@@ -12,6 +12,8 @@ fit:
   multistarts_deg: [0, -15, 15, -30, 30]
   snap_step_deg: 15.0
   snap_tolerance_deg: 2.0
+  snap_accept_mm: 0.15
+  restart_stop_rms_mm: 0.35
   noise_floor_mm: 0.05
   initial_shots: 7
   active_shots: 3
