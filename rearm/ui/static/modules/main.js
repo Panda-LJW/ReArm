@@ -7,7 +7,8 @@ function loadCss(path) {
   return new Promise(resolve => {
     const link = document.createElement("link");
     link.rel = "stylesheet"; link.href = new URL(path, base).href;
-    link.onload = link.onerror = resolve;
+    link.onload = () => resolve(true);
+    link.onerror = () => { link.remove(); resolve(false); };
     document.head.appendChild(link);
   });
 }
@@ -20,9 +21,7 @@ await loadCss("main.css");
 
 // 专注阅读：状态的图标编码、动效收敛、按阶段弱化次要区域。纯样式模块。
 await optional("focus", async () => {
-  const response = await fetch(new URL("focus/focus.css", base), { method: "HEAD" });
-  if (!response.ok) throw new Error("样式文件不存在");
-  await loadCss("focus/focus.css");
+  if (!await loadCss("focus/focus.css")) throw new Error("样式文件不存在");
 });
 
 // 数字孪生：数据源 → 孪生。两者只通过 JointFrame 相连。

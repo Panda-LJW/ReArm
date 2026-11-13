@@ -1,0 +1,102 @@
+/* 专注阅读模块：让状态更易辨认，减少干扰，兼容日常与路演模式。
+   一、颜色、图标与原有文字共同表达状态；二、放缓忙碌提示并去掉装饰发光；
+   三、按阶段突出异常与安全提示；四、微调操作、说明、表格与键盘焦点层级。 */
+
+/* 一、状态图标。优先级覆盖后加载的路演圆点尺寸，字号跟随当前模式。 */
+html body .chip.state::before,
+html body .chip.err::before,
+html body .chip.laser::before,
+.ev i,
+.ev i.ok,
+.ev i.bad,
+.ev i.busy,
+.ev i.info,
+html[data-mode="show"] body .ev i {
+  width:auto;
+  height:auto;
+  background:none;
+  border-radius:0;
+  font-size:1em;
+  line-height:1;
+  vertical-align:baseline;
+  font-style:normal;
+}
+
+.chip.state,
+.chip.err,
+.chip.laser { white-space:nowrap; }
+
+.chip.state.s-ok::before,
+.chip.err.s-ok::before { content:"✓"; color:var(--cyan); }
+.chip.state.s-busy::before { content:"◔"; color:var(--warn); }
+.chip.state.s-bad::before,
+.chip.err.s-bad::before { content:"▲"; color:var(--bad); }
+.chip.state.s-info::before,
+.chip.err.s-info::before { content:"●"; color:var(--accent); }
+.chip.laser::before { content:"○"; color:var(--sub); }
+.chip.laser.laser-on::before { content:"●"; color:var(--warn); }
+
+/* 给事件图标留一个字宽，避免路演大字挤进事件文字。 */
+.ev { grid-template-columns:60px 1em minmax(0,1fr); }
+html[data-mode="show"] body .ev { grid-template-columns:auto 1em minmax(0,1fr); }
+.ev i { text-align:center; }
+.ev i::before { content:"·"; color:var(--mute); }
+.ev i.ok::before { content:"✓"; color:var(--cyan); }
+.ev i.bad::before { content:"▲"; color:var(--bad); }
+.ev i.busy::before { content:"◆"; color:var(--warn); }
+.ev i.info::before { content:"●"; color:var(--accent); }
+
+.tag.cur::before { content:"▶ "; }
+.tag.ok::before { content:"✓ "; }
+.tag.bad::before { content:"✕ "; }
+.tag.cy::before { content:"↺ "; }
+
+/* 二、复用原有 pulse，只调整周期和透明度范围，不增加动画。 */
+.s-busy::before { animation:pulse 2.4s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { opacity:1; }
+  50% { opacity:.55; }
+}
+.brand::before,
+.dot.on,
+.bar i { box-shadow:none; }
+
+/* 三、ok 保持原样；横幅与顶栏在 .page 外，急停时仍完整可见。 */
+.page,
+.row2 .card:nth-child(3),
+.card h3 .aside { transition:opacity .2s; }
+
+body[data-phase="busy"] .row2 .card:nth-child(3) { opacity:.5; }
+body[data-phase="busy"] .cam { outline:2px solid var(--warn); }
+body[data-phase="bad"] .cam { outline:2px solid var(--bad); }
+
+body[data-phase="stop"] .stop-banner {
+  background:var(--bad);
+  color:#fff;
+  font-weight:700;
+  font-size:var(--fs-lg);
+}
+body[data-phase="stop"] .stop-banner span { font-size:var(--fs-lg); }
+body[data-phase="stop"] .stop-banner::before { content:"■ "; }
+body[data-phase="stop"] .page { opacity:.45; }
+body[data-phase="stale"] .stale-banner { font-weight:700; }
+body[data-phase="stale"] .stale-banner::before { content:"⚠ "; }
+.kpi[data-level="bad"] { box-shadow:inset 3px 0 var(--bad); }
+
+/* 四、主要操作与焦点更明确，日常说明稍弱化，表格支持横向对读。 */
+header button.primary { font-weight:600; }
+html:not([data-mode="show"]) .card h3 .aside { opacity:.8; }
+tbody tr:hover td { background:var(--hover); }
+:focus-visible,
+input:focus-visible,
+select:focus-visible,
+button:focus-visible { outline-width:3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation:none!important;
+    transition:none!important;
+  }
+}
