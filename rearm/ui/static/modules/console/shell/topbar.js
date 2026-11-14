@@ -3,6 +3,7 @@ import { mount as mountEstop } from "./estop.js";
 import { setUnavailable } from "./tooltip.js";
 import { frameView } from "./view.js";
 import { WORDS } from "../state/words.js";
+import { statusWord } from "../state/selectors.js";
 
 export function mount(root, ctx = {}) {
   const doc = root.ownerDocument;
@@ -26,7 +27,7 @@ export function mount(root, ctx = {}) {
   root.append(brand, navigation, status, spacer, reset);
   const nav = mountNav(navigation, ctx), estop = mountEstop(root, ctx);
   const view = frameView(state => {
-    const text = WORDS[state?.phase] || WORDS.idle;
+    const text = state ? statusWord(state) : WORDS.idle;
     if (status.textContent !== text) status.textContent = text;
     setUnavailable(reset, state?.link?.online && typeof ctx.reset === "function" ? "" : "连接就绪后可操作");
     estop.render(state);

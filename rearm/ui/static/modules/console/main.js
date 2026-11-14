@@ -3,13 +3,16 @@ import { mount as mountRouter } from "./shell/router.js";
 import { mount as mountTooltip } from "./shell/tooltip.js";
 import { mount as mountDialog } from "./shell/dialog.js";
 import { PAGES } from "./shell/nav.js";
+import { createStore } from "./state/store.js";
 
 const css = document.createElement("link");
 css.rel = "stylesheet"; css.href = new URL("./console.css", import.meta.url).href;
 document.head.append(css);
 
-// T1 只装配外壳；数据源、store 和业务指令由后续任务接入。
-const ctx = {};
+const store = createStore();
+let source = null, unsubscribeSource = () => {};
+const ctx = { store, send: (cmd, args) => source ? source.send(cmd, args) :
+  Promise.resolve({ v: 1, ok: false, code: "offline", msg: "连接已关闭", seq: 0 }) };
 const tooltip = mountTooltip(document, ctx), dialog = mountDialog(document.body, ctx);
 const topbar = mountTopbar(document.querySelector("[data-topbar]"), ctx);
 const pagesRoot = document.querySelector("[data-pages]"), views = [];
@@ -22,18 +25,27 @@ const roots = new Map(PAGES.map(({ id, label }) => {
 }));
 const router = mountRouter(pagesRoot, { onRoute: topbar.navigate,
   beforeRoute() { tooltip.hide(); dialog.close(); } });
-topbar.render();
+ctx.dialog = dialog;
+const unsubscribeStore = store.subscribe(state => { topbar.render(state); for (const view of views) view.render(state); });
 
 async function optional(name, mount) {
   try {
     const view = await mount();
-    views.push(view); view.render();
-    roots.get(name).dataset.ready = "true";
+    if (view) { views.push(view); view.render(store.getState()); }
+    if (roots.has(name)) roots.get(name).dataset.ready = "true";
   } catch (error) {
-    roots.get(name).replaceChildren(document.createTextNode("此页暂时无法显示，请刷新重试。"));
+    roots.get(name)?.replaceChildren(document.createTextNode("此页暂时无法显示，请刷新重试。"));
     console.warn(`页面 ${name} 未启用：`, error);
   }
 }
+
+await optional("datasource", async () => {
+  const { createMockConsole } = await import("../datasource/mock-console.js");
+  source = createMockConsole();
+  window.__rearmMock = { commands: source.commands };
+  unsubscribeSource = source.subscribe(message => store.dispatch(message));
+  source.start();
+});
 
 // 各页独立加载，单页 import / mount 失败不会阻断导航或顶栏。
 await Promise.all(PAGES.map(({ id }) => optional(id, async () => {
@@ -43,6 +55,7 @@ await Promise.all(PAGES.map(({ id }) => optional(id, async () => {
 
 window.addEventListener("pagehide", event => {
   if (event.persisted) return;
+  unsubscribeSource(); source?.stop(); unsubscribeStore();
   for (const view of views) view.dispose();
   router.dispose(); topbar.dispose(); dialog.dispose(); tooltip.dispose();
 }, { once: true });

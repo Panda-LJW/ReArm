@@ -41,7 +41,12 @@ def test_console_assets_and_thin_entry(config, tmp_path):
 def test_console_has_no_transport_legacy_imports_or_cross_page_dependencies():
     for path in CONSOLE.rglob('*.js'):
         source = path.read_text()
-        assert not re.search(r'\bfetch\s*\(|\bWebSocket\b|laser|__rearmMock', source), path
+        assert not re.search(r'\bfetch\s*\(|\bWebSocket\b|laser', source), path
+        if path != CONSOLE / 'main.js':
+            assert '__rearmMock' not in source, path
+        else:
+            assert source.count('__rearmMock') == 1
+            assert 'window.__rearmMock = { commands: source.commands };' in source
         assert not re.search(r'\.innerHTML\s*[+]?=', source), path
         assert '/api/' not in source and 'URLSearchParams' not in source
         assert not re.search(r'\.get\(["\x27]backend["\x27]\)', source), path
@@ -49,7 +54,9 @@ def test_console_has_no_transport_legacy_imports_or_cross_page_dependencies():
         assert len(source.splitlines()) <= 200, path
         for spec in re.findall(r'(?:from\s*|import\s*\()["\x27]([^"\x27]+)', source):
             target = (path.parent / spec).resolve()
-            assert target.is_relative_to(CONSOLE), (path, spec)
+            assert target.is_relative_to(CONSOLE) or (
+                path == CONSOLE / 'main.js' and target == STATIC / 'modules/datasource/mock-console.js'
+            ), (path, spec)
             if path.is_relative_to(CONSOLE / 'pages') and target.is_relative_to(CONSOLE / 'pages'):
                 assert target.relative_to(CONSOLE / 'pages').parts[0] == path.relative_to(CONSOLE / 'pages').parts[0]
     css = (CONSOLE / 'console.css').read_text()
