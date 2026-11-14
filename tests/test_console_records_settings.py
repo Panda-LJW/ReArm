@@ -54,9 +54,9 @@ assert.deepEqual([...recordsRoot.querySelectorAll('[data-records="training"] th'
 await source.send('train_start',{target:'part',draft:{id:'plate'}});advance(8400);
 assert.equal(rows('training').length,0);
 advance(1200);
-assert.deepEqual(rows('training'),[['09:00:09','零件 · 薄片','8 轮','0.6 mm','0:09']]);
+assert.deepEqual(rows('training'),[['09:00:09','零件 · 薄片','8 轮','0.6 mm','40:00']]);
 await source.send('train_start',{target:'recipe',draft:{id:'plate-tube'}});advance(9600);
-assert.deepEqual(rows('training')[0],['09:00:19','配方 · 薄片 + 空心圆柱配套件','8 轮','0.6 mm','0:09']);
+assert.deepEqual(rows('training')[0],['09:00:19','配方 · 薄片 + 空心圆柱配套件','8 轮','0.6 mm','40:00']);
 assert.equal(rows('training').length,2);
 assert.deepEqual(store.getState().trains.map(row=>row.target),['part','recipe']);
 const first=body('training').rows[0];advance(500);assert.equal(body('training').rows[0],first);

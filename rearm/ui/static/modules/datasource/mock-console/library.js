@@ -1,4 +1,4 @@
-import { PARTS, CAPTURE, forceBasis, trainingRecord } from "../fixtures/parts.js";
+import { PARTS, CAPTURE, forceBasis, summarizeTraining } from "../fixtures/parts.js";
 import { RECIPES, FIXTURE } from "../fixtures/recipes.js";
 
 export const clone = value => structuredClone(value);
@@ -36,7 +36,7 @@ export function createLibrary() {
       if (!old && target === "recipe") Object.assign(doc, { fixture_id: FIXTURE.id, fixture_name: FIXTURE.name,
         steps: draft.steps.map((s, i) => ({ index: i + 1, part_id: s.part_id, target_id: "post", target_name: "定位柱" })),
         part_ids: [...new Set(draft.steps.map(s => s.part_id))] });
-      doc.training = trainingRecord(rounds.map(r => r.deviation_mm), { t });
+      doc.training = summarizeTraining(rounds, t);
       doc.collected_at = t; doc.version = (old?.version || 0) + 1;
       if (old) docs[docs.indexOf(old)] = doc; else docs.push(doc);
       return clone(doc);

@@ -10,6 +10,8 @@ export const POSES = {
   observe: down(0, -1.3, -1.2),
   parts: { plate: grasp(-0.45), tube: grasp(0.45), sleeve: grasp(-0.8), block: grasp(0.8) },
   post: grasp(0),
+  // 第二层仍先选关节角；FK 对照 5 mm 公差，末端朝向保持向下。
+  postStack: { above: down(0, -1.75, -0.43), contact: down(0, -2.13, -0.43) },
 };
 export const OPEN_MM = ARM_PARAMS.gripper.openingMm[1];
 export function tcpPosition(q) {
@@ -18,5 +20,5 @@ export function tcpPosition(q) {
 }
 export function keyPoses() {
   return [POSES.folded, POSES.observe, ...Object.values(POSES.parts).flatMap(p => [p.above, p.contact]),
-    POSES.post.above, POSES.post.contact];
+    POSES.post.above, POSES.post.contact, POSES.postStack.above, POSES.postStack.contact];
 }

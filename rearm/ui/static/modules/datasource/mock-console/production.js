@@ -18,6 +18,7 @@ export function scheduleProduction({ timeline, emit, recipe, parts, runId, resul
     targets: recognitionTargets(recipe.part_ids) }));
   recipe.steps.forEach((step, i) => {
     const part = parts.find(p => p.id === step.part_id), pick = POSES.parts[part.id] || POSES.parts.block;
+    const place = i === 0 ? POSES.post : POSES.postStack;
     const offset = 9500 + i * 10000, closed = Math.min(OPEN_MM, Math.min(...part.size_mm.slice(0, 2)));
     const report = (action, status) => emit("step_state", { run_id: runId, index: i + 1,
       action, part_id: part.id, status, force_n: part.force_n, ...(action === "pick" ? { angle_deg: 0 } : {}) });
@@ -26,11 +27,11 @@ export function scheduleProduction({ timeline, emit, recipe, parts, runId, resul
     at(offset + 2000, () => move(pick.contact, OPEN_MM, 2000));
     at(offset + 4000, () => move(pick.contact, closed, 500));
     at(offset + 4500, () => { move(pick.above, closed, 500); report("pick", "done"); });
-    at(offset + 5000, () => { move(POSES.post.above, closed, 2000); state("place", i + 1, part.id); });
+    at(offset + 5000, () => { move(place.above, closed, 2000); state("place", i + 1, part.id); });
     at(offset + 5000, () => report("place", "started"));
-    at(offset + 7000, () => move(POSES.post.contact, closed, 2000));
-    at(offset + 9000, () => move(POSES.post.contact, OPEN_MM, 500));
-    at(offset + 9500, () => { move(POSES.post.above, OPEN_MM, 500); report("place", "done"); });
+    at(offset + 7000, () => move(place.contact, closed, 2000));
+    at(offset + 9000, () => move(place.contact, OPEN_MM, 500));
+    at(offset + 9500, () => { move(place.above, OPEN_MM, 500); report("place", "done"); });
   });
   const inspectAt = 9500 + total * 10000;
   at(inspectAt, () => { move(POSES.observe, OPEN_MM, 2000); state("inspect"); });

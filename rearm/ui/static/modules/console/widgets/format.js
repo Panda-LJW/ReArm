@@ -3,7 +3,9 @@ export const millimeters = value => Number.isFinite(value) && value >= 0 ? `${va
 export function duration(ms) {
   if (!Number.isFinite(ms) || ms < 0) return "—";
   const seconds = Math.floor(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const pad = value => String(value).padStart(2, "0");
+  return seconds >= 3600 ? `${Math.floor(seconds / 3600)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}` :
+    `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`;
 }
 export function time(value) {
   if (!Number.isFinite(value)) return "—";

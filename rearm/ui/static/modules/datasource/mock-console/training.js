@@ -1,4 +1,5 @@
 import { POSES, OPEN_MM } from "../fixtures/poses.js";
+import { TRAIN_ROUND_MS, trainingImages } from "../fixtures/parts.js";
 
 export function scheduleTraining({ timeline, emit, library, trainId, target, draft }) {
   const started = timeline.time(), rounds = [];
@@ -9,8 +10,10 @@ export function scheduleTraining({ timeline, emit, library, trainId, target, dra
     timeline.at(started + i * 1200, () =>
       timeline.move({ q, gripper_mm: i === values.length - 1 || i % 2 ? OPEN_MM : 28 }, 1200));
     timeline.at(started + (i + 1) * 1200, () => {
+    // 画面每 1.2 秒推进一轮，训练数据使用每轮 5 分钟的训练时钟。
+    const elapsed_ms = (i + 1) * TRAIN_ROUND_MS;
     const progress = { train_id: trainId, target, round: i + 1, deviation_mm,
-      grasp_ok: i > 0, images: (i + 1) * 24, elapsed_ms: timeline.time() - started };
+      grasp_ok: i > 0, images: trainingImages(elapsed_ms), elapsed_ms };
     rounds.push(progress); emit("train_progress", progress);
     });
   });

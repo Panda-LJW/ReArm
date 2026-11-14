@@ -72,7 +72,7 @@ advance(1200);await flush();
 assert.match(libraryRoot.querySelector('[data-new-flow]').textContent,/训练完成 · 已收录/);
 assert.equal(find('开始训练'),undefined);assert.equal($('[data-status]').textContent,'待命');
 assert.equal($('[data-action="start"]').getAttribute('aria-disabled'),'false');
-assert.equal(store.getState().trains[0].images,192);assert.equal(store.getState().trains[0].elapsed_ms,9600);
+assert.equal(store.getState().trains[0].images,4800);assert.equal(store.getState().trains[0].elapsed_ms,2400000);
 await tab('parts');assert.equal(libraryRoot.querySelectorAll('[data-part]').length,5);
 assert.equal(store.getState().library.parts.at(-1).name,'新的零件');
 assert.equal(source.commands.filter(c=>c.cmd==='train_start').length,1);

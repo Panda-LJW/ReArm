@@ -3,15 +3,17 @@ import { PARTS } from "./parts.js";
 import { FIXTURE } from "./recipes.js";
 
 const post = tcpPosition(POSES.post.contact);
+// 薄片中心对应第一层接触姿态；盘面在其下半厚度处，柱从盘面立起。
+const supportZ = post[2] - PARTS[0].size_mm[2] / 2000;
 const partProps = PARTS.map(part => ({ id: part.id, kind: "part", name: part.name, shape: part.shape,
   size_m: part.size_mm.map(v => v / 1000), pose: tcpPosition(POSES.parts[part.id].contact), held: false }));
 export const WORKSPACE = {
   image: { width: 640, height: 480 },
-  table_z_m: post[2] - 0.025,
+  table_z_m: supportZ - 0.01,
   props: [{ id: FIXTURE.id, kind: "fixture", name: FIXTURE.name, shape: "disc", size_m: [0.09, 0.09, 0.01],
-    pose: [post[0], post[1], post[2] - 0.02], held: false },
+    pose: [post[0], post[1], supportZ - 0.005], held: false },
   { id: "post", kind: "post", name: "定位柱", shape: "post", size_m: [0.008, 0.008, 0.05],
-    pose: [...post], held: false }, ...partProps],
+    pose: [post[0], post[1], supportZ + 0.025], held: false }, ...partProps],
 };
 // 俯视示意坐标只由 FK 布局求得；框是图像像素，不冒充实物相机标定结果。
 const bounds = [0, 1].map(axis => {

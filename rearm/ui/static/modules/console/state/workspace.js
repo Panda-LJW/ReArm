@@ -14,8 +14,16 @@ export function movePart(workspace, step) {
   if (step.status !== "done") return workspace;
   const post = workspace.props.find(prop => prop.kind === "post");
   if (!post || !["pick", "place"].includes(step.action)) return workspace;
+  const support = workspace.props.find(prop => prop.kind === "fixture");
+  if (!support) return workspace;
+  const floor = support.pose[2] + support.size_m[2] / 2;
+  // 仅沿柱轴累计已放下的零件高度；第二件落在第一件顶面，不再共用柱中心。
+  const top = Math.max(floor, ...workspace.props.filter(prop => prop.kind === "part" && prop.id !== step.part_id &&
+    !prop.held && Math.hypot(prop.pose[0] - post.pose[0], prop.pose[1] - post.pose[1]) < 0.005)
+    .map(prop => prop.pose[2] + prop.size_m[2] / 2));
   return { ...workspace, props: workspace.props.map(prop => prop.id !== step.part_id ? prop :
-    { ...prop, held: step.action === "pick", pose: step.action === "place" ? [...post.pose] : prop.pose }) };
+    { ...prop, held: step.action === "pick", pose: step.action === "place" ?
+      [post.pose[0], post.pose[1], top + prop.size_m[2] / 2] : prop.pose }) };
 }
 
 export function workspaceBox(workspace, prop) {

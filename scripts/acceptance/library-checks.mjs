@@ -12,6 +12,7 @@ export async function openDoc(ctx, target) {
   await fresh(ctx, 'parts'); await visitLibrary(ctx, target === 'part' ? 'parts' : 'recipes');
   await ctx.page.locator(target === 'part' ? '[data-part]' : '[data-recipe-doc]').first().click();
   await ctx.page.locator('[data-chart="deviation"]:visible').first().waitFor({ state: 'visible' });
+  await ctx.page.locator('[data-chart="deviation"]:visible polyline').first().waitFor({ state: 'visible' });
   await shot(ctx, `${target}-doc`, `${target}-doc`);
 }
 
@@ -48,6 +49,8 @@ export async function newFlow(ctx, target, capture = async () => {}) {
   await capture(`${target} 开始训练前`);
   await train.click();
   await ctx.page.waitForFunction(() => document.querySelector('[data-status]')?.textContent.trim() === '训练中');
+  await ctx.page.waitForFunction(() => [...document.querySelectorAll('[data-new-flow] [data-chart="deviation"] polyline')]
+    .some(line => line.getBoundingClientRect().width > 0 && line.points.numberOfItems >= 2));
   await capture(`${target} 新增步骤2`); await shot(ctx, `${target}-step2`);
   await ctx.page.waitForFunction(() => [...document.querySelectorAll('[data-new-flow]')]
     .some(el => el.getBoundingClientRect().width && /训练完成\s*·\s*已收录/.test(el.innerText)), null, { timeout: 30000 });
@@ -86,10 +89,12 @@ export async function checkLibrary(ctx) {
   ctx.note(`零件=${parts}；配方=${recipes}`);
   ctx.assert(parts >= 4 && recipes >= 1, '零件少于4个或配方少于1个');
   await openDoc(ctx, 'part');
+  await assertCurve(ctx, '零件');
   const force = (await ctx.page.locator('[data-force]:visible').innerText()).trim();
   ctx.assert(/^\d+\.\d N$/.test(force), `夹持力格式错误：${force}`);
   ctx.note(`零件文档偏差曲线可见，夹持力=${force}`);
   await openDoc(ctx, 'recipe');
+  await assertCurve(ctx, '配方');
   await newFlow(ctx, 'part');
   // 不刷新，必须核对同次训练后库里的真实增量。
   await visitLibrary(ctx);
@@ -97,4 +102,11 @@ export async function checkLibrary(ctx) {
   ctx.note(`新增后零件数=${after}，原=${parts}`);
   ctx.assert(after === parts + 1, '三步完成后零件列表没有恰好新增1项');
   await shot(ctx, 'library-after-training');
+}
+
+async function assertCurve(ctx, name) {
+  const points = await ctx.page.locator('[data-chart="deviation"]:visible polyline').first()
+    .evaluate(line => line.points.numberOfItems);
+  ctx.note(`${name}文档偏差折线点数=${points}`);
+  ctx.assert(points >= 2, `${name}文档偏差折线必须至少有 2 个点`);
 }

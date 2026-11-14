@@ -1,7 +1,7 @@
 import { element } from "../../../widgets/dom.js";
 
 export const number = value => Number.isFinite(value) ? value.toFixed(1) : "—";
-export const duration = ms => Number.isFinite(ms) ? `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}` : "—";
+export { duration } from "../../../widgets/format.js";
 export function collected(value) {
   if (!Number.isFinite(value)) return "—";
   const d = new Date(value), pad = v => String(v).padStart(2, "0");

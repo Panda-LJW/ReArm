@@ -10,7 +10,7 @@ export function mount(root, ctx) {
   const title = element(doc, "h2"), meta = element(doc, "p", "library-muted");
   const message = element(doc, "p", "library-message", "正在读取文档…"); message.setAttribute("role", "status");
   const content = element(doc, "div", "library-doc-body"), summary = element(doc, "section");
-  const record = element(doc, "section"), graph = element(doc, "div");
+  const record = element(doc, "section"), graph = element(doc, "div", "library-training-record");
   record.append(element(doc, "h3", "", ctx.target === "recipe" ? "装配训练记录" : "训练记录"), graph);
   content.append(summary, record);
   let state, current, pending = false, disposed = false, sequence = 0;

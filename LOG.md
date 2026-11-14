@@ -346,3 +346,52 @@
 - 验收对照：surface-checks.mjs 的四项 data-nav 顺序及文字不变，browser.mjs 的 data-page 可见且内容非空由原导航测试继续覆盖，第 3 条预计保持绿。第 9、12、14 条仅自查本次两页的按钮/措辞/样式兼容性，不宣称全站已通过；详细对照追加至卡点.md。
 - 遗留：未运行 node1.sh、浏览器、服务或其他验收入口；没有三种视口、实际截断/滚动或截图的新证据，正式报告未更新。外部须继续跑验收脚本确认第 3 条及两页实际画面。未修改 scripts/acceptance/、协议、数据源、急停/限位、旧首页、孪生、README 或 SPEC；没有 git add/commit，未开始 T7。
 - 回滚：开工 HEAD 为 409bbb8f8eb7beaa11e53437ca21b270d6da4e76。改前两页 index.js 和三份文档副本位于 /private/tmp/rearm-node1-t6-before.BgceSO；只恢复两页 index.js，移除本轮两份 CSS、widgets/format.js 和测试文件，按段撤销本轮文档追加，保留其他会话内容及原有未跟踪文件。
+
+
+## NODE1-T7-20261115：统一打磨与七项截图反馈修正
+
+- 日期：2026-11-15（Asia/Taipei）。目标：仅完成 T7 与本轮七项补充；正式浏览器验收、截图和提交由外部执行，未开始 T8。
+- 决策：延续原生 ES 模块、品牌 tokens、单列步骤与既有数据源；不增加依赖、不换框架、不改协议，不接设备。生产父容器直接分发状态，由叶子视图统一 RAF 合帧；stepper 在所属视图帧内写 DOM，顶栏与步骤同步，保留每帧合并。reduce 拒绝 action/index/part_id 或时序不属于当前 run_state 的 step_state。
+- 提示：保留850ms悬停延迟、aria-disabled/help与统一激活拦截；只对键盘 focus-visible 显示焦点提示，鼠标按下/焦点回还不显示；显示4秒自动移除提示与描述关联。定时器、移开、失效和 dispose 清理完整。
+- 观察与布局：观察画面占右列全宽；标签按真实尺寸分配上下区域，图形限定中间区，连线对应目标，识别框固定屏幕线宽。空结果显示灰色“尚未检查”。配方标签同行、统计紧凑排列；记录两表并列/内部滚动，设置分上下栅格，文档图形和曲线利用余高。所有字号≥12px token；单列步骤保留。未查看修改后实际渲染。
+- 训练：五份历史文档的用时为32:40、40:12、36:50、46:01、47:50，收录时间分别错开，图像按2张/秒累计。现场每1.2秒推进一个画面轮次，每轮训练时钟为5分钟，8轮9.6秒演示完成，训练记录为40:00/4800张。入库直接归档已发进度，避免用墙钟重新计算。文档/记录共用用时格式，小时以上显示h:mm:ss。
+- 抓放：第一层接触姿态确定盘面高度；第二层另选限位内朝下姿态，用FK检查5mm公差；工作区按已放零件顶面累加高度。夹持时走既有Three道具层，放下后保持位置，第二件叠在第一件上。没有逆解或孪生源码改动。
+- 验收脚本：修改前已在卡点.md说明原因；只收紧library-checks.mjs，文档截图等polyline可见，第13条检查两类文档折线点数≥2，步骤2等至少两轮折线。未调整其他脚本、超时、数量或判断门槛。
+- 验证：基线417 passed in 36.33s；第一轮422 passed in 37.76s；最终保留单列步骤并匹配观察纵横比后422 passed in 35.71s。均为 .venv/bin/python -m pytest -q，零失败、零跳过，新增5项。56个控制台/fixtures/mock-console/验收JS与MJS的node --check通过。新增测试覆盖同帧高亮与迟到事件、鼠标/键盘提示及4秒寿命、训练时钟与归档及小时格式、所有预置抓取接触姿态和两次抓放≤5mm、夹持随动与叠放、观察标签边界/互斥/避开图形。原测试只更新0:09、192张及重合位置等已改变语义，精确数值断言保留并加强。
+- 验收预期：第9、12、14条预计转绿，第13条收紧后预计仍通过，其余原条目预计保持；17项实际选择器逐条对照记录在docs/路演/tasks/卡点.md。以上不是正式验收结果。
+- 遗留：真实浏览器三种尺寸、鼠标焦点行为、WebGL运动画面未验证；按用户要求没有启动浏览器/服务、运行node1.sh、更新验收报告或截图。未git add/commit；旧首页/训练模块、孪生、急停/限位及server.py均无diff；素材包未跟踪，main仍为57785e8f95837f0d2384b4f5968cba225821434c。保留其他会话的PPT和接口材料。
+- 回滚：改前文件在/private/tmp/rearm-t7-before/rollback.tar；只提取下列本轮改动的已有文件，移除新增observation-layout.js和test_console_polish.py。LOG/LOG-INDEX/卡点只撤本轮段落，不整文件覆盖并行内容。
+
+改动文件（完整清单）：
+
+- `LOG-INDEX.md`
+- `LOG.md`
+- `docs/路演/tasks/卡点.md`
+- `rearm/ui/static/modules/console/pages/parts/parts.css`
+- `rearm/ui/static/modules/console/pages/parts/views/format.js`
+- `rearm/ui/static/modules/console/pages/parts/views/library-doc.js`
+- `rearm/ui/static/modules/console/pages/parts/views/training-record.js`
+- `rearm/ui/static/modules/console/pages/production/index.js`
+- `rearm/ui/static/modules/console/pages/production/production.css`
+- `rearm/ui/static/modules/console/pages/production/views/observation-layout.js`
+- `rearm/ui/static/modules/console/pages/production/views/observe-view.js`
+- `rearm/ui/static/modules/console/pages/records/records.css`
+- `rearm/ui/static/modules/console/pages/settings/settings.css`
+- `rearm/ui/static/modules/console/shell/tooltip.js`
+- `rearm/ui/static/modules/console/state/store.js`
+- `rearm/ui/static/modules/console/state/workspace.js`
+- `rearm/ui/static/modules/console/widgets/format.js`
+- `rearm/ui/static/modules/console/widgets/stepper.js`
+- `rearm/ui/static/modules/datasource/fixtures/parts.js`
+- `rearm/ui/static/modules/datasource/fixtures/poses.js`
+- `rearm/ui/static/modules/datasource/fixtures/recipes.js`
+- `rearm/ui/static/modules/datasource/fixtures/workspace.js`
+- `rearm/ui/static/modules/datasource/mock-console/library.js`
+- `rearm/ui/static/modules/datasource/mock-console/production.js`
+- `rearm/ui/static/modules/datasource/mock-console/training.js`
+- `scripts/acceptance/library-checks.mjs`
+- `tests/test_console_data.py`
+- `tests/test_console_parts.py`
+- `tests/test_console_polish.py`
+- `tests/test_console_production.py`
+- `tests/test_console_records_settings.py`

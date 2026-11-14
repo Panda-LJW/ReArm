@@ -67,7 +67,10 @@ for(const p of PARTS) {
   assert.deepEqual(WORKSPACE.props.find(x=>x.id===p.id).pose,tcpPosition(POSES.parts[p.id].contact));
   assert.ok(tcpPosition(POSES.parts[p.id].above)[2]>tcpPosition(POSES.parts[p.id].contact)[2]);
 }
-assert.deepEqual(WORKSPACE.props.find(x=>x.id==='post').pose,tcpPosition(POSES.post.contact));
+const post=WORKSPACE.props.find(x=>x.id==='post'),disc=WORKSPACE.props.find(x=>x.kind==='fixture');
+assert.deepEqual(post.pose.slice(0,2),tcpPosition(POSES.post.contact).slice(0,2));
+assert.ok(Math.abs(post.pose[2]-post.size_m[2]/2-disc.pose[2]-disc.size_m[2]/2)<1e-12);
+assert.ok(Math.abs(tcpPosition(POSES.post.contact)[2]-PARTS[0].size_mm[2]/2000-disc.pose[2]-disc.size_m[2]/2)<1e-12);
 const camera=endPoses(ARM_PARAMS,POSES.observe).camera;
 assert.ok(Math.abs(camera[0])<0.0002 && Math.abs(camera[4])<0.0002 && camera[8]<-0.99999,
   JSON.stringify([camera[0],camera[4],camera[8]]));

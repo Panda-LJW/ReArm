@@ -56,7 +56,7 @@ cleanup();
 def test_production_exact_status_sequence_result_count_and_selfcheck():
     jsdom_script(SETUP + r'''
 assert.equal($('[data-count="sets"]').textContent,'0');assert.equal($('[data-count="pass-rate"]').textContent,'—');
-assert.equal($('[data-result]').textContent,'—');assert.equal($('.production-trend span').textContent,'—');
+assert.equal($('[data-result]').textContent,'尚未检查');assert.equal($('.production-trend span').textContent,'—');
 await begin();const phases=[];
 for(let t=0;t<=38000;t+=50){
   const word=$('[data-status]').textContent;if(phases.at(-1)!==word)phases.push(word);
@@ -95,7 +95,7 @@ await begin();advance(38000);assert.equal($('[data-count="sets"]').textContent,'
 await begin();advance(38000);assert.equal($('[data-count="sets"]').textContent,'2');
 assert.equal(store.getState().runs.length,2);
 $('[data-action="reset"]').click();await flush();assert.equal($('[data-count="sets"]').textContent,'0');
-assert.equal($('[data-count="pass-rate"]').textContent,'—');assert.equal($('[data-result]').textContent,'—');
+assert.equal($('[data-count="pass-rate"]').textContent,'—');assert.equal($('[data-result]').textContent,'尚未检查');
 assert.deepEqual(store.getState().workspace,original);cleanup();
 ''')
 
@@ -108,10 +108,15 @@ assert.equal(store.getState().workspace.props.find(p=>p.id==='plate').held,false
 advance(50);assert.equal(store.getState().workspace.props.find(p=>p.id==='plate').held,true);
 advance(5000);
 const workspace=store.getState().workspace,plate=workspace.props.find(p=>p.id==='plate');
-assert.equal(plate.held,false);assert.deepEqual(plate.pose,workspace.props.find(p=>p.kind==='post').pose);
+assert.equal(plate.held,false);
+const post=workspace.props.find(p=>p.kind==='post'),disc=workspace.props.find(p=>p.kind==='fixture');
+assert.deepEqual(plate.pose.slice(0,2),post.pose.slice(0,2));
+assert.ok(Math.abs(plate.pose[2]-plate.size_m[2]/2-disc.pose[2]-disc.size_m[2]/2)<1e-12);
 assert.deepEqual(original.workspace.props,seed.props);assert.deepEqual(WORKSPACE,seed);
 advance(19000);assert.equal(store.getState().workspace.props.find(p=>p.id==='tube').held,false);
-assert.deepEqual(store.getState().workspace.props.find(p=>p.id==='tube').pose,plate.pose);cleanup();
+const tube=store.getState().workspace.props.find(p=>p.id==='tube');
+assert.deepEqual(tube.pose.slice(0,2),plate.pose.slice(0,2));
+assert.ok(Math.abs(tube.pose[2]-tube.size_m[2]/2-plate.pose[2]-plate.size_m[2]/2)<1e-12);cleanup();
 ''')
 
 

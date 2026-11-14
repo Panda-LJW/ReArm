@@ -11,14 +11,15 @@ export function mount(root = document, ctx = {}) {
   tip.id = "console-disabled-tip"; tip.className = "console-tooltip";
   tip.setAttribute("role", "tooltip"); tip.dataset.tip = ""; tip.hidden = true;
   doc.body.append(tip);
-  let owner = null, timer = null;
+  let owner = null, timer = null, expiry = null, keyboard = true;
   const buttonAt = target => target?.closest?.('button,[role="button"]');
   const eligible = button => button?.isConnected && root.contains(button) &&
     button.getAttribute("aria-disabled") === "true" && button.dataset.reason?.trim() &&
     !button.closest("[hidden],[inert],dialog:not([open])");
   function hide() {
     if (timer !== null) win.clearTimeout(timer);
-    timer = null;
+    if (expiry !== null) win.clearTimeout(expiry);
+    timer = null; expiry = null;
     if (owner) {
       const ids = (owner.getAttribute("aria-describedby") || "").split(/\s+/).filter(id => id && id !== tip.id);
       if (ids.length) owner.setAttribute("aria-describedby", ids.join(" "));
@@ -40,9 +41,11 @@ export function mount(root = document, ctx = {}) {
     const below = at.bottom + gap;
     const top = below + box.height + gap <= win.innerHeight ? below : Math.max(gap, at.top - box.height - gap);
     tip.style.left = `${left}px`; tip.style.top = `${top}px`;
+    expiry = win.setTimeout(hide, 4000);
   }
   function begin(event) {
     const button = buttonAt(event.target);
+    if (event.type === "focusin" && (!keyboard || !button?.matches(":focus-visible"))) return;
     if (!eligible(button) || owner === button) return;
     hide(); owner = button;
     // 留 50ms 事件派发余量，保证 0.8s 前不可见、1.2s 时可见。
@@ -58,7 +61,10 @@ export function mount(root = document, ctx = {}) {
     event.preventDefault(); event.stopImmediatePropagation();
   }
   function escape(event) { if (event.key === "Escape") hide(); }
+  function pointerDown() { keyboard = false; hide(); }
+  function keyboardDown(event) { if (!event.metaKey && !event.ctrlKey && !event.altKey) keyboard = true; }
   const bindings = [
+    ["pointerdown", pointerDown], ["keydown", keyboardDown],
     ["pointerenter", begin], ["pointerleave", leave], ["focusin", begin], ["focusout", leave],
     ["click", guard], ["dblclick", guard], ["keydown", guard], ["keyup", guard], ["keydown", escape],
   ];

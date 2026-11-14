@@ -4,6 +4,7 @@ import { mount as chart } from "../../../widgets/line-chart.js";
 import { button, detail, duration, number, collected } from "./format.js";
 
 export function mount(root) {
+  root.classList.add("library-training-record");
   const doc = root.ownerDocument, graph = element(doc, "div"), metrics = element(doc, "dl", "library-metrics");
   const attempts = element(doc, "div", "library-attempts"), videoSlot = element(doc, "div");
   root.append(graph, metrics, attempts, videoSlot); const curve = chart(graph);

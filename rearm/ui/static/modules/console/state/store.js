@@ -46,7 +46,9 @@ export function reduce(state, message) {
     case "recognition":
       return m.run_id === state.run?.run_id && state.phase !== "estop" ? { ...next, recognition: m } : state;
     case "step_state":
-      return m.run_id === state.run?.run_id && ["pick", "place"].includes(state.phase) ?
+      return m.run_id === state.run?.run_id && ["pick", "place"].includes(state.phase) &&
+        m.action === state.phase && m.index === state.run.step_index && m.part_id === state.run.part_id &&
+        newer(m, state.run) ?
         { ...next, step: m, workspace: movePart(state.workspace, m) } : state;
     case "inspect_result":
       return m.run_id === state.run?.run_id && state.phase !== "estop" ? { ...next, inspection: m } : state;
