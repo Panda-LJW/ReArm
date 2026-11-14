@@ -10,7 +10,7 @@ button:hover{background:var(--hover);border-color:#3a414d}button:disabled{opacit
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:500}button.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
 button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
 input,select{border:1px solid var(--line2);border-radius:6px;padding:6px 8px;background:var(--bg);color:var(--text)}
-input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 header{position:sticky;top:0;z-index:20;background:rgba(10,12,15,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 20px;height:var(--header-h)}
 .brand{font-weight:600;font-size:var(--fs-lg);letter-spacing:.2px;display:flex;align-items:center;gap:8px}

@@ -1,21 +1,15 @@
 /* 视觉主题“仪表”：工业控制台的克制风格。依据见 docs/overnight/视觉参考.md 的六条规则。
    一、变量层：底色近黑、层级只靠明度；颜色只表达语义；数据最亮、容器最暗。
    二、外观细节：细线、小圆角、去掉发光与毛玻璃；标签加字距；画面区加角标刻度。
-   不改布局、不改交互、不新增状态颜色。删除本目录或加 ?theme=classic 即回到原主题。 */
+   不改布局、不改交互、不新增状态颜色。加 ?theme=classic 可关掉本文件的外观细节（颜色仍走 tokens.css）。 */
 
-/* —— 一、变量 —— */
+/* —— 一、变量 ——
+   通用颜色、字体、圆角已统一放进 /static/tokens.css（品牌与界面规范）。这里只留数字孪生的配色，
+   因为 twin.css 会在 tokens.css 之后声明自己的默认值，必须由主题再覆盖一次。孪生用中性灰，和实物的黑机身、白夹指一致。 */
 :root{
-  --bg:#06080a;--panel:#0b0e11;--panel2:#10141a;--head:#0b0e11;--hover:#161b22;
-  --line:#1a1f26;--line2:#2a313b;--grid:#151a20;
-  --text:#e9edf3;--sub:#a3acb9;--mute:#8d97a6;
-  /* 蓝色只用于“可操作 / 当前选中”；数据曲线用接近白色的冷灰，是画面里最亮的线 */
-  --accent:#4a90f5;--accent-2:#7aaef8;--accent-bg:rgba(74,144,245,.10);
-  --data:#dfe6f0;--data-fill:rgba(223,230,240,.07);--data-fill-end:rgba(223,230,240,.07);
-  --geo:#6b7584;--video:#030405;--radius:3px;
-  --twin-body:#2e353f;--twin-plate:#c2cad6;--twin-joint:#dfe6f0;--twin-edge:#8d97a6;--twin-grid:#1f252d;--twin-pedestal:#12161b;
-  --twin-skin-dark:#3b434f;--twin-skin-darker:#252b33;--twin-skin-metal:#d3dae4;--twin-skin-trim:#7d8796;
+  --twin-body:#2f3236;--twin-plate:#c9cbce;--twin-joint:var(--brand-mist);--twin-edge:#8b8f95;--twin-grid:#1f2225;--twin-pedestal:#121416;
+  --twin-skin-dark:#3d4044;--twin-skin-darker:#26282b;--twin-skin-metal:#d9dadc;--twin-skin-trim:#7f8388;
 }
-html[data-mode="show"]{--line:#232a33;--line2:#3a434f;--grid:#1e242c;--data:#f2f5f9}
 
 /* —— 二、外观细节 —— */
 body{font-feature-settings:"tnum" 1,"zero" 1}
@@ -28,7 +22,7 @@ header{background:var(--bg);backdrop-filter:none}
 nav button{letter-spacing:.04em}
 nav button.on{border-bottom-color:var(--text)}
 
-/* 按钮：细线描边、小圆角；只有主操作是实心蓝 */
+/* 按钮：细线描边、小圆角；只有主操作是反白实底 */
 button{border-radius:var(--radius);background:transparent;border-color:var(--line2)}
 button:hover{background:var(--hover);border-color:var(--mute)}
 button.primary{background:var(--accent);border-color:var(--accent)}

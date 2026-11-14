@@ -1,0 +1,395 @@
+<title>ReArm 品牌与界面规范</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Noto+Sans+SC:wght@400;700&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* 布局：左侧固定目录 + 右侧规范正文；颜色、字体、圆角全部来自 tokens.css，本页不另写色值。 */
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:var(--fs-md)/1.65 var(--sans);font-feature-settings:"tnum" 1}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding-block:var(--sp-6) 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:180px minmax(0,1fr);gap:48px}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;display:grid;gap:2px;font-size:var(--fs-sm)}
+.toc a{text-decoration:none;color:var(--sub);padding:4px 0 4px 12px;border-left:1px solid var(--line)}
+.toc a:hover{color:var(--text);border-left-color:var(--text)}
+.toc b{font:600 var(--fs-xs)/1 var(--mono);color:var(--mute);letter-spacing:var(--tracking-label);margin-bottom:10px}
+main{min-width:0;display:grid;gap:72px}
+section{display:grid;gap:var(--sp-5);scroll-margin-top:24px}
+.eyebrow{font:500 var(--fs-xs)/1 var(--mono);letter-spacing:var(--tracking-label);color:var(--mute);text-transform:uppercase}
+h1,h2{font-family:var(--display);font-weight:700;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h2{font-size:26px;line-height:1.2}
+h3{font-size:var(--fs-md);font-weight:600;margin:0 0 var(--sp-2);letter-spacing:.02em}
+p{margin:0;max-width:66ch;color:var(--sub)}
+p strong,li strong{color:var(--text);font-weight:600}
+ul{margin:0;padding-left:1.2em;color:var(--sub);display:grid;gap:4px}
+code{font:var(--fs-sm) var(--mono);color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 5px}
+.head{display:grid;gap:var(--sp-3);border-bottom:1px solid var(--line);padding-bottom:var(--sp-5)}
+.grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cell{background:var(--panel);padding:var(--sp-4);min-width:0;display:grid;gap:var(--sp-2);align-content:start}
+.k{font:500 var(--fs-xs)/1.3 var(--mono);letter-spacing:var(--tracking-label);color:var(--mute);text-transform:uppercase}
+.note{font-size:var(--fs-sm);color:var(--sub)}
+.wm{display:block;color:currentColor}
+.stage{min-height:180px;display:grid;place-items:center;padding:var(--sp-5);position:relative;overflow:hidden}
+.stage.paper{background:var(--bg);color:var(--text)}
+.tblwrap{overflow-x:auto;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm);min-width:560px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 var(--fs-xs)/1.3 var(--mono);letter-spacing:var(--tracking-label);color:var(--mute);background:var(--panel);text-transform:uppercase}
+td{background:var(--bg);color:var(--sub)}
+tr:last-child td{border-bottom:0}
+td.mono{font-family:var(--mono);color:var(--text);white-space:nowrap}
+.sw{display:grid;grid-template-rows:88px auto;background:var(--panel);min-width:0}
+.sw i{display:block;border-bottom:1px solid var(--line)}
+.sw div{padding:10px 12px;display:grid;gap:2px}
+.sw b{font-size:var(--fs-sm);font-weight:600}
+.sw span{font:var(--fs-xs) var(--mono);color:var(--sub)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.row{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+/* 组件示例：照规范写的参考实现 */
+.btn{height:var(--ctl-h);padding:0 14px;border-radius:var(--radius);border:1px solid var(--line2);background:transparent;color:var(--text);font:500 var(--fs-base)/1 var(--sans);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.btn:hover{background:var(--hover);border-color:var(--mute)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn.ghost{border-color:transparent;color:var(--sub)}
+.btn.ghost:hover{color:var(--text);background:var(--hover)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-sm)}
+.btn.lg{height:var(--ctl-h-lg);padding:0 18px;font-size:var(--fs-md)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.estop{height:48px;padding:0 22px;border-radius:var(--radius);border:2px solid var(--estop);background:var(--estop);color:var(--on-estop);font:700 var(--fs-md)/1 var(--sans);letter-spacing:.12em;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:1px solid var(--line2);border-radius:var(--radius-sm);font:500 var(--fs-xs)/1 var(--sans);letter-spacing:.04em;color:var(--sub)}
+.tag svg{width:12px;height:12px}
+.tag.ok{border-color:var(--ok);color:var(--ok)}.tag.warn{border-color:var(--warn);color:var(--warn)}.tag.bad{border-color:var(--bad);color:var(--bad)}.tag.cur{border-color:var(--accent);color:var(--accent-2)}
+.field{display:grid;gap:6px;min-width:0}
+.field label{font:500 var(--fs-xs)/1 var(--mono);letter-spacing:var(--tracking-label);color:var(--mute);text-transform:uppercase}
+.input{height:var(--ctl-h);border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);color:var(--text);padding:0 10px;font:var(--fs-base) var(--mono);width:100%}
+.input:focus{outline:2px solid var(--focus);outline-offset:1px}
+.slider{display:grid;gap:8px}
+.slider .top{display:flex;justify-content:space-between;align-items:baseline}
+.slider .v{font:500 var(--fs-xl)/1 var(--mono);color:var(--data)}.slider .v small{font-size:var(--fs-xs);color:var(--mute);margin-left:3px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(var(--text),var(--text)) 0/var(--p,40%) 100% no-repeat,var(--line2)}
+input[type=range]::-moz-range-track{height:2px;background:var(--line2)}
+input[type=range]::-moz-range-progress{height:2px;background:var(--text)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:16px;margin-top:-7px;background:var(--text);border:0;border-radius:0}
+input[type=range]::-moz-range-thumb{width:4px;height:16px;background:var(--text);border:0;border-radius:0}
+input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:4px}
+.scale{display:flex;justify-content:space-between;font:var(--fs-2xs) var(--mono);color:var(--mute)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.card h4{margin:0;padding:10px var(--pad);border-bottom:1px solid var(--line);font:500 var(--fs-xs)/1.3 var(--sans);letter-spacing:var(--tracking-label);color:var(--sub);display:flex;align-items:center;gap:8px}
+.card h4:before{content:"";width:6px;height:6px;border:1px solid var(--mute)}
+.card h4 em{margin-left:auto;font-style:normal;font-family:var(--mono);color:var(--mute);letter-spacing:0}
+.card .body{padding:var(--pad);display:grid;gap:var(--sp-3)}
+.kpi{display:grid;gap:4px}.kpi .v{font:500 var(--fs-kpi)/1 var(--mono);color:var(--data)}.kpi .v small{font-size:var(--fs-sm);color:var(--mute);margin-left:3px}
+.ico{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.ico div{background:var(--panel);padding:var(--sp-4) var(--sp-2);display:grid;justify-items:center;gap:8px;font:var(--fs-2xs) var(--mono);color:var(--mute)}
+.ico svg{width:20px;height:20px;color:var(--text)}
+svg.l{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.sp{display:flex;align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap}
+.sp div{display:grid;gap:6px;justify-items:center;font:var(--fs-2xs) var(--mono);color:var(--mute)}
+.sp i{display:block;background:var(--text);opacity:.85}
+.rad{display:flex;gap:var(--sp-4);flex-wrap:wrap}
+.rad div{display:grid;gap:6px;justify-items:center;font:var(--fs-2xs) var(--mono);color:var(--mute)}
+.rad i{width:56px;height:56px;border:1px solid var(--text)}
+.do,.dont{font:600 var(--fs-xs)/1 var(--mono);letter-spacing:var(--tracking-label)}
+.do{color:var(--ok)}.dont{color:var(--bad)}
+.circle{position:absolute;border-radius:50%;background:var(--panel2)}
+.cover{display:grid;gap:var(--sp-3);justify-items:center;text-align:center;position:relative}
+.cover .zh{font:700 44px/1.1 var(--display);letter-spacing:.04em}
+.cover .slogan{font:400 var(--fs-xl)/1 var(--display);letter-spacing:.3em;color:var(--sub);padding-left:.3em}
+@media (max-width:860px){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:var(--sp-5)}
+  .toc{position:static;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}.toc b{display:none}
+  .g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:520px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}.cover .zh{font-size:32px}h2{font-size:22px}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="wordmark" viewBox="0 0 378 100">
+    <clipPath id="wmclip"><rect width="378" height="100"/></clipPath>
+    <g clip-path="url(#wmclip)"><path d="M9 100V9H34A23.5 23.5 0 0 1 34 56H9M33 56L61 100" fill="none" stroke="currentColor" stroke-width="18"/><path d="M83 64H137A27 27 0 1 0 129.1 83.1" fill="none" stroke="currentColor" stroke-width="18"/><path d="M152 100L183 0L203 0L234 100L215 100L209.42 82L176.58 82L171 100Z M182.16 64L193 29L203.84 64Z" fill="currentColor" fill-rule="evenodd"/><path d="M251 100V28M251 62C251 44 262 37 280 37" fill="none" stroke="currentColor" stroke-width="18"/><path d="M295 100V28M295 100V56A18.5 18.5 0 0 1 332 56V100M332 56A18.5 18.5 0 0 1 369 56V100" fill="none" stroke="currentColor" stroke-width="18"/></g>
+  </symbol>
+</svg>
+
+<div class="wrap">
+  <nav class="toc" aria-label="目录">
+    <b>目录</b>
+    <a href="#logo">Logo</a>
+    <a href="#color">颜色</a>
+    <a href="#dark">深色翻译</a>
+    <a href="#type">字体</a>
+    <a href="#icon">图标</a>
+    <a href="#comp">组件</a>
+    <a href="#space">间距与圆角</a>
+    <a href="#paper">路演白底</a>
+    <a href="#dev">开发怎么用</a>
+  </nav>
+
+  <main>
+    <header class="head">
+      <div class="eyebrow">品牌与界面规范 · v1.0 · 2026-11-14</div>
+      <svg class="wm" viewBox="0 0 378 100" style="width:min(320px,70%)" role="img" aria-label="ReArm"><use href="#wordmark"/></svg>
+      <p>这一页是海报和前端之间的翻译词典。颜色、字体、圆角都写在 <code>/static/tokens.css</code> 里，本页直接引用那份文件，所以页面上看到的就是代码里的值。海报没有源文件，Logo 和色值是按海报重新绘制、取样定下的；以后拿到设计稿，只改 tokens.css 和 <code>/static/brand/</code> 里的 SVG。</p>
+    </header>
+
+    <!-- 一、Logo -->
+    <section id="logo">
+      <div class="eyebrow">A · 从海报提取</div>
+      <h2>Logo</h2>
+      <p><strong>主 Logo 是粗体字标。</strong>点阵版是辅助标志，只出现在品牌位、封面、加载页和路演开场，不进入日常操作界面。两版都是矢量路径，不依赖字体。</p>
+      <div class="grid g2">
+        <div class="cell">
+          <span class="k">主 Logo · 字标 · 深色底</span>
+          <div class="stage"><svg class="wm" viewBox="0 0 378 100" style="width:220px;color:var(--text)" role="img" aria-label="ReArm"><use href="#wordmark"/></svg></div>
+          <span class="note"><code>brand/rearm-wordmark.svg</code> · 颜色随 currentColor</span>
+        </div>
+        <div class="cell" data-tone="paper">
+          <span class="k">主 Logo · 字标 · 白底</span>
+          <div class="stage paper"><svg class="wm" viewBox="0 0 378 100" style="width:220px" role="img" aria-label="ReArm"><use href="#wordmark"/></svg></div>
+          <span class="note">墨黑 <code>#212121</code>，不用纯黑</span>
+        </div>
+        <div class="cell">
+          <span class="k">辅助 · 点阵横排</span>
+          <div class="stage"><img src="brand/rearm-dotmatrix.svg" alt="ReArm 点阵字" style="width:240px"></div>
+          <span class="note"><code>brand/rearm-dotmatrix.svg</code> · 5×7 点阵，点灰 <code>#737373</code></span>
+        </div>
+        <div class="cell">
+          <span class="k">辅助 · 点阵竖排 / 图标 / “+”</span>
+          <div class="stage" style="grid-auto-flow:column;gap:40px">
+            <img src="brand/rearm-dotmatrix-vertical.svg" alt="ReArm 竖排点阵字" style="height:150px">
+            <img src="brand/rearm-mark.svg" alt="ReArm 图标" style="width:64px">
+            <img src="brand/rearm-plus.svg" alt="点阵加号" style="width:28px">
+          </div>
+          <span class="note">竖排用于海报式版面；方形图标用于网页图标和应用图标</span>
+        </div>
+      </div>
+      <div class="grid g3">
+        <div class="cell"><span class="k">最小尺寸</span><span class="note">字标屏幕上高度不小于 14px；点阵版不小于 40px 宽，再小点会糊成一片。</span></div>
+        <div class="cell"><span class="k">留白</span><span class="note">四周至少留一个“e”的宽度。顶栏里字标高 16px，左右留 12px。</span></div>
+        <div class="cell"><span class="k">配中文</span><span class="note">“日新臂”用思源黑体 Bold，与字标同高或略小，放字标右侧或下方。</span></div>
+      </div>
+      <p><span class="dont">不要</span>　拉伸变形、加彩色或渐变、加阴影和发光、把点阵版当正文标题、在照片杂乱处直接压 Logo。</p>
+    </section>
+
+    <!-- 二、颜色 -->
+    <section id="color">
+      <div class="eyebrow">A + B · 品牌原色与功能色</div>
+      <h2>颜色</h2>
+      <p><strong>品牌只有黑、白、灰，没有彩色主色。</strong>主操作和选中态用“反白”表达（白底黑字、白色下划线）。彩色只给状态用，而且必须配文字或形状。</p>
+      <h3>品牌原色（海报取样）</h3>
+      <div class="grid g4">
+        <div class="sw"><i style="background:var(--brand-ink)"></i><div><b>墨黑</b><span>--brand-ink · #212121</span><span>海报标题</span></div></div>
+        <div class="sw"><i style="background:var(--brand-paper)"></i><div><b>纸白</b><span>--brand-paper · #fdfdfd</span><span>海报底色</span></div></div>
+        <div class="sw"><i style="background:var(--brand-mist)"></i><div><b>雾灰</b><span>--brand-mist · #eaebed</span><span>海报灰圆</span></div></div>
+        <div class="sw"><i style="background:var(--brand-dot)"></i><div><b>点阵灰</b><span>--brand-dot · #737373</span><span>竖排点阵字</span></div></div>
+      </div>
+      <h3>功能色（为界面新定）</h3>
+      <div class="grid g4">
+        <div class="sw"><i style="background:var(--ok)"></i><div><b>成功 / 正常</b><span>--ok · #3ecf8e</span><span>在范围内、已连接、完成</span></div></div>
+        <div class="sw"><i style="background:var(--warn)"></i><div><b>警告 / 进行中</b><span>--warn · #f2a93b</span><span>运行中、接近限位、模拟数据</span></div></div>
+        <div class="sw"><i style="background:var(--bad)"></i><div><b>错误 / 急停</b><span>--bad · #ff5d5d</span><span>急停按钮实底用 --estop #d92d2d</span></div></div>
+        <div class="sw"><i style="background:var(--focus)"></i><div><b>键盘焦点</b><span>--focus · #7aaef8</span><span>只画焦点框，不做装饰</span></div></div>
+      </div>
+      <h3>图表专用</h3>
+      <p>曲线默认用 <code>--data</code>（纸白，画面里最亮）。对比两条线时，实测用 <code>--obs</code> <span class="dot" style="background:var(--obs)"></span>，预测用 <code>--pred</code> <span class="dot" style="background:var(--pred)"></span>。这两个颜色不拿去做按钮、标签或边框。</p>
+    </section>
+
+    <!-- 三、深色翻译 -->
+    <section id="dark">
+      <div class="eyebrow">B · 深色模式的翻译规则</div>
+      <h2>海报白底 → 控制台黑底</h2>
+      <p>海报是白底黑字，控制台是黑底白字。按下表对应，层级只靠明度区分，不用渐变、不用阴影分层。</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th>海报里</th><th>控制台里</th><th>变量</th><th>值</th></tr></thead>
+        <tbody>
+          <tr><td>墨黑（文字）</td><td>页面背景</td><td class="mono">--bg</td><td class="mono">#08090a</td></tr>
+          <tr><td>灰圆</td><td>面板、卡片底色</td><td class="mono">--panel / --panel2</td><td class="mono">#0e0f11 / #141618</td></tr>
+          <tr><td>纸白（底色）</td><td>正文文字</td><td class="mono">--text</td><td class="mono">#eaebed</td></tr>
+          <tr><td>纸白</td><td>数据、曲线、读数（最亮）</td><td class="mono">--data</td><td class="mono">#fdfdfd</td></tr>
+          <tr><td>点阵灰</td><td>次要文字、单位、标签</td><td class="mono">--sub / --mute</td><td class="mono">#a5a8ad / #8b8f95</td></tr>
+          <tr><td>灰圆描边</td><td>分隔线、边框</td><td class="mono">--line / --line2</td><td class="mono">#1d2023 / #2c3034</td></tr>
+          <tr><td>黑字</td><td>主按钮、选中态（反白）</td><td class="mono">--accent / --on-accent</td><td class="mono">#eaebed / #212121</td></tr>
+        </tbody>
+      </table></div>
+      <p>路演模式（<code>html[data-mode="show"]</code>）把线条和数据再提亮一级，保证会场最后一排看得见。</p>
+    </section>
+
+    <!-- 四、字体 -->
+    <section id="type">
+      <div class="eyebrow">A + B · 品牌字体与界面字体</div>
+      <h2>字体</h2>
+      <div class="grid g3">
+        <div class="cell"><span class="k">展示 · --display</span><div style="font:700 40px/1 var(--display);letter-spacing:-.01em">ReArm 日新臂</div><span class="note">英文 Montserrat Bold，中文思源黑体 Bold。只用于标题、封面、路演大字。都是 SIL OFL 授权，可免费商用。</span></div>
+        <div class="cell"><span class="k">正文 · --sans</span><div style="font:400 var(--fs-lg)/1.5 var(--sans)">关节 3 接近限位，已自动降速。</div><span class="note">跟随系统字体（苹方 / 微软雅黑），界面里所有文字默认用它。</span></div>
+        <div class="cell"><span class="k">数字 · --mono</span><div style="font:500 28px/1 var(--mono);color:var(--data)">−12.48<small style="font-size:13px;color:var(--mute);margin-left:4px">mm</small></div><span class="note">读数、坐标、编号一律等宽，单位小一号、颜色更淡。</span></div>
+      </div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>变量</th><th>字号</th><th>用在哪</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">--fs-2xs / xs</td><td class="mono">10 / 11px</td><td>刻度、小标签（大写加字距 <code>--tracking-label</code>）</td></tr>
+          <tr><td class="mono">--fs-sm / base</td><td class="mono">12 / 13px</td><td>表格、正文、按钮</td></tr>
+          <tr><td class="mono">--fs-md / lg</td><td class="mono">14 / 15px</td><td>卡片里的主要文字、提示条</td></tr>
+          <tr><td class="mono">--fs-xl / 2xl</td><td class="mono">17 / 19px</td><td>页面标题、滑块读数</td></tr>
+          <tr><td class="mono">--fs-kpi</td><td class="mono">22px</td><td>数据格大数字</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 五、图标 -->
+    <section id="icon">
+      <div class="eyebrow">B · 图标库</div>
+      <h2>图标：Lucide</h2>
+      <p>统一用 <strong>Lucide</strong>（MIT 授权）。线宽 1.5，界面里 16px，工具栏 20px，颜色跟文字走（currentColor）。不混用其他图标库，不用表情符号当图标。状态图标和状态色成对出现。</p>
+      <div class="ico">
+        <div><svg class="l" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></svg>play</div>
+        <div><svg class="l" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>pause</div>
+        <div><svg class="l" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>square</div>
+        <div><svg class="l" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>rotate-ccw</div>
+        <div><svg class="l" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>crosshair</div>
+        <div><svg class="l" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>camera</div>
+        <div><svg class="l" viewBox="0 0 24 24" style="color:var(--ok)"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>circle-check</div>
+        <div><svg class="l" viewBox="0 0 24 24" style="color:var(--warn)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>triangle-alert</div>
+        <div><svg class="l" viewBox="0 0 24 24" style="color:var(--bad)"><path d="M2.586 16.726A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2h6.624a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586z"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>octagon-x</div>
+      </div>
+    </section>
+
+    <!-- 六、组件 -->
+    <section id="comp">
+      <div class="eyebrow">B · 基础组件规则</div>
+      <h2>组件</h2>
+      <div class="grid g2">
+        <div class="cell">
+          <span class="k">按钮</span>
+          <div class="row">
+            <button class="btn primary" type="button">开始训练</button>
+            <button class="btn" type="button">回零位</button>
+            <button class="btn ghost" type="button">取消</button>
+            <button class="btn danger" type="button">清除数据</button>
+            <button class="btn" type="button" disabled>不可用</button>
+          </div>
+          <div class="row">
+            <button class="btn sm" type="button">小 26</button>
+            <button class="btn" type="button">默认 32</button>
+            <button class="btn lg primary" type="button">大 40</button>
+          </div>
+          <ul class="note">
+            <li><strong>主按钮</strong>反白实底，一屏最多一个。</li>
+            <li><strong>次按钮</strong>细线描边，透明底。<strong>幽灵按钮</strong>用于取消、关闭。</li>
+            <li><strong>危险按钮</strong>红色描边，点击后要二次确认。</li>
+          </ul>
+        </div>
+        <div class="cell">
+          <span class="k">急停</span>
+          <div class="row"><button class="estop" type="button"><svg class="l" viewBox="0 0 24 24" width="18" height="18" style="stroke-width:2"><path d="M2.586 16.726A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2h6.624a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586z"/></svg>急停</button></div>
+          <ul class="note">
+            <li>全界面<strong>唯一</strong>的红色实底按钮，固定在顶栏右侧，任何页面都在同一位置。</li>
+            <li>高 48px，比其他按钮都大；文字加字距，配八边形图标。</li>
+            <li>不做悬停变色以外的动效，不被任何浮层遮住。</li>
+          </ul>
+        </div>
+        <div class="cell">
+          <span class="k">状态标签</span>
+          <div class="row">
+            <span class="tag ok"><svg class="l" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>已连接</span>
+            <span class="tag warn"><svg class="l" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg>训练中</span>
+            <span class="tag bad"><svg class="l" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>超限</span>
+            <span class="tag cur">当前</span>
+            <span class="tag">待命</span>
+          </div>
+          <span class="note">颜色 + 图标 + 文字三重表达，色弱也能分清。标签只描边不铺底色，圆角 2px。</span>
+        </div>
+        <div class="cell">
+          <span class="k">滑块与输入</span>
+          <div class="slider">
+            <div class="top"><span class="k">速度上限</span><span class="v" id="spv">40<small>%</small></span></div>
+            <input type="range" id="speed" min="0" max="100" value="40" aria-label="速度上限">
+            <div class="scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          </div>
+          <div class="field"><label for="thr">命中阈值 mm</label><input class="input" id="thr" value="5.0"></div>
+          <span class="note">滑块是 2px 细轨 + 竖条游标，不用圆形把手；读数等宽、单位小一号。输入框和按钮同高 32px。</span>
+        </div>
+      </div>
+      <div class="grid g2" style="background:none;border:0;gap:var(--sp-4)">
+        <div class="card">
+          <h4>关节读数<em>J1–J3</em></h4>
+          <div class="body">
+            <div class="grid g3" style="border:0">
+              <div class="cell kpi" style="padding:var(--sp-3)"><span class="k">J1</span><span class="v">12.4<small>°</small></span></div>
+              <div class="cell kpi" style="padding:var(--sp-3)"><span class="k">J2</span><span class="v">−37.0<small>°</small></span></div>
+              <div class="cell kpi" style="padding:var(--sp-3)"><span class="k">J3</span><span class="v">88.6<small>°</small></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="cell" style="background:none;padding:0">
+          <span class="k">卡片</span>
+          <ul class="note">
+            <li>面板底色 <code>--panel</code>，1px <code>--line</code> 边框，圆角 3px，<strong>没有阴影</strong>。</li>
+            <li>标题是小号大写加字距的标签，前面一个 6px 空心方块，下面一条细线；没有填色的标题条。</li>
+            <li>内边距 14px（<code>--pad</code>），卡片之间 12px（<code>--gap</code>）。</li>
+            <li>数据格之间用 1px 细线分开，不各自加边框。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 七、间距与圆角 -->
+    <section id="space">
+      <div class="eyebrow">B · 间距与圆角</div>
+      <h2>间距与圆角</h2>
+      <p>间距都是 4 的倍数。圆角整体偏小，让界面像仪器而不像手机应用。</p>
+      <div class="grid g2">
+        <div class="cell"><span class="k">间距 --sp-1 … --sp-6</span>
+          <div class="sp"><div><i style="width:4px;height:4px"></i>4</div><div><i style="width:8px;height:8px"></i>8</div><div><i style="width:12px;height:12px"></i>12</div><div><i style="width:16px;height:16px"></i>16</div><div><i style="width:24px;height:24px"></i>24</div><div><i style="width:32px;height:32px"></i>32</div></div>
+        </div>
+        <div class="cell"><span class="k">圆角</span>
+          <div class="rad"><div><i style="border-radius:var(--radius-sm)"></i>2 · 标签</div><div><i style="border-radius:var(--radius)"></i>3 · 按钮卡片</div><div><i style="border-radius:var(--radius-lg)"></i>6 · 弹窗</div><div><i style="border-radius:50%"></i>圆 · 状态点</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 八、路演白底 -->
+    <section id="paper">
+      <div class="eyebrow">海报原样 · data-tone="paper"</div>
+      <h2>路演白底</h2>
+      <p>加载页、封面和路演开场可以直接用海报的样子：纸白底、灰圆、墨黑大字。在任意容器上加 <code>data-tone="paper"</code>，里面所有变量自动换成白底值，组件不用改。</p>
+      <div data-tone="paper" style="background:var(--bg);color:var(--text);border:1px solid var(--line);position:relative;overflow:hidden;padding:56px 24px 64px">
+        <span class="circle" style="width:300px;height:300px;right:-60px;top:-90px"></span>
+        <span class="circle" style="width:220px;height:220px;left:-40px;bottom:-80px"></span>
+        <img src="brand/rearm-plus.svg" alt="" style="position:absolute;left:20px;top:20px;width:22px">
+        <img src="brand/rearm-dotmatrix-vertical.svg" alt="" style="position:absolute;right:20px;top:20px;height:120px">
+        <div class="cover">
+          <svg class="wm" viewBox="0 0 378 100" style="width:min(260px,70%)" role="img" aria-label="ReArm"><use href="#wordmark"/></svg>
+          <div class="zh">日新臂</div>
+          <div class="slogan">苟日新，日日新，又日新。</div>
+          <div class="row" style="justify-content:center;margin-top:var(--sp-4)"><button class="btn primary lg" type="button">开始演示</button><span class="tag ok"><svg class="l" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>机械臂已就绪</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 九、开发怎么用 -->
+    <section id="dev">
+      <div class="eyebrow">给开发</div>
+      <h2>开发怎么用</h2>
+      <ul>
+        <li>页面只用<strong>第二层语义变量</strong>（<code>--bg</code> <code>--text</code> <code>--ok</code> …），不直接用 <code>--brand-*</code>，更不写十六进制色值。</li>
+        <li>旧变量名 <code>--cyan</code> 等于 <code>--ok</code>，<code>--accent-2</code> 是主按钮悬停色，都还能用，新代码用新名字。</li>
+        <li>数字孪生的配色在 <code>modules/theme/theme.css</code> 的 <code>--twin-*</code>，跟实物一样是中性灰。</li>
+        <li>字体文件还没打包：上线前把 Montserrat 和思源黑体（Noto Sans SC）的 woff2 放进 <code>/static/fonts/</code>，在 tokens.css 加 <code>@font-face</code>。没装时会退回 Avenir Next / 苹方，不影响使用。</li>
+        <li>目前 CSS 和 JS 里还有约 90 处写死的颜色，下一步按这页逐个换成变量。</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  var r=document.getElementById('speed'),v=document.getElementById('spv');
+  function upd(){r.style.setProperty('--p',r.value+'%');v.firstChild.nodeValue=r.value;}
+  r.addEventListener('input',upd);upd();
+})();
+</script>

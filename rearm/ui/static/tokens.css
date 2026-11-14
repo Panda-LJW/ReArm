@@ -1,14 +1,64 @@
+/* ReArm 日新臂 · 设计变量（design tokens）
+   这是颜色、字体、圆角、间距的唯一来源。规范说明见 /static/brand.html，那一页也直接引用本文件。
+   分三层：一、品牌原色（来自海报取样）；二、界面语义变量（页面只用这一层）；三、路演白底（data-tone="paper"）。
+   旧变量名（--cyan、--accent-2 等）保留为别名，现有页面不用改就能用上新值。 */
+
 :root{
-  --bg:#0a0c0f;--panel:#111418;--panel2:#161a20;--head:#13171c;--hover:#1b2028;
-  --line:#20252d;--line2:#2c323c;--text:#e7eaf0;--sub:#9aa3b1;--mute:#8993a2;
-  --accent:#3d8bff;--accent-2:#6aa6ff;--accent-bg:rgba(61,139,255,.13);--on-accent:#fff;
-  --cyan:#3fc8e8;--warn:#f2a93b;--warn-bg:rgba(242,169,59,.14);--bad:#ff5d5d;--bad-bg:rgba(255,93,93,.13);
-  --obs:#ff6a4d;--pred:#5aa2ff;--grid:#1c2128;--geo:#5d6676;
-  --data:#3d8bff;--data-fill:rgba(61,139,255,.28);--data-fill-end:rgba(61,139,255,0);
-  --video:#050607;--radius:8px;
+  /* —— 一、品牌原色：海报取样，只在本文件里被引用 —— */
+  --brand-ink:#212121;    /* 海报标题黑 */
+  --brand-paper:#fdfdfd;  /* 海报纸白 */
+  --brand-mist:#eaebed;   /* 海报灰圆 */
+  --brand-dot:#737373;    /* 竖排点阵字的灰 */
+
+  /* —— 二、界面语义变量（深色控制台，默认） ——
+     翻译规则：海报的黑 → 界面背景；海报的白 → 界面文字与数据；海报的灰圆 → 面板底色（深色下抬亮一级）。 */
+  --bg:#08090a;--panel:#0e0f11;--panel2:#141618;--head:#0e0f11;--hover:#1a1c1f;
+  --line:#1d2023;--line2:#2c3034;--grid:#17191c;
+  --text:var(--brand-mist);--sub:#a5a8ad;--mute:#8b8f95;
+  --data:var(--brand-paper);--data-fill:rgba(253,253,253,.07);--data-fill-end:rgba(253,253,253,.07);
+
+  /* 强调：品牌没有彩色主色。主操作和选中态用“反白”（白底黑字 / 白色下划线）。 */
+  --accent:var(--brand-mist);--accent-2:#ffffff;--accent-bg:rgba(234,235,237,.08);--on-accent:var(--brand-ink);
+  --focus:#7aaef8;  /* 只用于键盘焦点框，不做任何装饰 */
+
+  /* 功能色：数量固定、含义唯一，必须配文字或形状 */
+  --ok:#3ecf8e;--ok-bg:rgba(62,207,142,.12);      /* 成功 / 正常 / 在范围内 */
+  --warn:#f2a93b;--warn-bg:rgba(242,169,59,.14);  /* 警告 / 进行中 */
+  --bad:#ff5d5d;--bad-bg:rgba(255,93,93,.13);     /* 错误 / 急停，红色只给需要立刻处理的事 */
+  --estop:#d92d2d;--on-estop:#ffffff;             /* 急停按钮实底，比 --bad 深一级，白字对比度够 */
+  --cyan:var(--ok);                               /* 旧名，等同 --ok */
+
+  /* 图表专用：只出现在曲线里，不拿去做按钮或标签 */
+  --obs:#ff8a5c;--pred:#7aaef8;--geo:#6b7077;
+  --video:#030405;
+
+  /* 字体：英文展示用几何无衬线，中文用思源黑体；正文跟系统走；数字等宽 */
+  --display:"Montserrat","Avenir Next","Noto Sans SC","Noto Sans CJK SC","PingFang SC",sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Noto Sans SC","Noto Sans CJK SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
   --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
   --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13px;--fs-md:14px;--fs-lg:15px;--fs-xl:17px;--fs-2xl:19px;--fs-kpi:22px;--fs-kpi-wide:20px;
   --fs-chart:10px;--fs-chart-label:11px;--fs-chart-empty:12px;
-  --sans:-apple-system,BlinkMacSystemFont,"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --tracking-label:.08em;  /* 小标签字距 */
+
+  /* 形状与间距：小圆角，4 的倍数 */
+  --radius:3px;--radius-sm:2px;--radius-lg:6px;--radius-round:999px;
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
   --gap:12px;--pad:14px;--header-h:52px;
+  --ctl-h:32px;--ctl-h-sm:26px;--ctl-h-lg:40px;  /* 按钮、输入框高度 */
+  --line-w:1px;
+}
+
+/* 路演模式下线条和数据再提亮一级，保证投影上看得见 */
+html[data-mode="show"]{--line:#25292d;--line2:#3a3f45;--grid:#202327;--data:#ffffff}
+
+/* —— 三、路演白底（海报原样）：给加载页、封面、路演开场用，挂在任意容器上即生效 —— */
+[data-tone="paper"]{
+  --bg:var(--brand-paper);--panel:#ffffff;--panel2:var(--brand-mist);--head:#ffffff;--hover:#f2f3f4;
+  --line:#e2e3e5;--line2:#cfd1d4;--grid:#eeeff0;
+  --text:var(--brand-ink);--sub:#55585c;--mute:var(--brand-dot);
+  --data:var(--brand-ink);--data-fill:rgba(33,33,33,.06);--data-fill-end:rgba(33,33,33,.06);
+  --accent:var(--brand-ink);--accent-2:#000000;--accent-bg:rgba(33,33,33,.06);--on-accent:var(--brand-paper);
+  --ok:#14995c;--ok-bg:rgba(20,153,92,.10);--warn:#b86e00;--warn-bg:rgba(184,110,0,.10);--bad:#d92d2d;--bad-bg:rgba(217,45,45,.08);
+  --geo:#9a9da2;--video:#f2f3f4;
+  color-scheme:light;
 }

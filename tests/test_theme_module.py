@@ -53,6 +53,6 @@ def test_theme_does_not_change_layout_or_safety_controls():
 
 def test_data_colour_is_a_token_so_charts_follow_the_theme():
     tokens = (STATIC / 'tokens.css').read_text()
-    assert '--data:#3d8bff' in tokens and '--data-fill:' in tokens
+    assert '--data:' in tokens and '--data-fill:' in tokens
     app_js = (STATIC / 'app.js').read_text()
     assert 'line:V("--data")' in app_js and 'V("--data-fill")' in app_js and 'rgba(61,139,255' not in app_js
