@@ -6,12 +6,12 @@ import { button, collected } from "./format.js";
 import { mount as trainingRecord } from "./training-record.js";
 
 export function mount(root, ctx) {
-  const doc = root.ownerDocument, header = element(doc, "header", "library-doc-header");
-  const title = element(doc, "h2"), meta = element(doc, "p", "library-muted");
+  const doc = root.ownerDocument, header = element(doc, "header", "library-doc-header c-card-head");
+  const title = element(doc, "h2"), meta = element(doc, "p", "library-muted library-doc-meta");
   const message = element(doc, "p", "library-message", "正在读取文档…"); message.setAttribute("role", "status");
-  const content = element(doc, "div", "library-doc-body"), summary = element(doc, "section");
-  const record = element(doc, "section"), graph = element(doc, "div", "library-training-record");
-  record.append(element(doc, "h3", "", ctx.target === "recipe" ? "装配训练记录" : "训练记录"), graph);
+  const content = element(doc, "div", "library-doc-body"), summary = element(doc, "section", "library-doc-summary");
+  const record = element(doc, "section", "library-record-section"), graph = element(doc, "div", "library-training-record");
+  record.append(element(doc, "h3", "c-card-head", ctx.target === "recipe" ? "装配训练记录" : "训练记录"), graph);
   content.append(summary, record);
   let state, current, pending = false, disposed = false, sequence = 0;
   const fresh = () => ctx.store?.getState() || state;
@@ -19,7 +19,8 @@ export function mount(root, ctx) {
   const retrain = button(doc, "重新训练", () => {
     if (current && !trainReason(fresh())) ctx.openFlow(ctx.target, current);
   });
-  header.append(title, retrain); root.append(header, meta, message, retry, content);
+  const body = element(doc, "div", "library-detail-content c-card-body");
+  body.append(meta, message, retry, content); header.append(title, retrain); root.append(header, body);
   const training = trainingRecord(graph); content.hidden = true; retry.hidden = true; retrain.hidden = true;
   async function read() {
     if (pending || disposed || !ctx.send) return;

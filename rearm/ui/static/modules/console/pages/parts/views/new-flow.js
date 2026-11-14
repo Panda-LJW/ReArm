@@ -8,7 +8,7 @@ import { mount as trainingRecord } from "./training-record.js";
 
 export function mount(root, ctx) {
   const doc = root.ownerDocument, sidebar = element(doc, "ol", "library-flow-steps");
-  const content = element(doc, "div", "library-flow-content"); root.dataset.newFlow = "";
+  const content = element(doc, "div", "library-flow-content c-card-body"); root.dataset.newFlow = "";
   root.classList.add("library-flow");
   const steps = [ctx.target === "part" ? "识别零件" : "编排配方", "训练", "入库"].map((text, i) => {
     const item = element(doc, "li", "", `${i + 1} ${text}`); item.dataset.step = String(i + 1); sidebar.append(item); return item;

@@ -14,12 +14,14 @@ export function mount(root, ctx = {}) {
   const doc = root.ownerDocument, css = element(doc, "link");
   css.rel = "stylesheet"; css.href = new URL("./parts.css", import.meta.url).href; doc.head.append(css);
   let state = ctx.store?.getState() || initialState(), tab = "parts", mode = "list", detailView, flowView, flowTarget;
-  const header = element(doc, "header", "library-header"), tabs = element(doc, "div", "library-tabs");
+  const header = element(doc, "header", "library-header"), tabs = element(doc, "div", "library-tabs c-tabs");
   tabs.setAttribute("role", "tablist"); tabs.setAttribute("aria-label", "零件库分类");
-  const listSlot = element(doc, "div", "library-scroll"), docSlot = element(doc, "article", "library-scroll");
-  const flowSlot = element(doc, "div", "library-scroll"), panels = element(doc, "div", "library-panels");
+  const listSlot = element(doc, "div", "library-scroll library-list-slot c-card"), docSlot = element(doc, "article", "library-scroll library-doc-slot c-card");
+  const flowSlot = element(doc, "div", "library-scroll library-flow-slot c-card"), panels = element(doc, "div", "library-panels");
+  const emptyDoc = element(doc, "section", "library-doc-empty c-card");
+  emptyDoc.append(element(doc, "h2", "c-card-head", "文档"), element(doc, "p", "c-empty", "选择零件或配方，查看文档与训练记录。"));
   const local = { ...ctx, store: ctx.store || { getState: () => state }, openDoc, openFlow };
-  const partRoot = element(doc, "section"), recipeRoot = element(doc, "section");
+  const partRoot = element(doc, "section", "library-list-panel"), recipeRoot = element(doc, "section", "library-list-panel");
   partRoot.id = "library-parts"; recipeRoot.id = "library-recipes";
   partRoot.setAttribute("role", "tabpanel"); recipeRoot.setAttribute("role", "tabpanel");
   const lists = [partList(partRoot, local), recipeList(recipeRoot, local)]; listSlot.append(partRoot, recipeRoot);
@@ -33,13 +35,14 @@ export function mount(root, ctx = {}) {
       tabButtons[target].click(); tabButtons[target].focus();
     }); tabs.append(control); return control;
   });
+  const indicator = element(doc, "span", "library-tab-indicator"); indicator.setAttribute("aria-hidden", "true"); tabs.append(indicator);
   const back = button(doc, "返回列表", () => { mode = "list"; sync(); });
   const resume = button(doc, "查看新增流程", () => { mode = "flow"; sync(); });
   const add = button(doc, "新增零件", () => {
     state = local.store.getState(); if (!trainReason(state)) openFlow(tab === "parts" ? "part" : "recipe");
   }, true);
   header.append(element(doc, "h1", "", "零件库"), tabs, back, resume, add);
-  panels.append(listSlot, docSlot, flowSlot); root.replaceChildren(header, panels);
+  panels.append(listSlot, docSlot, flowSlot, emptyDoc); root.replaceChildren(header, panels);
   function sync() {
     partRoot.hidden = tab !== "parts"; recipeRoot.hidden = tab !== "recipes";
     tabButtons.forEach(el => { el.setAttribute("aria-selected", String(el.dataset.tab === tab)); el.tabIndex = el.dataset.tab === tab ? 0 : -1; });
@@ -48,9 +51,13 @@ export function mount(root, ctx = {}) {
     add.textContent = tab === "parts" ? "新增零件" : "新增配方";
     resume.hidden = !flowView || mode === "flow" || flowTarget !== (tab === "parts" ? "part" : "recipe");
     setUnavailable(add, trainReason(state));
+    listSlot.querySelectorAll(".library-open").forEach(el => el.closest("tr").classList.toggle("library-row-selected",
+      mode === "doc" && (el.dataset.part || el.dataset.recipeDoc) === docSlot.dataset.libraryId &&
+      (el.dataset.part ? "part" : "recipe") === docSlot.dataset.libraryTarget));
   }
   function openDoc(target, id) {
     detailView?.dispose(); docSlot.replaceChildren(); tab = target === "part" ? "parts" : "recipes"; mode = "doc";
+    docSlot.dataset.libraryId = id; docSlot.dataset.libraryTarget = target;
     detailView = (target === "part" ? partDoc : recipeDoc)(docSlot, { ...local, id });
     detailView.render(local.store.getState()); sync();
   }

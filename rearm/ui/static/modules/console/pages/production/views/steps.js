@@ -18,12 +18,13 @@ export function productionSteps(state, recipe) {
 }
 
 export function mount(root, ctx) {
-  const doc = root.ownerDocument, title = element(doc, "h2", "", "生产步骤");
+  const doc = root.ownerDocument, title = element(doc, "h2", "c-card-head", "生产步骤");
+  const body = element(doc, "div", "production-steps-body c-card-body");
   const checks = element(doc, "div", "production-checks"), progress = element(doc, "div");
   const items = CHECKS.map(([id, label]) => {
     const el = element(doc, "span"); el.dataset.checkItem = id; checks.append(el); return { id, label, el };
   });
-  root.append(title, checks, progress); const stepper = mountStepper(progress);
+  body.append(checks, progress); root.append(title, body); const stepper = mountStepper(progress);
   return frameView(state => {
     checks.hidden = state.phase !== "selfcheck"; progress.hidden = !checks.hidden;
     for (const { id, label, el } of items) {

@@ -4,12 +4,14 @@ import { startReason } from "../../../state/selectors.js";
 import { element } from "../../../widgets/dom.js";
 
 export function mount(root, ctx) {
-  const doc = root.ownerDocument, label = element(doc, "label", "production-field", "配方");
+  const doc = root.ownerDocument, label = element(doc, "label", "production-field");
+  const title = element(doc, "span", "production-recipe-title c-card-head", "配方");
+  const controls = element(doc, "div", "production-recipe-controls c-card-body");
   const select = element(doc, "select"); select.setAttribute("aria-label", "配方");
-  const start = element(doc, "button", "console-button console-primary", "开始");
+  const start = element(doc, "button", "console-button console-primary c-btn primary", "开始");
   start.type = "button"; start.dataset.action = "start";
   const message = element(doc, "p", "production-message"); message.setAttribute("role", "status"); message.hidden = true;
-  label.append(select); root.append(label, start, message);
+  label.append(title, select); controls.append(label, start); root.append(controls, message);
   let state, recipes, pending = false, disposed = false, check = null, requestId = "";
   const reason = () => !state ? "连接就绪后可操作" : startReason(state) ||
     (!ctx.selection.id ? "请先选择配方" : pending ? "请求已发送，请稍候" : "");

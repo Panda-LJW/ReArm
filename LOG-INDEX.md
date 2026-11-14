@@ -34,3 +34,10 @@
 | 2026-11-15 | 路演节点① T7 打磨、七项截图反馈及422项回归 | LOG.md NODE1-T7-20261115 | 351bbf2f75c2ca20 |
 | 2026-11-15 | 现有前端 v1 接口规范、9指令15消息及5场景交互样例 | LOG.md FRONTEND-API-SPEC-20261115 | 5e33d57bec4c10c9 |
 | 2026-11-15 | T7 二轮保留四项修正、观察标签两轮失败回滚及423项回归 | LOG.md NODE1-T7-R2-20261115 | 01f038d389a87cf0 |
+| 2026-11-15 | 孪生安装台归零、48项回归；道具落地待确认演示数据范围 | LOG.md TWIN-PEDESTAL-20261115 | 6f6c565f585d8396 |
+| 2026-11-15 | 观察画面摄像头 URL/MediaStream 接入口、失败回退及56项回归 | LOG.md OBSERVE-CAMERA-20261115 | 0b3e82fe65f4d182 |
+| 2026-11-15 | 控制台工业仪表外壳与 c- 组件、144项回归及截图权限卡点 | LOG.md CONSOLE-VISUAL-SHELL-20261115 | 007bf9804de64f1b |
+| 2026-11-15 | 记录/设置仪表卡片、真实汇总 KPI、页面动效及81项回归 | LOG.md CONSOLE-VISUAL-RECORDS-SETTINGS-20261115 | c233a66f9d09d268 |
+| 2026-11-15 | 零件库旧版样式、页面动效与86项console回归；画面权限未验证 | LOG.md CONSOLE-VISUAL-PARTS-20261115 | 7483a0843397ac51 |
+| 2026-11-15 | 生产页旧版仪表布局、CSS动效、86项console回归及画面验证阻塞 | LOG.md CONSOLE-VISUAL-PRODUCTION-20261115 | e6e92123fb793807 |
+| 2026-11-15 | 观察标签24px内缩、底部状态chip、孪生固定构图及148项回归 | LOG.md PRODUCTION-FRAMING-20261115 | 9b39b61f6ce40ccd |

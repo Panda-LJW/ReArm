@@ -9,8 +9,9 @@ export function mount(root, ctx = {}) {
   css.rel = "stylesheet"; css.href = new URL("./settings.css", import.meta.url).href; doc.head.append(css);
   const fields = {};
   function group(title, rows) {
-    const section = element(doc, "section", "settings-section"), list = element(doc, "dl", "settings-values");
-    section.append(element(doc, "h2", "", title), list);
+    const section = element(doc, "section", "settings-section c-card"), list = element(doc, "dl", "settings-values");
+    const body = element(doc, "div", "settings-body c-card-body");
+    body.append(list); section.append(element(doc, "h2", "c-card-head", title), body);
     for (const [id, label] of rows) {
       const pair = element(doc, "div", "settings-pair"), value = element(doc, "dd", "", "—");
       value.dataset.setting = id; fields[id] = value;
@@ -19,7 +20,7 @@ export function mount(root, ctx = {}) {
     return section;
   }
   const header = element(doc, "header", "settings-header");
-  header.append(element(doc, "h1", "", "设置"), element(doc, "p", "", "只读"));
+  header.append(element(doc, "h1", "", "设置"), element(doc, "p", "pill", "只读"));
   const content = element(doc, "div", "settings-content");
   content.append(group("连接", [["source", "数据来源"], ["connection", "状态"], ["protocol", "协议版本"]]),
     group("参数", [["threshold", "偏差阈值"], ["opening", "夹爪开口"]]));

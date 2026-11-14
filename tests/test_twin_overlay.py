@@ -105,11 +105,14 @@ const moved={camera:rowMajor(named('cameraHead').matrix),frustum:positions(named
 globalThis.fetch=fetchFiles;await s.loadSkin(new URL('./twin/meshes/b601.json',base));
 const afterSkin=named('cameraHead').children.every(o=>o.visible);
 s.setPose(Object.fromEntries(C.joints.map((j,i)=>[j.id,[0,-2.4434609528,-1.1772453242,-0.2278,0,0][i]])),{laserOn:false});s.render();
+const belowFloorVisible=named('laserBeam').visible;
+// 旧测试姿态已在 Z=0 下方；另取地面上方向下的姿态验证三轴投影落点。
+s.setPose(Object.fromEntries(C.joints.map((j,i)=>[j.id,[0,-2,-1.57,-0.2278,0,0][i]])),{laserOn:false});s.render();
 const old={sensors:named('sensors').visible,frustum:named('cameraFrustum').visible,
  visible:named('laserBeam').visible,beam:positions(named('laserBeam')),opacity:named('laserBeam').material.opacity};
 s.dispose();
 console.log(JSON.stringify({initial,expected:endPoses(P,middle),ray:laserRay(P,middle),corners:frustumCorners(P,middle,0.18),
- measured,measuredBeam,visible,moved,movedExpected:endPoses(P,q),movedCorners:frustumCorners(P,q,0.18),afterSkin,old}));
+ measured,measuredBeam,visible,moved,movedExpected:endPoses(P,q),movedCorners:frustumCorners(P,q,0.18),afterSkin,old,belowFloorVisible}));
 ''')
     initial = out['initial']
     assert initial['camera'] == pytest.approx(out['expected']['camera'])
@@ -124,7 +127,8 @@ console.log(JSON.stringify({initial,expected:endPoses(P,middle),ray:laserRay(P,m
         assert out['moved']['frustum'][i * 12 + 3:i * 12 + 6] == pytest.approx(out['movedCorners'][i], abs=1e-7)
     assert out['moved']['camera'] == pytest.approx(out['movedExpected']['camera'])
     assert not out['old']['sensors'] and not out['old']['frustum'] and out['old']['visible']
-    assert out['old']['opacity'] == 0.28 and out['old']['beam'][-1] == pytest.approx(-0.2)
+    assert not out['belowFloorVisible']
+    assert out['old']['opacity'] == 0.28 and out['old']['beam'][-1] == pytest.approx(0)
 
 
 def test_overlay_segments_markers_coordinates_theme_and_disposal():
@@ -178,7 +182,7 @@ const manual=P.joints.map(j=>(j.limit[0]+j.limit[1])/2);frame(s,manual);
 const manualFrustum=frustumCorners(P,manual,0.18).map(p=>s.projectPoint(p));
 s.dispose();console.log(JSON.stringify({{rows,reset,manualFrustum}}));
 ''')
-    distance = 0.45 if view == 'gripper' else 2.05  # arm-params.js 的 scene.cameraDistance
+    distance = 0.45 if view == 'gripper' else 1.45  # arm-params.js 的 scene.cameraDistance
     for row in out['rows']:
         assert math.dist(row['expected'], row['at']) == pytest.approx(distance)
         assert [a + d * distance for a, d in zip(row['at'], row['direction'])] == pytest.approx(row['expected'])

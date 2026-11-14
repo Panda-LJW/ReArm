@@ -4,8 +4,8 @@ import { detail, number } from "./format.js";
 import { shape } from "./shape.js";
 
 function describe(root, item) {
-  const doc = root.ownerDocument, appearance = element(doc, "div", "library-appearance");
-  root.append(element(doc, "h3", "", "外形与轮廓"), appearance);
+  const doc = root.ownerDocument, appearance = element(doc, "div", "library-appearance c-viewport");
+  root.append(element(doc, "h3", "c-card-head", "外形与轮廓"), appearance);
   if (item.photo_url) {
     const photo = element(doc, "img"); photo.src = item.photo_url; photo.alt = `${item.name}外形照片`;
     photo.addEventListener("error", () => photo.remove()); appearance.append(photo);

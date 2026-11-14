@@ -414,3 +414,87 @@
 - 验证：开工 422 passed in 39.33s；两轮观察布局分别 4 failed/419 passed、2 failed/421 passed，失败现象与尝试均写入卡点；回滚失败观察改法后 423 passed in 35.69s。最终 5 个改动 JS 的 node --check 退出码均为 0。关键姿态与完整运动限位、精确插值、5 条初始历史与重置/重连/现场排序、单点和多点图内坐标均有测试。
 - 遗留：第 3 点观察画面仍为上一版四角标签和长引线，未完成；实际像素、WebGL、三分辨率均未验证，原验收报告未刷新。原 17 项选择器和判断逐条静态自查见卡点，不宣称浏览器全绿。没有运行 node1.sh、服务、浏览器，没有修改 scripts/acceptance/、git add/commit 或开始下个任务。
 - 回滚：本轮开工 HEAD=2c83c8e55d77296f3858081ae4d04a545d7dd8ce；两个原 CSS 保存在 /private/tmp/rearm-t7-r2-backup/。失败观察实现另存该目录 observation-failed/，已从工作树撤回。若回滚保留的四项，仅逆向应用本轮上述源码/测试差异，并移除此日志、索引及卡点本节；保留并行会话的接口文档、样例和 FRONTEND-API-SPEC 日志。
+
+## 2026-11-15 孪生安装台归零，待确认道具与演示姿态同步 [TWIN-PEDESTAL-20261115]
+- 目标：移除机械臂脚下安装台，底座、网格与道具共用地面；本轮只完成安装台归零，道具落地尚未完成。
+- 改动文件：rearm/ui/static/modules/arm/arm-params.js、tests/test_twin_overlay.py、LOG.md、LOG-INDEX.md。
+- 关键决策：pedestalHeight 从 0.20 改为 0，更新配置注释；scene.js 原有 lift > 0 分支会跳过安装台，GridHelper 定位到 Z=0，fallback2d.js 的 fillRect 高度为 0，均无需改实现。保留 cameraTarget 及其余视觉参数，不改运动学、页面或样式。
+- 测试调整：旧三轴激光落点断言从 -0.20 改为 0；原测试姿态的出光点 Z=-0.132098 m 已低于新地面，补查其射线隐藏，另取位于地面上方且向下的旧三轴姿态核验落点。
+- 验证：指定 pytest 三文件，修改前 48 passed in 1.82s，修改后 48 passed in 1.83s；rg -n -i pedestal tests 仅命中这三文件，无额外命中文件。实际 Three 几何审计确认安装台节点 1→0，网格 Z=-0.20→0，加载官方网格后的底座最低点约 0；相机位置、joint1/tool 投影完全不变。2D 调用记录确认填充高度 0、底座起点与地面线同高。审计结果：/private/tmp/rearm-pedestal-20261115/geometry-audit.json。
+- 遗留：WORKSPACE 道具底面在 Z=-0.167619～-0.182619 m，本次归零后仍在地下；接触姿态由 FK 生成且已有抓取对齐回归，不能只平移道具而破坏抓放。已请求用户确认是否同步调整 fixtures/poses.js 与 fixtures/workspace.js 的演示数据，未收到确认，不继续扩大修改。实际画面未验证：启动 127.0.0.1:8017 本地只读静态服务被沙箱以 PermissionError: Operation not permitted 拒绝，未请求权限或绕过限制。
+- 回滚：原 arm-params.js、test_twin_overlay.py 已保存至 /private/tmp/rearm-pedestal-20261115/，仅恢复这两个本轮文件即可撤回代码修改；随后移除此日志及对应索引。保留开工时的无关未跟踪文档和素材。未执行 git commit。
+- 并行改动：最终只读检查发现 production/views/twin-stage.js 已被另一处修改移除 setProps 调用，另有观察区与生产页测试改动；本轮未触碰或回退这些文件。上述负高度结论针对 WORKSPACE 数据和直接挂载道具的孪生，生产页是否继续显示道具应以用户最终范围为准。
+
+## 2026-11-15 观察画面摄像头接入口 [OBSERVE-CAMERA-20261115]
+- 目标：在生产页观察 SVG 下接入 URL 或 MediaStream，保留原识别框、引线与标签。
+- 改动文件：rearm/ui/static/modules/console/pages/production/views/observe-view.js、rearm/ui/static/modules/console/pages/production/production.css、tests/test_console_camera.py；LOG.md、LOG-INDEX.md 仅追加本节。
+- 接口：observe-view.mount(root) 返回的 view.setCameraSource(source) 接受 null、URL 字符串、{url,type} 或 MediaStream；启动时读取 ?camera=<编码后的 URL>，之后 render 不覆盖调用方设置。URL pathname 的 jpg/jpeg/mjpg/mjpeg 扩展名使用 img；显式 type 支持 img/image/mjpeg/jpeg、image/* 和 multipart/x-mixed-replace，其余走 video。video 静音自动播放、playsInline，MediaStream 绑定 srcObject；HLS 使用浏览器原生能力，未新增播放器依赖。
+- 行为：无来源显示“未接入摄像头”；等待首个 img load/video loadeddata 时显示“摄像头连接中”，保留示意图；成功仅隐藏 objects 组；error 解绑媒体、恢复示意图并显示“摄像头连接失败”。切源、断开和 dispose 清除事件、URL、视频播放与 srcObject，不停止调用方拥有的 tracks；旧来源回调不可改变当前状态。
+- 排版：媒体在 SVG 和标签下方，沿用现有 imageTransform 的图像区域，object-fit: contain；角标使用 --mute、--video、--fs-sm、--sp-1，排版给角标预留高度，未新增硬编码颜色或更改原标签算法。
+- 验证：新增 5 项 Node/JSDOM 测试覆盖无来源、MJPEG、视频、显式类型、URL 默认源、查询参数不干扰扩展名、MediaStream、成功/失败/断开、旧事件、dispose 和媒体/识别框坐标一致。最终 .venv/bin/pytest -q tests/test_console_camera.py tests/test_console_data.py tests/test_console_polish.py tests/test_console_production.py tests/test_console_shell.py：56 passed in 13.20s；node --check observe-view.js 和 git diff --check 通过。补跑首轮发现角标 --fs-xs 违反现有最小字号断言，已改用 --fs-sm，未放宽测试。
+- 遗留：实际浏览器画面、真实摄像头、真实视频/HLS 播放均未验证；Playwright CLI 未缓存，离线调用 ENOTCACHED；启动 127.0.0.1:8765 只读静态服务被环境以 PermissionError: Operation not permitted 拒绝，未申请权限或绕过限制。手动验收：打开 /?camera=%2Fapi%2Fcamera.mjpg，确认画面与识别标注；改用不可达来源确认失败回退；调用 setCameraSource(null) 确认恢复未接入标记。
+- 回滚：修改前 observe-view.js、production.css 和日志副本保存在 /private/tmp/rearm-camera-feed-before-20261115/；仅撤回本轮两个源码文件差异、删除新增测试和本日志/索引段，保留其他会话后续变更。未修改 twin-stage.js、twin/、arm-params.js、scene.js、workspace 数据层或已有测试；工作树内这些文件和日志的并行变更均保留。未执行 git commit。
+
+## CONSOLE-VISUAL-SHELL-20261115：工业仪表外壳与通用组件
+
+- 日期：2026-11-15（Asia/Taipei）。目标：实现《控制台视觉改版规范》第二、三节；先完整阅读规范及旧版 app.css、theme.css、tokens.css，再核对顶栏、导航、急停、重置、对话框、tooltip 选择器断言。
+- 改动文件：rearm/ui/static/modules/console/console.css、rearm/ui/static/modules/console/shell/topbar.js、tests/test_console_shell.py；本日志和 LOG-INDEX.md 仅追加。未编辑 pages/、twin/、arm/、tokens.css、app.css、index.html，保留开工时已有改动；未 git commit。
+- 外壳：文字品牌与副标题、7px 连接点、已有 hello.sim 数据来源、低调状态 pill、下划线导航、32px 普通按钮及最小 40px 实底急停。连接展示复用 online selector，区分未连接、等待握手、协议不兼容；缺字段不补数据。重置/急停事件、顺序、状态更新与焦点逻辑不变。
+- 容器：页面透明网格，padding 为 12px 16px；桌面在内容区内部滚动，≤1080 允许页面滚动，≤720 顶栏两行。页面卡片底色由后续页面任务套用，未代改各页布局。
+- 通用类与使用：c-card 包 c-card-head / c-card-body，标题右侧 c-aside；c-kpis 直接放 c-kpi，内用 c-kpi-label/value/note（兼容 k/v/d，空值由视图写“—”）；c-viewport 带四角取景线，c-chip 加 tl/tr/bl/br 定位和 ok/busy/bad 状态；table.c-table 的数字列 num/r、当前行 cur 或 aria-current=true、选中行 aria-selected=true；c-tag 加 ok/bad/cur；c-btn 加 primary；c-tabs 的子 button/a 用 on 或既有 aria 选中；c-empty 空态、pill 简短状态。每组规则就近提供用法注释。
+- 浮层：dialog/tooltip 使用 token 圆角及规范阴影，遮罩使用规定 rgba，无模糊；既有原生 dialog、键盘焦点圈、禁用提示定时和指令拦截逻辑未变。
+- 测试调整：图片 Logo 断言按新规范改为文字品牌/副标题；原来一律禁止像素、角标渐变和阴影的旧断言改为禁止新增 hex/rgb/hsl、仅允许规范三个 rgba 并核对所有 CSS 变量来自 tokens。保留所有交互断言，新增连接/握手/协议/来源缺失及旧文字清理的回归。
+- 验证：改动前指定命令为 143 passed, 285 deselected in 21.39s；改动后 `.venv/bin/pytest -q tests/ -k 'console or twin or panel'` 为 144 passed, 285 deselected in 21.17s。topbar.js 的 node --check 及 git diff --check 通过。
+- 遗留：三视口实际渲染未验证。Playwright wrapper 离线查 npm 元数据返回 ENOTCACHED；已确认本地 CLI 可用。随后启动只服务本地静态文件的 127.0.0.1:8026 HTTP 服务时，沙箱对 socket.bind 返回 PermissionError: [Errno 1] Operation not permitted；未请求提权、未换端口或绕过限制，未宣称截图验收通过。需后续浏览器核对 1440×900、1280×720、390×844 的排版及原生 dialog/tooltip。
+- 回滚：开工备份位于 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-console-shell-zc6x76rl/。可只恢复本条列出的三个代码/测试文件；日志只删除本条与对应索引行，不整份覆盖，避免覆盖并发记录。
+
+
+## CONSOLE-VISUAL-RECORDS-SETTINGS-20261115：记录与设置仪表卡片
+
+- 日期：2026-11-15（Asia/Taipei）。目标：按《控制台视觉改版规范》第四节记录/设置和第五节页面动效，对齐旧版面板；已完整读取规范、旧 index.html、app.css、theme.css，并先检索 tests/ 的本页选择器与断言。
+- 改动文件：rearm/ui/static/modules/console/pages/records/index.js、records.css；rearm/ui/static/modules/console/pages/settings/index.js、settings.css；LOG.md 与 LOG-INDEX.md 仅追加。未编辑 console.css、shell/、main.js、console.html、tokens.css、twin/、arm/、其他页面或测试；未 git commit。
+- 记录页：保留页标题，两张并排 c-card 表格卡使用 c-card-head 空心方块标题和 c-aside 条数；c-table 数字列等宽右对齐、结果 c-tag、粘性表头、区域内部滚动。顶部 c-kpis 四格显示完成套数、到位率、平均偏差、训练记录。只从原 selectors 返回的记录计算展示值：到位率仅以 boolean 结果为分母，平均值仅纳入有限且非负的生产偏差；空分母显示“—”，训练条数包含归档记录。不修改 store、selector、指令、订阅或既有记录刷新判断。
+- 设置页：连接、参数两张 c-card，dl 键值行采用小标签与等宽值；状态沿用 data-online，以 7px 圆点加原状态文字呈现，已连接只把圆点变绿；页标题旁的“只读”使用 pill。所有原 data-*、aria-*、role、字段文案及表头保留，无新增可编辑控件。
+- 布局：桌面记录页为标题、KPI、双卡三行网格；设置页为标题和双卡；≤1080px 单列，记录表滚动区限制为 60dvh，≤720px 收紧表格横向留白。引用已有 c- 组件，新增 CSS 均限定本页 data-page，页面类和 keyframes 使用 records-/settings- 前缀，颜色/字体/间距/圆角仅引用 tokens。
+- 动效：卡片 320ms 淡入上移 6px、第二张延迟 40ms；表格行/键值行 120ms hover 过渡；KPI 仅在显示值变化时替换数值节点，触发 sub→data 的 320ms 高亮，不增加计时器；连接圆点 200ms 颜色过渡。时长/曲线使用带默认值的 var()，prefers-reduced-motion 下禁用两页全部动画、过渡和滚动动效。本页无步骤、画面区或对话框，没有添加不属于本页的动效。
+- 验证：开工 `.venv/bin/pytest -q tests/ -k console` 为 81 passed, 348 deselected in 20.69s。修改后首次全组遇到并发生产页缺少 stage-chips.js，23 failed/58 passed；未触碰其他页面，待文件出现后再次执行相同筛选，最终 81 passed, 348 deselected in 17.50s（输出 /private/tmp/rearm-records-settings-console-pytest.txt）。本页独立测试 4 passed in 1.93s。额外复用 JSDOM 宿主验证空数据、缺测/负值剔除、已知结果分母、归档数量、节点不变性、只读和零指令；两份 JS 的 node --check、限定范围 git diff --check、颜色 token/动效 fallback 静态核对通过。
+- 遗留：实际渲染未验证。Playwright 默认浏览器版本 1254 不在本机，改用已存在的 chromium_headless_shell-1234 后，启动被沙箱拒绝（bootstrap_check_in MachPortRendezvousServer: Permission denied (1100)）。未请求提权或继续绕过；没有三视口截图或实际动效/溢出验收结论。后续在 1440×900、1280×720、390×844 切换记录/设置核对长表内部滚动、文字完整和减少动效模式。
+- 回滚：四个页面文件的原始副本保存在 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-records-settings-before-k_z_8nyf/，内含 records/、settings/。仅逐文件恢复这两个目录；日志仅撤销本条及对应索引，不覆盖其他会话内容。
+
+
+## CONSOLE-VISUAL-PARTS-20261115：零件库工业仪表样式与页面动效
+
+- 日期：2026-11-15（Asia/Taipei）。目标：按《控制台视觉改版规范》第四节零件库及第五节页面动效对齐旧版面板；已完整阅读规范、index.html、app.css、theme.css，改前核对 tests/ 的零件库选择器。
+- 修改文件：rearm/ui/static/modules/console/pages/parts/{index.js,parts.css}；其 views/{format,identify-step,library-doc,library-list,new-flow,part-doc,recipe-doc,training-record}.js。本日志与 LOG-INDEX.md 仅追加；未修改 console.css、shell/、main.js、console.html、tokens.css、twin/、arm/、其他页面、测试或 README/SPEC；保留并发任务已有修改，未 git commit。
+- 布局：顶部文字 tab 与滑动底线、右侧新增；左列表 c-card/c-table，名称按钮的透明伪元素覆盖整行，仍触发原按钮事件；28px 线框缩略图、mono 编号/版本/时间、选中行左侧 2px 线；右侧文档卡含轮廓角标、文档属性、训练 KPI 细线格、曲线与试抓标签，未选择显示空态；识别预览尺寸沿用已有文案并套 c-chip；三步新增沿用 stepper，改为旧版 steps 横排细框。桌面内容区内部滚动；≤1080 单列、≤720 列表紧凑重排。
+- 边界决策：不改原 mode、hidden、事件、命令、状态机或数据流；用本页 CSS 在文档模式下显示原列表及新增按钮，实现左右并排，所有原 data-*、aria-*、role、文案和选择器保留。新增的 data-library-* 与 class 仅表达选中状态；训练 KPI 动效在持久容器上交替 class，只在展示值变化时触发，避免原有重复渲染截断或反复播放动画。
+- 动效：卡片 320ms 淡入上移 6px，右卡延迟 40ms；tab 底线 200ms；按钮/行 hover 120ms、按压位移；选中线 120ms、详情内容 120ms 淡入；数值 320ms 高亮；当前步骤线向下展开 200ms、完成勾淡入；取景角标从中心到四角。全 CSS，时长曲线 var 带默认值，prefers-reduced-motion 下关闭。页面没有可沿用的 busy 画面状态，未伪造扫描或状态点。
+- 验证：改前 console 基线 81 passed / 348 deselected；最终 `.venv/bin/pytest -q tests/ -k console` 为 86 passed / 348 deselected（17.72s，新增外壳测试由并发任务提供），其中本页 12 项通过。14 个本页 JavaScript 文件 node --check 通过；展示探针验证选中行切换、tab、相同 KPI 值不重启动效及值变化重启；颜色/字体/间距等变量均来自 tokens，动效变量带 fallback；git diff --check 通过。
+- 遗留：1440×900、1280×720、390×844 实际画面和真实点击区域未验证。Playwright wrapper 离线缓存不足；本地 HTTP 在命令环境不可达；浏览器 host 不可用且 CUA 返回未获准使用 Google Chrome，未申请权限或继续尝试绕过。以上测试不等同截图验收。
+- 回滚：修改前 parts/ 完整副本位于 /tmp/rearm-parts-visual-20261115/before。只恢复上述 10 个页面文件，恢复前先确认没有后续零件库改动；不要回退共享目录或整份日志。
+
+## 2026-11-15 生产页对齐旧版工业仪表布局 [CONSOLE-VISUAL-PRODUCTION-20261115]
+
+- 目标：按 docs/控制台视觉改版规范.md 第四节生产及第五节动效，对齐旧版 index.html、app.css、theme.css 的 row1 画面加右侧栏结构。开工先完整阅读上述文件，并检索 tests/ 的生产、摄像头、孪生及打磨选择器。
+- 改动文件：production/index.js、production/production.css、production/views/key-number.js、observe-view.js、recipe-pick.js、steps.js；新增 production/production-motion.css、production/views/stage-chips.js。LOG.md、LOG-INDEX.md 仅追加。未改测试、console.css、shell/、main.js、console.html、tokens.css、twin/、arm/ 或其他页面。
+- 布局：左侧约 60% 为 c-card / c-viewport 孪生宿主，四角 c-chip 展示当前状态、所选配方、数据来源、当前步骤，保留拖动/缩放/双击复位提示。右侧依次是 c-kpis 四格、配方卡、步骤卡和观察卡；配方选择及开始按钮同行，步骤序号等宽、状态点和当前行左侧细线，观察卡底部保留检查结果。桌面通过内容区及步骤卡内部滚动约束一屏；≤1080 单列、≤720 KPI 两列。
+- 数据与接口：只增加视图绑定及 CSS 状态属性；KPI 使用原完成套数、一次通过率、最后记录偏差和 duration_ms，第四格明确为“最近一套用时”，无数据为“—”，不从时钟推算本套用时。原偏差趋势继续使用原 sparkline。生产指令、确认/禁用逻辑、事件、状态归并均未改；摄像头 setCameraSource、?camera=、MediaStream/URL 生命周期、媒体与识别框坐标算法完整保留。twin-stage.js 与 observation-layout.js 和开工备份字节一致，没有恢复 setProps 或道具渲染。
+- 动效：生产页自身的 CSS 文件负责五块依次淡入上移、按钮/行 hover、按压、数值变化高亮、步骤左线长出、完成勾淡入、进行中状态点 pulse、角标收拢、busy 顶部扫描及 chip 文本淡出淡入。数值/文本仅在展示内容变化时切换 data-flash，不增加定时器。所有时长/曲线引用 --t-* / --ease-* 并有默认值；prefers-reduced-motion 全关闭。结构 CSS 与 keyframes 分开，沿用现有结构样式作用域测试；两份 CSS 的颜色与设计变量均经 tokens 集合核对，没有硬编码新颜色。
+- 验证：开工 `.venv/bin/pytest -q tests/ -k console` 为 81 passed, 348 deselected；最终相同命令为 86 passed, 348 deselected in 17.67s，增加的测试来自并发外壳任务，本轮未改测试。额外临时 Node/JSDOM 检查四卡四格、chip/配方/当前步骤、两次生产数值变化、0.4 mm 与 0:32、急停/重置/训练状态及样式清理均通过；8 个生产 JS 文件的 node --check、CSS token 静态核对和 git diff --check 通过。最终测试输出保存在 /private/tmp/rearm-production-visual-z553pyu4/pytest-console-final.txt。
+- 实际画面未验证：已有 8001 服务可读取页面，但 Playwright CLI 写入系统缓存被 EPERM 拒绝；项目既有 playwright-core 启动 Chromium 又被 macOS bootstrap_check_in Permission denied 拒绝；内置浏览器返回 browser access host unavailable。未提权、未修改系统或权限、未连接硬件，未生成截图。1440×900、1280×720、390×844 的像素排版、真实视频播放及浏览器动效仍需手动核对。
+- 回滚：开工原文件及本轮 after 快照位于 /private/tmp/rearm-production-visual-z553pyu4/；production-visual.patch 只包含本轮 8 个生产文件的差异，可在确认没有后续冲突时反向应用。不要覆盖整份并发日志，仅移除此节及对应索引行。未 git commit。
+- 唯一 HASH：e6e92123fb793807。
+
+
+## 2026-11-15 观察标签内缩与孪生默认构图 [PRODUCTION-FRAMING-20261115]
+
+- 目标：观察标签避开取景角标，摄像头状态不与标签重叠；只通过 cameraTarget / cameraDistance 调整孪生构图，不改业务逻辑、不提交 commit。
+- 改动文件：production/views/observation-layout.js、production/views/observe-view.js、production/production.css、arm/arm-params.js；tests/test_console_production.py、test_console_polish.py、test_console_camera.py、test_twin_overlay.py；LOG.md 和 LOG-INDEX.md 仅追加。
+- 标签：外边距从 4px 改为 24px，保留 4px 标签间距；CSS 的两列最大宽度同步扣除 24px 两侧边距和中缝。摄像头状态使用 c-chip 基础样式，文字/边框降为 mute/line，置底居中；沿用原有实测状态高度预留机制，不改媒体或事件逻辑。观察卡最小行高 14rem→17rem，补偿新增边距与 chip 高度，避免矮屏挤没图像区。
+- 相机：cameraTarget [0.20, 0, 0.20]→[0.06, 0, 0.18] m；cameraDistance 2.05→1.45 m。方位角 -62°、仰角 16°和其余参数完全保留。折叠姿态模型本身低矮，同一固定镜头下高度约为观察姿态的六成，无法两者同时达到 55%–65%；已通过异步问题说明两种取舍，用户未回复时按已说明的推荐项实施，观察约 65%、折叠约 40%，不扩大为动态镜头。
+- 投影核对：复用现有 SCENE_HOST，加载真实 b601 / 自制夹指网格与传感器，保留真实 Three 几何、FK、相机投影，仅替换 GPU 宿主。800×700、1000×900、700×580 的观察/折叠占高分别 64.98%/39.62%，中心横向约 54%/45%，纵向约 44%/56%；350×400 为 56.45%/34.42%，两态全部顶点均在画幅内。结果保存在 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-framing-before-mooacvdu/projection-audit.json，投影计算不等同截图验收。
+- 测试调整：观察测试同步新内边距、两列宽度和状态区高度；多行标签样本高度增加 40px 保持原图像可用高度；原孪生复位距离断言从 2.05 改为 1.45，夹爪视角 0.45 不变。首轮局部测试 2 项失败，原因是新增几何断言在 frameView 的下一帧布局前检查；在布局检查前推进既有虚拟时钟 16ms，未改变生产代码的事件逻辑或放宽避让断言。
+- 验证：`.venv/bin/pytest -q tests/ -k 'console or twin or arm'` 为 148 passed, 286 deselected in 21.82s。三份修改 JS 的 node --check 与 git diff --check 通过。
+- 遗留：实际渲染未验证。CUA 返回 browser access host unavailable；Playwright wrapper 离线缓存缺失 ENOTCACHED；复用仓库已有 playwright-core 与已安装 Chromium 启动时被 macOS bootstrap_check_in Permission denied (1100) 拒绝。未提权、未修改权限；错误保存在 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-framing-before-mooacvdu/browser-check-error.txt。用户刷新生产页后核对折叠/观察姿态，以及未接入/连接失败两种状态下标签与角标的位置。
+- 回滚：开工文件副本及 after 快照位于 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-framing-before-mooacvdu/，本轮八个源文件/测试的独立差异为 framing.patch；核对后可反向应用，仅删除本日志节和对应索引，保留原有未提交修改。未改 README 或需求文件。
+- 唯一 HASH：9b39b61f6ce40ccd。

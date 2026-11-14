@@ -63,7 +63,15 @@ def test_console_has_no_transport_legacy_imports_or_cross_page_dependencies():
             if path.is_relative_to(CONSOLE / 'pages') and target.is_relative_to(CONSOLE / 'pages'):
                 assert target.relative_to(CONSOLE / 'pages').parts[0] == path.relative_to(CONSOLE / 'pages').parts[0]
     css = (CONSOLE / 'console.css').read_text()
-    assert not re.search(r'#[\da-fA-F]{3,8}\b|(?:rgb|hsl)a?\(|\d+px|gradient\(|shadow:', css)
+    # 视觉规范允许同色线性角标、三种固定透明底/阴影；其他颜色仍只能取 tokens。
+    assert not re.search(r'#[\da-fA-F]{3,8}\b|\b(?:rgb|hsl|hsla)\(', css)
+    assert set(re.findall(r'rgba\([^)]*\)', css)) <= {
+        'rgba(6,8,10,.86)', 'rgba(0,0,0,.6)', 'rgba(0,0,0,.72)',
+    }
+    tokens = set(re.findall(r'(--[\w-]+)\s*:', (STATIC / 'tokens.css').read_text()))
+    # 动效规范的局部时间/曲线与错峰序号不属于颜色 token。
+    motion_tokens = {'--t-fast', '--t-base', '--t-slow', '--ease-out', '--ease-in-out', '--enter-i', '--i'}
+    assert set(re.findall(r'var\((--[\w-]+)', css)) <= tokens | motion_tokens
     assert 'cursor: help' in css and 'var(--estop)' in css
 
 
@@ -190,7 +198,9 @@ const commands=[], tooltip=tips(doc), header=doc.querySelector('[data-topbar]');
 const topbar=mount(header,{send:cmd=>commands.push(cmd)});topbar.render();tick(32);
 const estop=header.querySelector('[data-action="estop"]'), reset=header.querySelector('[data-action="reset"]');
 assert.equal(header.lastElementChild,estop);assert.equal(estop.previousElementSibling,reset);
-assert.match(header.querySelector('img').src,/\/static\/brand\/rearm-wordmark.svg$/);
+assert.equal(header.querySelector('.console-brand-name').textContent,'ReArm');
+assert.equal(header.querySelector('.console-brand small').textContent,'日新臂 · 生产控制台');
+assert.equal(header.querySelector('img'),null);
 assert.equal(header.querySelector('[data-status]').textContent,'待命');
 estop.click();assert.deepEqual(commands,[]);
 topbar.render({phase:'pick',link:{online:true}});tick(32);
@@ -200,6 +210,34 @@ estop.click();assert.deepEqual(commands,['estop']);
 assert.equal(header.querySelector('[data-status]').textContent,'抓取中'); // 展示必须等待数据源状态。
 topbar.render({phase:'estop',link:{online:true}});tick(32);assert.equal(estop.getAttribute('aria-disabled'),'false');
 topbar.dispose();tooltip.dispose();dom.window.close();
+''')
+
+
+def test_topbar_connection_uses_handshake_and_hides_missing_source_without_stale_labels():
+    jsdom_script(DOM + r'''
+const {mount}=await import('./console/shell/topbar.js');
+const header=doc.querySelector('[data-topbar]'), topbar=mount(header);
+const connection=header.querySelector('.console-connection'), source=header.querySelector('.console-source');
+const label=header.querySelector('.console-connection-label');
+topbar.render();tick(32);assert.equal(connection.hidden,true);assert.equal(source.hidden,true);
+for(const [state,text,sourceText,connected] of [
+  [{link:{online:true}},'等待握手','',false],
+  [{link:{online:true},hello:{proto:1,sim:true}},'实时连接','本地演示',true],
+  [{link:{online:true},hello:{proto:1,sim:false}},'实时连接','主机',true],
+  [{link:{online:false},hello:{proto:1,sim:false}},'未连接','主机',false],
+  [{link:{online:true},hello:{proto:2,sim:true}},'协议不兼容','本地演示',false],
+  [{link:{online:true},hello:{proto:1}},'实时连接','',true],
+]) {
+  topbar.render(state);tick(32);
+  assert.equal(label.textContent,text);assert.equal(connection.dataset.online,String(connected));
+  assert.equal(source.textContent,sourceText);assert.equal(source.hidden,!sourceText);
+  assert.equal(header.querySelector('[data-status]').textContent,'待命');
+}
+topbar.render({hello:{sim:true}});tick(32);
+assert.equal(connection.hidden,false);assert.equal(label.hidden,true);
+assert.equal(source.textContent,'本地演示');assert.equal(connection.dataset.online,'false');
+topbar.render({});tick(32);assert.equal(connection.hidden,true);assert.equal(source.textContent,'');
+topbar.dispose();assert.equal(header.children.length,0);dom.window.close();
 ''')
 
 

@@ -8,7 +8,7 @@ import { recipeFields } from "./recipe-fields.js";
 
 export function mount(root, ctx) {
   const doc = root.ownerDocument, form = element(doc, "div", "library-identify");
-  const preview = element(doc, "div", "library-candidate"), message = element(doc, "p", "library-message");
+  const preview = element(doc, "div", "library-candidate c-viewport"), message = element(doc, "p", "library-message");
   message.setAttribute("role", "status");
   let state = ctx.store.getState(), pending = false, candidate = null, baseline, disposed = false;
   let resetAtCapture = state.reset;
@@ -60,7 +60,7 @@ export function mount(root, ctx) {
     if (pending && next.candidate && next.candidate !== baseline) {
       pending = false; candidate = next.candidate;
       name.input.value = candidate.name; code.input.value = candidate.code;
-      preview.replaceChildren(shape(doc, candidate), element(doc, "p", "", `${candidate.size_mm.map(number).join(" × ")} mm`));
+      preview.replaceChildren(shape(doc, candidate), element(doc, "p", "c-chip br", `${candidate.size_mm.map(number).join(" × ")} mm`));
       message.textContent = "模型自己识别，请确认名称和编号。";
     }
     sync();

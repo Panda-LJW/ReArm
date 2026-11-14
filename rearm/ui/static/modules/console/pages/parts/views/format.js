@@ -8,7 +8,7 @@ export function collected(value) {
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${[d.getHours(), d.getMinutes(), d.getSeconds()].map(pad).join(":")}`;
 }
 export function button(doc, text, action, primary = false) {
-  const el = element(doc, "button", `console-button${primary ? " console-primary" : ""}`, text);
+  const el = element(doc, "button", `console-button c-btn${primary ? " console-primary primary" : ""}`, text);
   el.type = "button"; el.addEventListener("click", action); return el;
 }
 export function field(doc, text, tag = "input") {
@@ -17,6 +17,6 @@ export function field(doc, text, tag = "input") {
   return { label, input };
 }
 export function detail(doc, name, value) {
-  const pair = element(doc, "div", "library-detail");
-  pair.append(element(doc, "dt", "", name), element(doc, "dd", "", value)); return pair;
+  const pair = element(doc, "div", "library-detail c-kpi");
+  pair.append(element(doc, "dt", "c-kpi-label", name), element(doc, "dd", "c-kpi-value", value)); return pair;
 }

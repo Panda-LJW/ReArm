@@ -1,74 +1,251 @@
-:root { color-scheme: dark; }
+:root {
+  color-scheme: dark;
+  --t-fast: 120ms; --t-base: 200ms; --t-slow: 320ms;
+  --ease-out: cubic-bezier(.2,.7,.2,1); --ease-in-out: cubic-bezier(.65,0,.35,1);
+}
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font: var(--fs-md)/1.5 var(--sans);
+  font: var(--fs-base)/1.5 var(--sans);
+  font-feature-settings: "tnum" 1, "zero" 1;
 }
 .console-shell { height: 100dvh; display: flex; flex-direction: column; }
 .console-topbar {
   display: flex; align-items: center; flex: 0 0 auto; gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-5); background: var(--head);
+  height: var(--header-h); padding: 0 var(--sp-4); background: var(--bg);
   border-bottom: var(--line-w) solid var(--line);
 }
-.console-brand {
-  display: flex; align-items: center; flex-shrink: 0;
-  background: var(--accent); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius);
+.console-brand { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
+.console-brand-name {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-lg); font-weight: 600; letter-spacing: .06em;
 }
-.console-brand img { display: block; height: var(--sp-4); width: auto; }
-.console-nav { display: flex; align-items: center; gap: var(--sp-1); }
+.console-brand-name::before { content: ""; width: var(--sp-2); height: var(--sp-2); background: var(--text); }
+.console-brand small { color: var(--mute); font-size: var(--fs-sm); white-space: nowrap; }
+.console-connection { display: flex; align-items: center; gap: calc(var(--sp-3) / 2); color: var(--sub); font-size: var(--fs-sm); white-space: nowrap; }
+.console-connection-dot { flex: none; width: calc(var(--pad) / 2); height: calc(var(--pad) / 2); border-radius: 50%; background: var(--mute); }
+.console-connection[data-online="true"] .console-connection-dot { background: var(--ok); }
+.console-nav { position: relative; display: flex; align-self: stretch; align-items: stretch; gap: var(--sp-1); }
 .console-nav a {
-  display: flex; align-items: center; min-height: var(--ctl-h-lg);
-  padding: var(--sp-2) var(--sp-4); text-decoration: none; white-space: nowrap;
-  border-radius: var(--radius); color: var(--sub);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 var(--sp-3); text-decoration: none; white-space: nowrap;
+  border-bottom: calc(var(--line-w) * 2) solid transparent;
+  color: var(--mute); letter-spacing: .04em;
 }
-.console-nav a:hover { background: var(--hover); color: var(--text); }
-.console-nav a[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
-.console-status {
-  color: var(--sub); border: var(--line-w) solid var(--line2);
-  border-radius: var(--radius); padding: var(--sp-1) var(--sp-3); white-space: nowrap;
+.console-nav a:hover { color: var(--text); }
+.console-nav a[aria-current="page"] { color: var(--text); }
+.console-nav-indicator {
+  position: absolute; left: 0; bottom: 0; height: calc(var(--line-w) * 2);
+  background: var(--text); pointer-events: none;
+  transition: transform var(--t-base) var(--ease-out), width var(--t-base) var(--ease-out);
 }
+.console-status { white-space: nowrap; }
 .console-spacer { flex: 1; }
-.console-button, .console-estop {
+/* .pill：连接来源、只读或简短状态；无实底，不代替状态文字。 */
+.pill { display: inline-flex; align-items: center; padding: var(--line-w) calc(var(--pad) / 2); border: var(--line-w) solid var(--line2); border-radius: var(--radius-sm); color: var(--sub); font-size: var(--fs-xs); }
+/* .c-btn：普通按钮；加 .primary 为主操作，disabled/aria-disabled 共用视觉。 */
+.c-btn, .console-button, .console-estop {
   display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0;
-  min-height: var(--ctl-h-lg); padding: var(--sp-2) var(--sp-4);
-  font: 500 var(--fs-md)/1.5 var(--sans); white-space: nowrap;
+  min-height: var(--ctl-h); padding: var(--sp-1) var(--sp-3);
+  font: 500 var(--fs-base)/1.5 var(--sans); white-space: nowrap;
   border: var(--line-w) solid var(--line2); border-radius: var(--radius);
-  background: var(--panel); color: var(--text); cursor: pointer;
+  background: transparent; color: var(--text); cursor: pointer;
 }
-.console-button:hover { background: var(--hover); }
-.console-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.console-primary:hover { background: var(--accent-2); }
-.console-estop {
-  min-height: calc(var(--sp-5) * 2); margin-left: var(--sp-2); padding-inline: var(--sp-5);
-  background: var(--estop); border-color: var(--estop); color: var(--on-estop); font-weight: 700;
+:is(.c-btn, .console-button):hover:not(:disabled):not([aria-disabled="true"]) { background: var(--hover); border-color: var(--mute); }
+.c-btn, .console-button {
+  transition: background-color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
 }
+:is(.c-btn, .console-button):active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(1px); }
+.c-btn.primary, .console-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+:is(.c-btn.primary, .console-primary):hover:not(:disabled):not([aria-disabled="true"]) { background: var(--accent-2); border-color: var(--accent-2); }
+.console-estop { min-height: var(--ctl-h-lg); padding-inline: var(--sp-4); background: var(--estop); border-color: var(--estop); color: var(--on-estop); font-weight: 700; }
+/* 安全控件始终静止，不能因同时使用通用按钮类而获得动效。 */
+.console-estop { animation: none !important; transition: none !important; transform: none !important; }
+.console-estop-banner {
+  flex: none; padding: var(--sp-1) var(--sp-4); background: var(--estop); color: var(--on-estop);
+  font-weight: 600; text-align: center; animation: c-estop-enter var(--t-base) var(--ease-out);
+}
+@keyframes c-estop-enter { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 :is(button, [role="button"])[aria-disabled="true"] { cursor: help; }
-.console-button[aria-disabled="true"] { color: var(--mute); background: var(--panel); }
-:is(button, a, input, select, textarea):focus-visible {
-  outline: calc(var(--line-w) * 2) solid var(--focus); outline-offset: var(--sp-1);
+:is(.c-btn, .console-button, .console-estop):is(:disabled, [aria-disabled="true"]) { opacity: .45; }
+:is(.c-btn, .console-button, .console-estop):disabled { cursor: default; }
+:is(button, a, input, select, textarea):focus-visible { outline: calc(var(--line-w) * 2) solid var(--focus); outline-offset: var(--line-w); }
+.console-pages { flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+.console-page { display: grid; height: 100%; min-height: 0; min-width: 0; gap: var(--gap); overflow: auto; }
+/* 页面只负责透明网格；双类权重防止旧页面的 padding:0 吞掉外壳留白。 */
+.console-pages > .console-page { padding: var(--sp-3) var(--sp-4); background: transparent; border: 0; border-radius: 0; }
+:where(.console-page p) { margin: 0; color: var(--sub); }
+
+/* .c-card > .c-card-head + .c-card-body；标题右侧放 .c-aside，body 可独立滚动。 */
+.c-card { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--panel); border: var(--line-w) solid var(--line); border-radius: var(--radius); }
+/* 默认按同层序号递增；页面可 style="--i: 0" 覆盖，0–5 六级、超出封顶。
+   router 重设页面 data-enter 后重播；数据刷新不改该属性，不重播。 */
+.c-card {
+  --enter-i: 0;
+  animation: c-card-enter var(--t-slow) var(--ease-out) backwards;
+  animation-delay: calc(clamp(0, var(--i, var(--enter-i)), 5) * 40ms);
 }
-.console-pages { flex: 1; min-height: 0; min-width: 0; padding: var(--sp-5); }
-.console-page {
-  height: 100%; min-width: 0; overflow: auto; padding: var(--sp-5);
-  background: var(--panel); border: var(--line-w) solid var(--line); border-radius: var(--radius);
+.c-card:nth-child(2) { --enter-i: 1; }
+.c-card:nth-child(3) { --enter-i: 2; }
+.c-card:nth-child(4) { --enter-i: 3; }
+.c-card:nth-child(5) { --enter-i: 4; }
+.c-card:nth-child(n+6) { --enter-i: 5; }
+.console-page:not([data-enter]) .c-card { animation: none !important; }
+@keyframes c-card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.console-page p { margin: 0; color: var(--sub); }
+.c-card-head {
+  display: flex; align-items: center; gap: var(--sp-2); flex: none;
+  margin: 0 0 var(--sp-3); padding: calc(var(--sp-2) + var(--line-w)) var(--pad);
+  border-bottom: var(--line-w) solid var(--line); color: var(--sub);
+  font-size: var(--fs-sm); font-weight: 500; letter-spacing: var(--tracking-label); overflow-wrap: anywhere;
+}
+.c-card-head::before { content: ""; flex: none; width: calc(var(--sp-3) / 2); height: calc(var(--sp-3) / 2); border: var(--line-w) solid var(--mute); }
+.c-aside { margin-left: auto; color: var(--mute); font-size: var(--fs-xs); font-weight: 400; letter-spacing: .02em; }
+.c-card-body { flex: 1; min-width: 0; min-height: 0; padding: 0 var(--pad) var(--pad); overflow: auto; }
+/* .c-kpis 直接放 .c-kpi；格内 label/value/note 使用下列 c-kpi-*（也支持旧 .k/.v/.d）。空值由视图写“—”。 */
+.c-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--line-w); background: var(--line); border: var(--line-w) solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.c-kpis > * { min-width: 0; margin: 0; padding: var(--sp-3) var(--pad); border: 0; border-radius: 0; background: var(--panel); overflow-wrap: anywhere; }
+.c-kpis :is(.c-kpi-label, .k) { color: var(--sub); font-size: var(--fs-xs); letter-spacing: var(--tracking-label); }
+.c-kpis :is(.c-kpi-value, .v) { display: block; margin-top: var(--radius-sm); color: var(--text); font: 500 var(--fs-kpi-wide)/1.5 var(--mono); font-variant-numeric: tabular-nums; }
+.c-kpis :is(.c-kpi-value, .v) small { margin-left: var(--sp-1); color: var(--mute); font-size: var(--fs-sm); font-weight: 400; }
+.c-kpis :is(.c-kpi-note, .d) { margin-top: var(--radius-sm); color: var(--mute); font-size: var(--fs-xs); }
+/* KPI 更新后给数值元素加 .c-flash；监听 animationend，仅在
+   event.target === value && event.animationName === 'c-flash-text' 时移除类。
+   prefers-reduced-motion: reduce 时不要加类（无 animationend）；不改 widgets 数据逻辑。 */
+.c-flash, .c-kpis .c-flash { position: relative; color: var(--data); animation: c-flash-text var(--t-slow) var(--ease-out); }
+.c-flash::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: var(--data); pointer-events: none; opacity: 0; transform-origin: left;
+  animation: c-flash-line var(--t-slow) var(--ease-out);
+}
+@keyframes c-flash-text { from { color: var(--sub); } to { color: var(--data); } }
+@keyframes c-flash-line {
+  from { transform: scaleX(0); opacity: 1; }
+  85% { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(1); opacity: 0; }
+}
+/* .c-viewport：孪生/相机宿主，页面自己定尺寸；::after 的 14px 四角线不拦截拖动。 */
+.c-viewport { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--video); border: var(--line-w) solid var(--line2); border-radius: var(--radius); }
+.c-viewport::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55; z-index: 1;
+  animation: c-viewport-enter var(--t-slow) var(--ease-out);
+  background:
+    linear-gradient(var(--sub),var(--sub)) left var(--sp-2) top var(--sp-2)/var(--pad) var(--line-w) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) left var(--sp-2) top var(--sp-2)/var(--line-w) var(--pad) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) right var(--sp-2) top var(--sp-2)/var(--pad) var(--line-w) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) right var(--sp-2) top var(--sp-2)/var(--line-w) var(--pad) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) left var(--sp-2) bottom var(--sp-2)/var(--pad) var(--line-w) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) left var(--sp-2) bottom var(--sp-2)/var(--line-w) var(--pad) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) right var(--sp-2) bottom var(--sp-2)/var(--pad) var(--line-w) no-repeat,
+    linear-gradient(var(--sub),var(--sub)) right var(--sp-2) bottom var(--sp-2)/var(--line-w) var(--pad) no-repeat;
+}
+@keyframes c-viewport-enter { from { background-position: 50% 50%; opacity: 0; } }
+/* 页面以 viewport.toggleAttribute('data-busy', busy) 或 classList.toggle('busy', busy)
+   开关扫描线；也支持 dataset.busy = String(busy)，"false" 与移除属性均关闭。 */
+.c-viewport:is([data-busy]:not([data-busy="false"]), .busy)::before {
+  content: ""; position: absolute; left: 0; top: 0; width: 25%; height: 1px;
+  background: var(--sub); opacity: .35; z-index: 1; pointer-events: none;
+  animation: c-viewport-scan 2.4s linear infinite;
+}
+@keyframes c-viewport-scan { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+/* .c-chip.tl/tr/bl/br 放 viewport 内；加 .ok/.busy/.bad 才显示对应状态点，文字必须说明状态。 */
+.c-chip { position: absolute; z-index: 2; max-width: calc(100% - var(--pad) * 2); padding: var(--sp-1) calc(var(--sp-2) + var(--line-w)); background: rgba(6,8,10,.86); border: var(--line-w) solid var(--line2); border-radius: var(--radius-sm); color: var(--text); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.c-chip.tl { top: var(--pad); left: var(--pad); }
+.c-chip.tr { top: var(--pad); right: var(--pad); }
+.c-chip.bl { bottom: var(--pad); left: var(--pad); }
+.c-chip.br { bottom: var(--pad); right: var(--pad); }
+.c-chip:is(.ok, .busy, .bad)::before { content: ""; display: inline-block; width: calc(var(--pad) / 2); height: calc(var(--pad) / 2); margin-right: calc(var(--sp-3) / 2); border-radius: 50%; transition: background-color var(--t-base) var(--ease-in-out); }
+.c-chip.ok::before { background: var(--ok); }
+.c-chip.busy::before { background: var(--warn); animation: c-pulse 1s infinite; }
+.c-chip.bad::before { background: var(--bad); }
+@keyframes c-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+/* table.c-table：数字单元格加 .num（或 .r）；当前行 .cur / aria-current=true，选中行 aria-selected=true。 */
+.c-table { width: 100%; border-collapse: collapse; color: var(--sub); font-size: var(--fs-sm); text-align: left; }
+.c-table :is(th, td) { padding: calc(var(--sp-3) / 2) var(--sp-2); border-bottom: var(--line-w) solid var(--line); vertical-align: middle; }
+.c-table th { color: var(--mute); font-size: var(--fs-xs); font-weight: 400; letter-spacing: .3px; text-align: left; }
+.c-table :is(.num, .r) { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.c-table tbody tr { transition: background-color var(--t-fast) var(--ease-out); }
+.c-table tbody tr:hover { background: var(--hover); }
+.c-table tr:is(.cur, [aria-current="true"], [aria-selected="true"]) { background: transparent; color: var(--text); }
+.c-table tr:is(.cur, [aria-current="true"], [aria-selected="true"]) > :first-child { box-shadow: inset calc(var(--line-w) * 2) 0 var(--text); }
+/* .c-tag + .ok/.bad/.cur：只变描边和文字，不铺状态色底。 */
+.c-tag { display: inline-block; padding: var(--line-w) calc(var(--pad) / 2); border: var(--line-w) solid var(--line2); border-radius: var(--radius-sm); background: transparent; color: var(--sub); font-size: var(--fs-xs); font-weight: 400; white-space: nowrap; }
+.c-tag.ok { border-color: var(--ok); color: var(--ok); }
+.c-tag.bad { border-color: var(--bad); color: var(--bad); }
+.c-tag.cur { border-color: var(--accent); color: var(--text); }
+/* .c-tabs 包 button/a；选中使用 aria-selected=true、aria-current=page 或 .on，保留原事件。 */
+.c-tabs { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--sp-3); }
+.c-tabs > :is(button, a) { display: inline-flex; align-items: center; min-height: var(--ctl-h); margin: 0; padding: var(--sp-1) 0; border: 0; border-bottom: calc(var(--line-w) * 2) solid transparent; border-radius: 0; background: transparent; color: var(--mute); font: var(--fs-sm)/1.5 var(--sans); text-decoration: none; cursor: pointer; }
+.c-tabs > :is(button, a):hover { color: var(--text); }
+.c-tabs > :is(.on, [aria-selected="true"], [aria-current="page"]) { color: var(--text); border-bottom-color: var(--text); }
+/* .c-empty：卡片内无内容提示，不生成占位数据。 */
+.c-empty { padding: calc(var(--sp-5) - var(--line-w) * 2); color: var(--mute); font-size: var(--fs-sm); text-align: center; overflow-wrap: anywhere; }
+
 .console-dialog {
-  width: min(36rem, calc(100vw - var(--sp-6) * 2));
-  max-height: calc(100dvh - var(--sp-6) * 2); overflow: auto;
+  width: min(40rem, calc(100vw - var(--sp-4) * 2));
+  max-height: calc(100dvh - var(--sp-4) * 2); overflow: auto;
   padding: var(--sp-5); background: var(--panel); color: var(--text);
-  border: var(--line-w) solid var(--line2); border-radius: var(--radius-lg);
-  font: var(--fs-md)/1.5 var(--sans);
+  border: var(--line-w) solid var(--line2); border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0,0,0,.6); font: var(--fs-base)/1.5 var(--sans);
 }
-.console-dialog::backdrop { background: var(--bg); opacity: .8; }
-.console-dialog h2 { margin: 0 0 var(--sp-4); font-size: var(--fs-2xl); }
-.console-dialog-content { overflow-wrap: anywhere; }
-.console-dialog-actions { display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-5); }
+.console-dialog::backdrop { background: rgba(0,0,0,.72); }
+/* dialog.js 完整检测后才标记 data-motion；不支持时维持上述无动画样式。 */
+@supports (transition-behavior: allow-discrete) and (overlay: auto) {
+  .console-dialog[data-motion] {
+    opacity: 0; transform: scale(.98);
+    transition: opacity var(--t-base) var(--ease-in-out), transform var(--t-base) var(--ease-in-out),
+      display var(--t-base), overlay var(--t-base);
+    transition-behavior: allow-discrete;
+  }
+  .console-dialog[data-motion][open] { opacity: 1; transform: scale(1); }
+  .console-dialog[data-motion]::backdrop {
+    opacity: 0;
+    transition: opacity var(--t-base) var(--ease-in-out), display var(--t-base), overlay var(--t-base);
+    transition-behavior: allow-discrete;
+  }
+  .console-dialog[data-motion][open]::backdrop { opacity: 1; }
+  @starting-style {
+    .console-dialog[data-motion][open] { opacity: 0; transform: scale(.98); }
+    .console-dialog[data-motion][open]::backdrop { opacity: 0; }
+  }
+}
+.console-dialog h2 { margin: 0 0 var(--sp-2); font: 600 var(--fs-xl)/1.5 var(--mono); }
+.console-dialog-content { color: var(--sub); overflow-wrap: anywhere; }
+.console-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-4); }
 .console-tooltip {
   position: fixed; z-index: 10; width: max-content;
   max-width: min(32ch, calc(100vw - var(--sp-4) * 2));
-  padding: var(--sp-2) var(--sp-3); overflow-wrap: anywhere;
-  background: var(--panel2); color: var(--text); border: var(--line-w) solid var(--line2);
-  border-radius: var(--radius); font: var(--fs-sm)/1.5 var(--sans); pointer-events: none;
+  padding: calc(var(--sp-1) + var(--line-w)) calc(var(--sp-2) + var(--line-w)); overflow-wrap: anywhere;
+  background: var(--panel2); color: var(--sub); border: var(--line-w) solid var(--line2);
+  border-radius: var(--radius); font: var(--fs-xs)/1.5 var(--sans); pointer-events: none;
+  box-shadow: 0 12px 32px rgba(0,0,0,.6);
+}
+@media (max-width: 1080px) {
+  .console-shell { height: auto; min-height: 100dvh; }
+  .console-topbar { gap: var(--sp-2); }
+  .console-brand small { display: none; }
+  .console-pages { flex: auto; overflow: visible; }
+  .console-pages > .console-page { height: auto; min-height: calc(100dvh - var(--header-h)); overflow: visible; grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .console-topbar { display: grid; height: auto; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-1) var(--sp-2); padding: var(--sp-2); }
+  .console-brand { grid-row: 1; grid-column: 1; }
+  .console-spacer { display: none; }
+  .console-topbar > [data-action="reset"] { grid-row: 1; grid-column: 2; padding-inline: var(--sp-2); }
+  .console-estop { grid-row: 1; grid-column: 3; padding-inline: var(--sp-3); }
+  .console-nav { grid-row: 2; grid-column: 1; gap: 0; }
+  .console-nav a { min-height: var(--ctl-h); padding-inline: var(--sp-2); font-size: var(--fs-sm); }
+  .console-connection { grid-row: 2; grid-column: 2; justify-self: end; gap: var(--sp-1); }
+  .console-connection[data-online="true"] .console-connection-label { display: none; }
+  .console-status { grid-row: 2; grid-column: 3; justify-self: end; }
+  .c-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .console-dialog { padding: var(--sp-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, *::backdrop { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  :is(.c-btn, .console-button):active { transform: none !important; }
+  .c-viewport:is([data-busy], .busy)::before { content: none !important; }
 }

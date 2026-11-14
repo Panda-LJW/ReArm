@@ -63,9 +63,8 @@ export const ARM_PARAMS = {
     gripperRail: { center: [-0.088, 0, 0], size: [0.030, 0.184, 0.040] },
     finger: { length: 0.065, thickness: 0.012, height: 0.040, opening: 0.030 },
   },
-  // 画面布置（m）。占位：仿真用的名义臂比 B601-DM 小，部分仿真姿态下末端会低于底座平面，
-  // 所以把臂画在一个安装台上；真机安装方式确定后改成实际高度（落地安装填 0）。
-  scene: { pedestalHeight: 0.20, cameraTarget: [0.20, 0, 0.20], cameraDistance: 2.05, cameraAzimuthDeg: -62, cameraElevationDeg: 16 },
+  // 画面布置（m）：不显示安装台，地面网格与机械臂底座同在 base_link 的 Z=0。
+  scene: { pedestalHeight: 0, cameraTarget: [0.06, 0, 0.18], cameraDistance: 1.45, cameraAzimuthDeg: -62, cameraElevationDeg: 16 },
   // 上位机关节读数（度）→ URDF 关节角（弧度）的映射：q_urdf = sign * deg2rad(q_panel) + offset。
   // 上位机约定：J1 偏航，0° 正对靶板；J2 大臂仰角，0° 水平、90° 竖直；J3 小臂相对大臂的夹角，负值为向下折。
   // 占位：offset/sign 是按 URDF 零位姿态数值求出的（见 tests/test_twin_modules.py 的核对），

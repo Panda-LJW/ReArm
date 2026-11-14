@@ -1,21 +1,44 @@
-[data-page="settings"] { display: flex; flex-direction: column; gap: var(--sp-5); overflow: hidden; }
-[data-page="settings"] .settings-header { display: flex; align-items: baseline; gap: var(--sp-4); }
-[data-page="settings"] h1 { margin: 0; font-size: var(--fs-2xl); }
-[data-page="settings"] h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
-[data-page="settings"] .settings-header p { color: var(--mute); font-size: var(--fs-base); }
-[data-page="settings"] .settings-content { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; grid-auto-rows: max-content; gap: var(--sp-6); }
-[data-page="settings"] .settings-section { min-width: 0; padding: var(--sp-5); border: var(--line-w) solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; }
-[data-page="settings"] .settings-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-5); margin: var(--sp-5) 0 0; }
-[data-page="settings"] .settings-pair {
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4);
-  padding: var(--sp-4) 0; border-bottom: var(--line-w) solid var(--line);
+[data-page="settings"] { display: flex; flex-direction: column; gap: var(--gap); overflow: hidden; }
+[data-page="settings"] .settings-header { display: flex; align-items: center; flex: none; gap: var(--sp-2); }
+[data-page="settings"] h1 { margin: 0; font-size: var(--fs-lg); font-weight: 500; }
+[data-page="settings"] .settings-header p { margin: 0; }
+[data-page="settings"] .settings-content {
+  flex: 1; min-height: 0; overflow: auto; display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; align-items: start; gap: var(--gap);
 }
-[data-page="settings"] dt { color: var(--sub); }
-[data-page="settings"] dd { margin: 0; color: var(--data); overflow-wrap: anywhere; }
-[data-page="settings"] [data-setting="threshold"] { font-family: var(--mono); }
-[data-page="settings"] :is(.settings-missing, [data-setting="connection"]) { color: var(--mute); }
-[data-page="settings"] [data-online="true"] { color: var(--ok); }
-
-@media (max-width: 64rem) {
-  [data-page="settings"] .settings-values { grid-template-columns: minmax(0, 1fr); }
+[data-page="settings"] .settings-section {
+  overflow: hidden;
+  animation: settings-enter var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)) both;
+}
+[data-page="settings"] .settings-section + .settings-section { animation-delay: 40ms; }
+[data-page="settings"] .settings-section .c-card-head { margin-bottom: 0; }
+[data-page="settings"] .settings-values { margin: 0; }
+[data-page="settings"] .settings-pair {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: baseline; gap: var(--sp-4);
+  padding: var(--sp-3) 0; border-bottom: var(--line-w) solid var(--line);
+  transition: background-color var(--t-fast, 120ms) var(--ease-out, cubic-bezier(.2,.7,.2,1));
+}
+[data-page="settings"] .settings-pair:hover { background: var(--hover); }
+[data-page="settings"] .settings-pair:last-child { border-bottom: 0; }
+[data-page="settings"] dt { color: var(--sub); font-size: var(--fs-xs); letter-spacing: var(--tracking-label); }
+[data-page="settings"] dd { margin: 0; color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+[data-page="settings"] .settings-missing { color: var(--mute); }
+[data-page="settings"] [data-setting="connection"] { display: flex; align-items: center; gap: calc(var(--sp-3) / 2); }
+[data-page="settings"] [data-setting="connection"]::before {
+  content: ""; flex: none; width: calc(var(--pad) / 2); height: calc(var(--pad) / 2); border-radius: var(--radius-round);
+  background: var(--mute); transition: background-color var(--t-base, 200ms) var(--ease-out, cubic-bezier(.2,.7,.2,1));
+}
+[data-page="settings"] [data-online="true"]::before { background: var(--ok); }
+@keyframes settings-enter {
+  from { opacity: 0; transform: translateY(calc(var(--sp-3) / 2)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 1080px) {
+  [data-page="settings"] { overflow: visible; }
+  [data-page="settings"] .settings-content { flex: auto; overflow: visible; grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-page="settings"] *, [data-page="settings"] *::before, [data-page="settings"] *::after {
+    animation: none !important; transition: none !important; scroll-behavior: auto !important;
+  }
 }

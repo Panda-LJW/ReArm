@@ -5,6 +5,12 @@ let sequence = 0;
 export function mount(root = document.body, ctx = {}) {
   const doc = root.ownerDocument, dialog = doc.createElement("dialog");
   dialog.className = "console-dialog"; dialog.setAttribute("aria-modal", "true");
+  // 三项能力齐备才启用原生开/关过渡；旧浏览器沿用立即显示/关闭。
+  const win = doc.defaultView;
+  if (typeof win.CSSStartingStyleRule === "function" &&
+      win.CSS?.supports("transition-behavior", "allow-discrete") && win.CSS?.supports("overlay", "auto")) {
+    dialog.dataset.motion = "";
+  }
   dialog.setAttribute("role", "dialog"); dialog.tabIndex = -1;
   const title = doc.createElement("h2"), content = doc.createElement("div"), actions = doc.createElement("div");
   title.id = `console-dialog-title-${++sequence}`;

@@ -1,0 +1,42 @@
+/* 本页动效与结构样式分开；只响应已有展示状态，不计时、不驱动生产。 */
+[data-page="production"] .production-viewport,
+[data-page="production"] .production-section {
+  animation: production-enter var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)) both;
+}
+[data-page="production"] .production-section-1 { animation-delay: 40ms; }
+[data-page="production"] .production-section-0 { animation-delay: 80ms; }
+[data-page="production"] .production-section-2 { animation-delay: 120ms; }
+[data-page="production"] .production-section-3 { animation-delay: 160ms; }
+[data-page="production"] :is(select, .c-btn, .production-stepper li) {
+  transition: background var(--t-fast, 120ms), border-color var(--t-fast, 120ms), color var(--t-fast, 120ms), transform var(--t-fast, 120ms);
+}
+[data-page="production"] select:hover:not([aria-disabled="true"]) { border-color: var(--mute); }
+[data-page="production"] .c-btn:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(var(--line-w)); }
+[data-page="production"] .production-kpi [data-flash="a"] { animation: production-value-a var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)); }
+[data-page="production"] .production-kpi [data-flash="b"] { animation: production-value-b var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)); }
+[data-page="production"] .production-stepper [data-progress="current"]::before { animation: production-step-line var(--t-base, 200ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)); }
+[data-page="production"] .production-stepper [data-progress="current"]::after { animation: production-pulse 1s infinite; }
+[data-page="production"] .production-stepper [data-progress="done"]::after { animation: production-check var(--t-base, 200ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)); }
+[data-page="production"] .c-viewport::after { animation: production-corners var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)); }
+[data-page="production"] .c-viewport[data-busy="true"]::before {
+  content: ""; position: absolute; z-index: 2; top: 0; left: 0; width: 25%; height: var(--line-w);
+  background: var(--data); opacity: .35; pointer-events: none; animation: production-scan 2.4s linear infinite;
+}
+[data-page="production"] .production-chip::before { transition: background-color var(--t-base, 200ms); }
+[data-page="production"] .production-chip-text[data-flash="a"] { animation: production-chip-a var(--t-fast, 120ms) var(--ease-in-out, cubic-bezier(.65,0,.35,1)); }
+[data-page="production"] .production-chip-text[data-flash="b"] { animation: production-chip-b var(--t-fast, 120ms) var(--ease-in-out, cubic-bezier(.65,0,.35,1)); }
+@keyframes production-enter { from { opacity: 0; transform: translateY(calc(var(--sp-3) / 2)); } to { opacity: 1; transform: none; } }
+@keyframes production-value-a { from { color: var(--sub); } to { color: var(--data); } }
+@keyframes production-value-b { from { color: var(--sub); } to { color: var(--data); } }
+@keyframes production-step-line { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
+@keyframes production-check { from { opacity: 0; } to { opacity: 1; } }
+@keyframes production-pulse { 50% { opacity: .25; } }
+@keyframes production-corners { from { opacity: 0; inset: var(--sp-6); } to { opacity: .55; inset: 0; } }
+@keyframes production-scan { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+@keyframes production-chip-a { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@keyframes production-chip-b { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-page="production"] *,
+  [data-page="production"] *::before,
+  [data-page="production"] *::after { animation: none !important; transition: none !important; }
+}

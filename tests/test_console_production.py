@@ -124,8 +124,9 @@ def test_observation_annotations_stay_in_frame_and_keep_target_leaders():
     jsdom_script(SETUP + r'''
 const rect=win.HTMLElement.prototype.getBoundingClientRect;
 win.HTMLElement.prototype.getBoundingClientRect=function(){
-  if(this.classList.contains('production-camera'))return{width:192,height:144};
-  if(this.dataset.target)return{width:84,height:40};
+  if(this.classList.contains('production-camera'))return{width:192,height:184};
+  if(this.classList.contains('production-camera-status'))return{width:100,height:28};
+  if(this.dataset.target)return{width:70,height:40};
   return rect.call(this);
 };
 await begin();advance(7500);
@@ -133,8 +134,8 @@ const labels=[...doc.querySelectorAll('.production-targets [data-target]')];
 assert.equal(labels.length,4);assert.equal(doc.querySelectorAll('[data-target-leader]').length,4);
 const boxes=labels.map(el=>({x:parseFloat(el.style.left),y:parseFloat(el.style.top)}));
 for(const [i,a] of boxes.entries()){
-  assert.ok(a.x>=0&&a.y>=0&&a.x+84<=192&&a.y+40<=144);
-  for(const b of boxes.slice(i+1))assert.ok(a.x+84<=b.x||b.x+84<=a.x||a.y+40<=b.y||b.y+40<=a.y);
+  assert.ok(a.x>=24&&a.y>=24&&a.x+70<=192-24&&a.y+40<=184-32-24);
+  for(const b of boxes.slice(i+1))assert.ok(a.x+70<=b.x||b.x+70<=a.x||a.y+40<=b.y||b.y+40<=a.y);
 }
 advance(2000);assert.equal($('[data-angle]').closest('[data-target]').dataset.target,'plate');
 advance(4500);assert.equal($('[data-angle]'),null);
@@ -180,18 +181,19 @@ assert.equal($('[data-action="estop"]').getAttribute('aria-disabled'),'true');se
 ''')
 
 
-def test_twin_public_adapter_options_coalescing_props_and_disposal():
+def test_twin_public_adapter_options_coalescing_without_props_and_disposal():
     jsdom_script(SETUP + r'''
 const {mount}=await import('./console/pages/production/views/twin-stage.js');
 let options,updates=[],props=[],disposed=0;
 const view=await mount($('[data-twin-stage]'),{createTwin:async(root,opts)=>{options=opts;return{
   update:value=>updates.push(value),setProps:value=>props.push(structuredClone(value)),dispose:()=>disposed++};}});
 const state=store.getState();view.render(state);view.render(state);tick(16);
-assert.deepEqual(options,{status:false,labels:'hover'});assert.equal(updates.length,1);assert.equal(props.length,1);
+assert.deepEqual(options,{status:false,labels:'hover'});assert.equal(updates.length,1);assert.equal(props.length,0);
 assert.deepEqual(updates[0].q_rad,state.joint.q);assert.equal(updates[0].gripper_mm,state.joint.gripper_mm);
-view.render(state);tick(16);assert.equal(props.length,1);
+view.render(state);tick(16);assert.equal(props.length,0);
 await begin();advance(14000);view.render(store.getState());tick(16);
-assert.equal(props.at(-1).find(p=>p.id==='plate').held,true);
+assert.equal(store.getState().workspace.props.find(p=>p.id==='plate').held,true);
+assert.equal(props.length,0);
 view.render(state);view.dispose();tick(16);assert.equal(disposed,1);assert.equal(updates.length,3);cleanup();
 ''')
 

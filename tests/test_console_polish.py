@@ -123,13 +123,14 @@ import {initialWorkspace,workspaceBox} from './console/state/workspace.js';
 const workspace=initialWorkspace();
 const separated=(a,b)=>a.left+a.width<=b.left||b.left+b.width<=a.left||a.top+a.height<=b.top||b.top+b.height<=a.top;
 for(const width of [320,378,400,520])for(const count of [4,6]){
-  const height=width*2/3,sizes=Array.from({length:count},(_,i)=>({width:(width-24)/2,height:i%2?44:26}));
+  // 外边距从 4 增至 24，增加相同高度保留原图像区；两列之间仍留 4px。
+  const height=width*2/3+40,sizes=Array.from({length:count},(_,i)=>({width:(width-52)/2,height:i%2?44:26}));
   const {plot,labels}=observationLayout(width,height,sizes,4),t=imageTransform(plot,workspace.image);
   const objects=workspace.props.map(p=>{const [x,y,w,h]=workspaceBox(workspace,p);
     return{left:t.x+x*t.scale,top:t.y+y*t.scale,width:w*t.scale,height:h*t.scale};});
   assert.ok(plot.height>=60);
   for(const [i,a] of labels.entries()){
-    assert.ok(a.left>=0&&a.top>=0&&a.left+a.width<=width&&a.top+a.height<=height);
+    assert.ok(a.left>=24&&a.top>=24&&a.left+a.width<=width-24&&a.top+a.height<=height-24);
     assert.ok(objects.every(b=>separated(a,b)),JSON.stringify({width,count,a,objects}));
     assert.ok(labels.slice(i+1).every(b=>separated(a,b)));
   }
