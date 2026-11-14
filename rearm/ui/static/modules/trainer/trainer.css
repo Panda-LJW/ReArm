@@ -1,0 +1,42 @@
+/* 只调整认领区域的内容密度；卡片位置、首页栅格与旧页面样式保持原状。 */
+html[data-trainer="on"] .trainer-controls{display:flex;align-items:center;gap:calc(var(--gap) * .5);flex:none;font-size:var(--fs-base)}
+html[data-trainer="on"] .trainer-controls button{white-space:nowrap;font-size:var(--fs-base)}
+html[data-trainer="on"] .trainer-controls .trainer-laser{margin-left:calc(var(--gap) * .7);font-size:var(--fs-sm);background:transparent;border-color:var(--warn);color:var(--warn)}
+html[data-trainer="on"] .trainer-controls .trainer-laser-on{background:var(--warn);border-color:var(--warn);color:var(--bg);font-weight:600}
+html[data-trainer="on"] .trainer-legacy-badge{display:none}
+html[data-trainer="on"] .trainer-source{font-size:var(--fs-xs);white-space:nowrap}
+html[data-trainer="on"] .trainer-laser-banner{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-size:var(--fs-sm)}
+html[data-trainer="on"] .kpi .k{letter-spacing:0}
+html[data-trainer="on"] .kpi .d{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;overflow-wrap:anywhere}
+html[data-trainer="on"] .kpis .card{padding:calc(var(--pad) * .55) calc(var(--pad) * .65)}
+html[data-trainer="on"] .jointcard{padding-bottom:calc(var(--pad) * .55)}
+html[data-trainer="on"] .jointcard h3{margin-bottom:calc(var(--gap) * .3);padding-top:calc(var(--pad) * .4);padding-bottom:calc(var(--pad) * .4)}
+html[data-trainer="on"] .joint{grid-template-columns:max-content minmax(0,1fr) max-content;gap:calc(var(--gap) * .6);margin:0;padding:calc(var(--gap) * .13) 0;line-height:1.25;font-size:var(--fs-sm)}
+html[data-trainer="on"] .joint .num{font-size:var(--fs-sm);min-width:5.4em;text-align:right}
+html[data-trainer="on"] .joint .n{font-size:var(--fs-sm);min-width:5.4em;white-space:nowrap}
+html[data-trainer="on"] .trainer-invalid{opacity:.5}
+html[data-trainer="on"] .envrow{gap:calc(var(--gap) * .4) var(--gap);margin-top:calc(var(--gap) * .35);padding-top:calc(var(--gap) * .35);line-height:1.25;font-size:var(--fs-sm)}
+html[data-trainer="on"] .envrow span{white-space:nowrap}
+html[data-trainer="on"] .trainer-explanation{margin:0 0 calc(var(--gap) * .6);font-size:var(--fs-sm);line-height:1.45;overflow-wrap:anywhere}
+html[data-trainer="on"] .trainer-correction-items{padding:0;margin:0;list-style:none;font-size:var(--fs-sm)}
+html[data-trainer="on"] .trainer-correction-items li{display:flex;justify-content:space-between;gap:var(--gap);padding:calc(var(--gap) * .2) 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+html[data-trainer="on"] .trainer-correction-history{max-height:8em;overflow:auto;border-top:1px solid var(--line);margin-top:var(--gap);font-size:var(--fs-sm);color:var(--sub)}
+html[data-trainer="on"] .trainer-correction-history p{margin:calc(var(--gap) * .4) 0}
+html[data-trainer="on"] .trainer-camera-canvas{position:absolute;inset:0;width:100%;height:100%}
+html[data-trainer="on"] .trainer-camera-status{right:calc(var(--gap) * .8);left:calc(var(--gap) * .8);max-width:none;justify-content:space-between;gap:calc(var(--gap) * .4)}
+html[data-trainer="on"] .trainer-camera-status .chip{font-size:var(--fs-sm);white-space:normal}
+html[data-trainer="on"] .trainer-camera-badge{left:calc(var(--gap) * .8);bottom:calc(var(--gap) * .8);font-size:var(--fs-sm)}
+html[data-trainer="on"] .trainer-camera-badge:before{display:none}
+html[data-trainer="on"] .trainer-mismatch{color:var(--bad);border-color:var(--bad)}
+html[data-trainer="on"] .trainer-spot-label{font-family:var(--mono);font-size:var(--fs-chart)}
+@media(min-width:1081px) and (max-height:800px){
+  html[data-trainer="on"][data-mode="show"] #joints{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--gap)}
+  html[data-trainer="on"][data-mode="show"] .joint{grid-template-columns:max-content 1fr;position:relative;padding:calc(var(--gap) * .25) 0;gap:0}
+  html[data-trainer="on"][data-mode="show"] .joint .bar{position:absolute;left:0;right:0;bottom:0;height:1px;opacity:.6}
+  html[data-trainer="on"][data-mode="show"] .joint .bar i{height:4px;top:-2px;width:2px}
+  html[data-trainer="on"][data-mode="show"] .joint .n{min-width:0}
+  html[data-trainer="on"][data-mode="show"] .joint .num{min-width:0}
+}
+@media(max-width:720px){
+  html[data-trainer="on"] .trainer-controls{grid-column:1/-1;justify-content:center}
+}

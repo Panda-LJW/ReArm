@@ -137,3 +137,19 @@
 - 验证：开工 .venv/bin/python -m pytest -q 为 156 passed in 8.68s；最终同命令 179 passed in 9.64s，原 156 项全部保留，新增 23 项。测试使用 Node ES 模块和虚拟时钟，不依赖真实等待；所有激光指令送 mock，真实 WebSocket/fetch 设为失败哨兵，host 仅使用假 WebSocket/fetch。覆盖 8 遍闭环、无光点失败、各类守护规则、TTL、急停、重连和 3 秒静默、不可变/乱序/去重、空指标、无 DOM 和无硬编码主机地址。7 个相关 JS 文件 node --check、git diff --check 通过。
 - 遗留与范围：真实硬件/网络及页面集成未验证，按任务要求未连接或修改；未启动服务或占用 8000 端口。执行中出现的 docs/model-swap/tasks/T3-接口文档.md、docs/model-swap/遥控面板方案.md 是外部并发新增，未触碰。app.js、app.css、index.html、main.js、arm/、twin/、guide/theme/focus/presentation、rearm 下 Python、config/、docs/、.venv 均未编辑。
 - 回滚：修改前 index.js、test_twin_modules.py、LOG.md、LOG-INDEX.md 保存在 /private/tmp/rearm-t4-2mhxj_6h/before/。只恢复本轮对应文件、移除上列新增的 6 个 JS 与 test_trainer_logic.py 即可局部回退；日志只移除本 T4 条目，保留后续用户或并发改动。
+
+## 2026-11-14 T5 首页认领接缝与轨迹训练区域 [T5-20261114]
+- 目标：按设计第 1、4、6 节、P0-3/P0-4 和 T5 任务替换首页内容，保持 feat/model-swap；不提交、不推送、不切分支、不装包、不接真实地址。
+- 修改：rearm/ui/static/app.js（仅认领判断）、modules/main.js（legacy 分流及 trainer 装配）；新增 modules/trainer/trainer.js、trainer.css、views/kpis.js、joints.js、feed.js、deviation-chart.js、corrections.js、camera.js、controls.js、canvas.js、format.js；新增 tests/test_trainer_views.py；追加 LOG.md 和 LOG-INDEX.md。
+- app.js：第 3 行 claimed；第 144 行断线相机芯片保护；第 188、197 行在相机已认领时停止旧请求；第 213–260 行按六个区域跳过原渲染；第 284 行误差图直接重画保护；第 478 行误差图 aria 文案保护。showCameraFrame 的检查防止认领前已发出的图像异步回填。syncControls、急停、导航、旧卡片等逻辑未改；没有引入 trainer 或 modules 字样，未认领时原语句顺序保持。
+- 装配：非 legacy 不启动旧孪生数据源、不加载 guide；孪生不可用时 trainer 接收 null。trainer 初始化失败恢复各区域原 DOM、按钮显隐和图表事件，main 清 claim 并广播 rearm:theme。无新增 HTML 挂载位，index.html 和 app.css 逐字未改。
+- 数据与孪生：订阅 T4 原始消息，经 reduce 和 summarize 更新七个 view；RAF 合并。原始关节帧按 pass 积累，每次换遍清空；buildPath 计算示范/本遍 TCP 路径，无效或断线帧断段。节点独立 FK，光点 mm 转 m；makeFrame 的时间从 Unix 毫秒转秒，按 hello.sim/链路映射 sim/live/offline。
+- 区域：四个 KPI 显示遍数、平均/最大偏差及阈值、改善率、修正次数；关节按 ARM_PARAMS 显示六轴及夹爪、无效行、最高温度/最大电流/模式；事件最新在上；偏差图平均实线/最大虚线/阈值，字号经探针；修正说明与条目用 textContent，历史滚动；手眼相机 MJPEG 或移动网格示意，光点/箭头/偏差、实际激光状态及不一致告警；控制区隐藏旧按钮，示范/练习互斥，手动激光次要按钮和琥珀提示条。旧模拟标签通过附加 trainer class 暂时隐藏，新增来源 pill 展示模拟或主机名。
+- 安全接线：pagehide、hidden、离开主页都 shutdown；捕获急停点击补发 estop、shutdown，不拦截旧处理；rearm:state 的 estop 真→假发送 reset_estop。未 hello/离线/故障/急停禁用训练操作，练习中手动激光禁用；离开主页或隐藏期间也禁用训练操作。生命周期 shutdown 后不自动恢复出光，需要新的显式操作重新装配 guard。激光预期只在开关意图变化时记录，续期不会不断重置 1 秒告警窗口。
+- 验证：开工全量 179 passed in 9.84s；最终 .venv/bin/python -m pytest -q 为 199 passed、1 failed in 10.87s。新增 21 项全过（1.42s），Node 语法检查及 git diff --check 通过。DOM 集成使用缓存中已存在的 jsdom，没有安装依赖；无该宿主的环境会跳过 4 项 DOM 集成，其余契约/纯逻辑测试仍执行。
+- 运行证据：实际 mock + trainer + guard 虚拟时钟跑完 6 遍，平均偏差 17.99→11.15→6.89→4.32→2.68→2.44 mm；验证 RAF 合并、孪生六轴/路径/节点、事件/修正/图表、手动提示、全部生命周期关灯、急停/解除、DOM 回退、无孪生、假 WebSocket 离线不回退模拟。另执行实际 app.js 的 DOM 测试，验证旧三轴渲染和认领后不覆盖六区域；实际 main.js 的隔离宿主验证 legacy、缺失孪生和 trainer 加载失败。恶意 llm_text 作为文字显示，不生成 img 节点。
+- 唯一测试冲突：现有 tests/test_trainer_logic.py:452 将 trainer 根目录 glob('*.js') 加两个 datasource 文件的数量写死为 6，且要求这些文件全部无 DOM；新增任务指定的 trainer.js 后为 7，因此失败。已通过异步问题申请仅把扫描范围限定到 T4 四个逻辑文件，尚未收到授权；按“旧测试不变”保持该文件原样，没有跳过或削弱断言。验收“全量全过”因此尚未达成。
+- 画面边界：独立 Chromium 启动退出（Target page, context or browser has been closed）；尝试绑定 127.0.0.1:8766 得到 PermissionError: Operation not permitted。未申请提权、未改变权限、未启动任何服务；1920×1080 / 1280×720 日常与路演的实际浏览器排版、实际 MJPEG、真实硬件均未验证。CSS 已做七行紧凑布局、矮屏路演两列，但不能据 DOM 测试声称没有截断。
+- 设计差异：功能接口与设计一致；新增 views/canvas.js、format.js 共用字号解析、格式化和回退工具。初次打开不自动执行示范/练习，默认模拟主机在线，按“示范→结束→练习”启动。测试扫描范围与新入口文件的冲突及浏览器限制如上，待处理。
+- 未触碰：app.css、index.html、tokens.css、guide/theme/focus/presentation、arm/twin、T4 逻辑及 datasource、rearm 下 Python、config、docs、.venv、全部旧测试、仓库根海报素材包.zip。
+- 回滚：修改前文件在 /private/tmp/rearm-t5-e1w8cxcw/before/；只恢复 app.js、main.js，移除上列本轮新增 trainer 入口/样式/views 和 test_trainer_views.py，删除本日志条目及对应索引即可局部回退，保留 T4 文件和其他用户改动。临时 DOM 验证脚本在同一 /private/tmp 目录；仓库未新增临时产物。

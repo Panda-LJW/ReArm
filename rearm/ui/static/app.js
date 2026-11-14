@@ -1,5 +1,6 @@
 (()=>{
 const $=id=>document.getElementById(id);
+const claimed=region=>(document.documentElement.dataset.claim||"").split(" ").includes(region);
 const V=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colors=()=>({line:V("--data"),cyan:V("--cyan"),warn:V("--warn"),bad:V("--bad"),obs:V("--obs"),pred:V("--pred"),grid:V("--grid"),geo:V("--geo"),mute:V("--mute"),vline:V("--line2"),mono:V("--mono")});
 let K=colors();
@@ -140,7 +141,7 @@ function connectionState(ok,message="连接断开，数据已过期，正在重�
   connected=ok;document.body.classList.toggle("stale",!ok);
   $("dot").classList.toggle("on",ok);$("conn").textContent=ok?"实时连接":message;
   $("connectionbar").hidden=ok;$("connectionbar").textContent=message;
-  if(!ok){$("chipstate").textContent="连接断开";$("chipstate").className="chip state s-bad";stopCamera()}
+  if(!ok){if(!claimed("cam")){$("chipstate").textContent="连接断开";$("chipstate").className="chip state s-bad";}stopCamera()}
   syncControls();schedule();announce();
 }
 function connect(){
@@ -184,6 +185,7 @@ function stopCamera(){
   if(source){source.onload=source.onerror=null;source.removeAttribute("src")}
 }
 function showCameraFrame(source){
+  if(claimed("cam")){stopCamera();return;}
   if(source!==cameraRequest||!connected||!source.naturalWidth||!source.naturalHeight)return;
   if(cameraFrame.width!==source.naturalWidth)cameraFrame.width=source.naturalWidth;
   if(cameraFrame.height!==source.naturalHeight)cameraFrame.height=source.naturalHeight;
@@ -192,6 +194,7 @@ function showCameraFrame(source){
   const img=$("camimg");img.src=cameraFrame.toDataURL();img.hidden=false;
 }
 function refreshCamera(){
+  if(claimed("cam")){stopCamera();return;}
   if(!S||!connected)return;
   if(cameraRequest){if(S.simulation)imgQueued=true;return}
   const stream=!S.simulation,source=cameraRequest=new Image();
@@ -207,28 +210,37 @@ function refreshCamera(){
 function render(){
   K=colors();
   if(!S)return;
-  $("mode").hidden=!S.simulation;$("debugtoggle").hidden=!S.simulation;$("cam").classList.toggle("sim",!!S.simulation);
+  $("mode").hidden=!S.simulation;$("debugtoggle").hidden=!S.simulation;if(!claimed("cam")){$("cam").classList.toggle("sim",!!S.simulation);}
   const head=S.head||{},recent=S.recent||[],last=recent[recent.length-1],alarm=S.alarm_mm||6;
   $("vcur").textContent=head.id?head.id:"—";
   const st=!connected?"连接断开":S.estop?"已急停":S.state||"—",cs=$("chipstate");
+  if(!claimed("cam")){
   cs.className="chip state "+(st==="正常"?"s-ok":["已拒绝","已急停","连接断开"].includes(st)?"s-bad":st==="重训残差"?"s-info":"s-busy");
   cs.textContent=st+(BUSY.includes(st)&&S.heal_start!=null?` · 已打 ${Math.max(0,S.shots-S.heal_start)} 发`:"");
+  }
   /* One coarse phase for the whole page, so styling can calm or stress regions without knowing the state machine. */
   document.body.dataset.phase=!connected?"stale":S.estop?"stop":st==="正常"?"ok":st==="已拒绝"?"bad":"busy";
   $("estopbar").hidden=!S.estop;
   $("stopdetail").textContent=S.estop_error?tr(S.estop_error):"已禁止动作与出光";
+  if(!claimed("cam")){
   $("chiplaser").textContent=!connected?"激光 未知":S.laser_on?"激光 开":"激光 关";
   $("chiplaser").classList.toggle("laser-on",connected&&!!S.laser_on);
+  }
   syncControls();
-  $("chipver").textContent="当前版本 "+(head.id||"—");
+  if(!claimed("cam")){$("chipver").textContent="当前版本 "+(head.id||"—");}
   const err=last?mag(last.residual):null,ce=$("chiperr");
+  if(!claimed("cam")){
   ce.className="chip err "+(err==null?"s-info":err>alarm?"s-bad":"s-ok");
   ce.textContent=last?(err==null?"未看到光点":"误差 "+f(err,2)+" mm"):"等待第一发";
   drawOverlay(recent);
+  }
+  if(!claimed("kpis")){
   $("k-err").innerHTML=err==null?"—":`<span class="${err>alarm?"badc":""}">${f(err,2)}</span><small>mm</small>`;
   $("k-err-d").textContent=(err!=null&&err>alarm?`▲ 超过阈值 ${f(alarm,0)} mm`:`阈值 ${f(alarm,0)} mm`)+(last?` · ${roleName(last.role)}`:"");
   $("k-err").parentNode.dataset.level=err==null?"none":err>alarm?"bad":"ok";
+  }
   const comp=compensation();
+  if(!claimed("kpis")){
   if(comp){const gain=(comp.geometry_median-comp.new_median)/comp.geometry_median*100;
     $("k-comp").innerHTML=`<span class="goodc">−${f(gain,0)}</span><small>%</small>`;$("k-comp-d").textContent=`${f(comp.geometry_median,2)} → ${f(comp.new_median,2)} mm（${head.residual_id}）`}
   else{const learned=(S.versions||[]).some(v=>v.residual_id!=="zero");
@@ -238,11 +250,14 @@ function render(){
   $("k-shots").textContent=S.shots||0;$("k-shots-d").textContent="运行 "+dur(uptime())+" · 报警 "+(S.alarms||0)+" 次";
   $("k-heal").innerHTML=`${(st2.recoveries||0)+(st2.recognitions||0)}<small>次</small>`;
   $("k-heal-d").textContent=`诊断修复 ${st2.recoveries||0} · 认出旧伤 ${st2.recognitions||0}`;
+  }
+  if(!claimed("joints")){
   const lim=S.joint_limits||[[-90,90],[0,110],[-150,0]],q=last?last.q:null;
   $("joints").innerHTML=["J1 底座","J2 大臂","J3 小臂"].map((n,i)=>{const[lo,hi]=lim[i],v=q?q[i]:null,p=v==null?null:(v-lo)/(hi-lo)*100;
     return `<div class="joint"><span class="n">${n}</span><div class="bar" title="限位 ${lo}° ~ ${hi}°">${p==null?"":`<i style="left:calc(${p}% - 1px)"></i>`}</div><span class="num" style="text-align:right">${v==null?"—":signed(v)+"°"}</span></div>`}).join("");
   $("e-load").textContent=last?f(last.load*100,0)+"%":"—";$("e-temp").textContent=last?f(last.temperature,1)+" °C":"—";$("e-volt").textContent=last?f(last.voltage,1)+" V":"—";
-  drawErr();renderDiag();drawLearn(comp);renderVersions();renderOverview();renderFeed();
+  }
+  if(!claimed("errchart")){drawErr();}if(!claimed("diag")){renderDiag();}drawLearn(comp);renderVersions();renderOverview();if(!claimed("feed")){renderFeed();}
   if(modalVersion)renderModal();updateChartLabels();announce();
 }
 function toPx(xy){const c=S.camera||{width:1000,height:760,pixels_per_mm:2};return[c.width/2+xy[0]*c.pixels_per_mm,c.height/2-xy[1]*c.pixels_per_mm]}
@@ -266,6 +281,7 @@ function axes(g,w,h,ymax,step,pad){const scale=px("--fs-chart")/10;g.font=chartF
 function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font=chartFont("--fs-chart-empty",V("--sans"));g.textAlign="left";g.fillText(msg,pad.l,h/2)}
 /* Log scale: a healthy arm sits near 1 mm and a damaged one near 100 mm, and both must stay readable. */
 function drawErr(){
+  if(claimed("errchart"))return;
   const[g,w,h]=setupCanvas($("errchart")),rec=(S.recent||[]).slice(-120),alarm=S.alarm_mm||6,scale=px("--fs-chart")/10,pad={l:30*scale,r:8*scale,t:10*scale,b:18*scale};
   EC=null;
   if(!rec.length)return emptyChart(g,h,pad,"点“自检”开始");
@@ -459,7 +475,7 @@ async function loadDoc(){if(docLoaded)return;try{const r=await fetch("/api/fault
 
 function updateChartLabels(){
   const rec=(S.recent||[]).slice(-120),vals=rec.map(s=>mag(s.residual)).filter(v=>v!=null),pts=learnPoints(),hist=S.stats?.history||[];
-  $("errchart").setAttribute("aria-label",`瞄准误差：最近 ${rec.length} 发，最新 ${f(rec.length?mag(rec.at(-1).residual):null,2)} 毫米，最大 ${f(vals.length?Math.max(...vals):null,2)} 毫米，报警阈值 ${S.alarm_mm||6} 毫米`);
+  if(!claimed("errchart"))$("errchart").setAttribute("aria-label",`瞄准误差：最近 ${rec.length} 发，最新 ${f(rec.length?mag(rec.at(-1).residual):null,2)} 毫米，最大 ${f(vals.length?Math.max(...vals):null,2)} 毫米，报警阈值 ${S.alarm_mm||6} 毫米`);
   $("learnchart").setAttribute("aria-label",`学习效果：${pts.length} 个验证版本，最新模型误差中位数 ${f(pts.at(-1)?.model,2)} 毫米`);
   $("healchart").setAttribute("aria-label",`自愈发数：${hist.length} 次记录，最近一次 ${hist.at(-1)?.shots??"暂无"} 发`);
 }

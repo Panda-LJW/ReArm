@@ -74,6 +74,9 @@ export function createMockHost({ now = Date.now, setTimer = setInterval, clearTi
   }
   function finishDemo() {
     if (mode !== "demo") return;
+    // 真实流程是人点第二次才结束；动作走完后停在终点等人点结束。停住的那段不算进示范轨迹。
+    const moving = samples.filter(sample => sample.t <= samples[0].t + DEMO_MS);
+    if (moving.length > 1) samples = moving;
     const nodes = [0.2, 0.45, 0.7, 1].map((fraction, index) => {
       const sample = samples[Math.round((samples.length - 1) * fraction)], ref = spot(sample.q);
       return { ...clone(sample), id: index + 1, gripper_state: sample.gripper_mm < 20 ? "closed" : "open",
@@ -174,18 +177,13 @@ export function createMockHost({ now = Date.now, setTimer = setInterval, clearTi
     if (!running) return;
     const target = clock + ms;
     while (running) {
-      const next = Math.min(nextFrame, nextStatus, expires,
-        mode === "demo" ? demoStart + DEMO_MS : Infinity, nextPracticeEvent());
+      const next = Math.min(nextFrame, nextStatus, expires, nextPracticeEvent());
       if (next > target) break;
       clock = next; updatePose();
       if (laser && clock >= expires) setLaser(false, "ttl_expired");
       if (practice && clock >= nextPracticeEvent()) practiceEvent();
       if (!running) break;
       if (clock >= nextFrame) { nextFrame += period; joint(); }
-      if (mode === "demo" && clock >= demoStart + DEMO_MS) {
-        if (samples.at(-1)?.t !== clock) joint();
-        finishDemo();
-      }
       if (clock >= nextStatus) { nextStatus += 1000; emit("heartbeat"); laserState(); }
     }
     clock = target; updatePose();

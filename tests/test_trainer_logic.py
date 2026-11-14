@@ -120,8 +120,9 @@ async function run(count, guarded = true, seed = 1) {
   host.subscribe(message => { messages.push(message); state = reduce(state, message); if (guarded) guard.onMessage(message); });
   host.start();
   clock.setTimer(() => host.advance(50), 50);
-  await host.send("demo_start"); clock.advance(6000);
-  assert.equal(messages.filter(m => m.type === "demo_trajectory").length, 1);
+  await host.send("demo_start"); clock.advance(9000);
+  // 动作走完也不自动结束：真实流程是人点第二次才结束。
+  assert.equal(messages.filter(m => m.type === "demo_trajectory").length, 0);
   await host.send("demo_stop");
   assert.equal(messages.filter(m => m.type === "demo_trajectory").length, 1);
   await host.send("practice_start");
@@ -448,8 +449,10 @@ console.log(JSON.stringify(true));
 
 
 def test_logic_has_no_dom_and_frontend_has_no_literal_host_address():
-    paths = list((MODULES / 'trainer').glob('*.js')) + [MODULES / 'datasource' / name for name in ['host-source.js', 'mock-host.js']]
-    assert len(paths) == 6
+    # 纯逻辑文件逐个列出：trainer.js 和 views/ 负责页面接线，本来就要碰 DOM，不在此列。
+    logic = ['config.js', 'store.js', 'metrics.js', 'laser-guard.js']
+    paths = [MODULES / 'trainer' / name for name in logic] + [MODULES / 'datasource' / name for name in ['host-source.js', 'mock-host.js']]
+    assert all(path.exists() for path in paths)
     for path in paths:
         text = path.read_text()
         assert not any(word in text for word in ['document.', 'querySelector', 'getElementById']), path
