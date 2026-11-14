@@ -1,0 +1,17 @@
+[data-page="settings"] { display: flex; flex-direction: column; gap: var(--sp-5); overflow: hidden; }
+[data-page="settings"] .settings-header { display: flex; align-items: baseline; gap: var(--sp-4); }
+[data-page="settings"] h1 { margin: 0; font-size: var(--fs-2xl); }
+[data-page="settings"] h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
+[data-page="settings"] .settings-header p { color: var(--mute); font-size: var(--fs-base); }
+[data-page="settings"] .settings-content { min-height: 0; overflow: auto; }
+[data-page="settings"] .settings-section { max-width: 52rem; margin-bottom: var(--sp-6); }
+[data-page="settings"] .settings-values { margin: var(--sp-3) 0 0; }
+[data-page="settings"] .settings-pair {
+  display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr); gap: var(--sp-4);
+  padding: var(--sp-4) 0; border-bottom: var(--line-w) solid var(--line);
+}
+[data-page="settings"] dt { color: var(--sub); }
+[data-page="settings"] dd { margin: 0; color: var(--data); overflow-wrap: anywhere; }
+[data-page="settings"] [data-setting="threshold"] { font-family: var(--mono); }
+[data-page="settings"] :is(.settings-missing, [data-setting="connection"]) { color: var(--mute); }
+[data-page="settings"] [data-online="true"] { color: var(--ok); }

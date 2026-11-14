@@ -333,3 +333,16 @@
 - 验收对照：逐条核对 library-checks.mjs 的数量、钩子、文档曲线、夹持力格式、名称编号、三步、30 秒完成及同页增量判断，第 13 条预计转绿；其他界面的按钮、措辞、布局规则一并静态核对，但不提前宣称第 9、12、14 条通过。详细选择器映射已追加卡点.md。
 - 遗留：没有运行 node1.sh 或其他验收入口，没有实际画面、鼠标时序、三种分辨率及新截图证据；未更新正式报告。训练录像与正式 3D 素材未提供，后端联调仍待后续节点。未开始 T6，没有 git add/commit，没有修改 scripts/acceptance/、旧首页/训练模块、孪生、数据源、README 或 SPEC，保留开工时其他未跟踪文件。
 - 回滚：开工 HEAD 为 206feddb16eff00b9477f42c90dad05edf7f7e3d；改前 parts/index.js 和三份文档副本存于 /private/tmp/rearm-node1-t5-before。只恢复本轮 index.js、移除本轮新增 parts 文件/line-chart.js/测试，按段撤销本轮日志及卡点追加；不要整文件覆盖其他会话新增内容。
+
+## NODE1-T6-20261115：记录与只读设置
+
+- 日期：2026-11-15（Asia/Taipei）。目标：仅完成节点① T6，补齐记录、设置两页；正式浏览器验收和提交由外部执行。
+- 改动文件：rearm/ui/static/modules/console/pages/records/index.js、records.css；pages/settings/index.js、settings.css；widgets/format.js（上述相对目录均位于 modules/console）；tests/test_console_records_settings.py；docs/路演/tasks/卡点.md；LOG.md、LOG-INDEX.md 仅追加。
+- 结构与决策：沿用原生 ES 模块、现有导航和 optional 独立加载。记录页由标题与两张语义表格组成，设置页由只读连接信息与参数组成；复用 frameView、DOM 工具、store 和 selectors，无跨页依赖、网络访问、额外指令或新增依赖。共用格式化工具仅供本次两页使用，不重构其他页面。
+- 记录：生产表含时间、配方、结果、偏差、用时；训练表含时间、对象、轮数、最终偏差、用时。仅展示 store 已完成记录，按最新在前显示；零件/配方名称从库或文档解析，未取到名称时保留编号。空表为灰色“还没有生产记录”或“还没有训练记录”；缺测保留“—”。生产、训练完成和重置直接跟随原状态更新，关节消息不重建记录行。
+- 设置：读取 hello.sim 显示“本地演示”或“主机”，连接区分未连接、等待握手、协议不兼容、已连接；协议版本和偏差阈值取自 hello，不写死阈值。夹爪开口显示规格规定的“全开”，是只读策略值，不充当实时夹爪读数。没有主机地址输入框或可编辑控件。
+- 视觉与状态自查：沿用品牌变量，两个 CSS 均限定各自 data-page；最小新增字级为 --fs-base（13px）。表格内部滚动、长名称换行，避免页面被长记录撑开；使用 textContent 避免名称被解释为 HTML；空值灰色；表格滚动区可键盘聚焦并有焦点框；收到高频遥测时保留阅读位置。实际浏览器画面未验证。
+- 验证：开工 .venv/bin/python -m pytest -q 为 413 passed in 36.19s；最终同命令 417 passed in 35.18s，新增 4 项，零失败、零跳过，原测试未删改。两个页面 index.js 和 widgets/format.js 的 node --check 全过。新增测试覆盖完整生产、两类训练、急停中断、重置、迟到名称、缺测、文本安全、只读连接状态及 dispose。
+- 验收对照：surface-checks.mjs 的四项 data-nav 顺序及文字不变，browser.mjs 的 data-page 可见且内容非空由原导航测试继续覆盖，第 3 条预计保持绿。第 9、12、14 条仅自查本次两页的按钮/措辞/样式兼容性，不宣称全站已通过；详细对照追加至卡点.md。
+- 遗留：未运行 node1.sh、浏览器、服务或其他验收入口；没有三种视口、实际截断/滚动或截图的新证据，正式报告未更新。外部须继续跑验收脚本确认第 3 条及两页实际画面。未修改 scripts/acceptance/、协议、数据源、急停/限位、旧首页、孪生、README 或 SPEC；没有 git add/commit，未开始 T7。
+- 回滚：开工 HEAD 为 409bbb8f8eb7beaa11e53437ca21b270d6da4e76。改前两页 index.js 和三份文档副本位于 /private/tmp/rearm-node1-t6-before.BgceSO；只恢复两页 index.js，移除本轮两份 CSS、widgets/format.js 和测试文件，按段撤销本轮文档追加，保留其他会话内容及原有未跟踪文件。
