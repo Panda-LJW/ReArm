@@ -300,6 +300,117 @@ dom.window.close();
 ''')
 
 
+KPI_FIXTURE = r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const dom = new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+globalThis.document = dom.window.document;
+const {mount} = await import('./trainer/views/kpis.js');
+const {initialState, reduce} = await import('./trainer/store.js');
+const {summarize} = await import('./trainer/metrics.js');
+const base = {...initialState(), link:{online:true}, hello:{sim:true}};
+const view = mount(document.querySelector('.kpis'));
+const render = state => {
+ view.render(state, {...summarize(state), thresholdMm:5});
+ return [...document.querySelectorAll('.kpi')].map(cell => ({
+  value:cell.querySelector('.v').firstChild.textContent,
+  unit:cell.querySelector('.v small')?.textContent ?? '',
+  detail:cell.querySelector('.d').textContent,
+  level:cell.dataset.level,
+ }));
+};
+'''
+
+
+@pytest.mark.parametrize('demo,detail', [
+    (None, '点“示范”，手扶机械臂做一遍'),
+    ({'nodes': []}, '点“练习”开始'),
+])
+def test_kpi_idle_next_step_only_in_first_cell(demo, detail):
+    jsdom_script(KPI_FIXTURE + f'''
+const cells = render({{...base, demo:{json.dumps(demo)}}});
+assert.equal(cells[0].detail, {json.dumps(detail)});
+assert.ok(cells.every(cell => cell.value === '—' && cell.unit === '' && cell.level === 'none'));
+assert.ok(cells.slice(1).every(cell => cell.detail === ''));
+view.dispose(); dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('completed,current,detail', [
+    (None, 1, '第 1 遍进行中'),
+    (4, 5, '第 4 遍已完成 · 练习中'),
+])
+def test_kpi_practice_distinguishes_current_pass_from_completed_result(completed, current, detail):
+    jsdom_script(KPI_FIXTURE + f'''
+let state = {{...base, mode:'practice', joint:{{pass:{current}}}}};
+if ({json.dumps(completed)} !== null) {{
+ state = reduce(state, {{type:'pass_result', pass:4, mean_mm:3, max_mm:4, valid_nodes:4, total_nodes:4}});
+ // 迟到的旧结果、当前遍的节点和修正都不能被当成最新完成结果。
+ state = reduce(state, {{type:'pass_result', pass:1, mean_mm:12, max_mm:15, valid_nodes:4, total_nodes:4}});
+ state = reduce(state, {{type:'correction', pass:5, applied:true, items:[]}});
+}}
+state = reduce(state, {{type:'node_result', pass:{current}, node:1, valid:true, dev_norm_mm:2}});
+const cells = render(state);
+assert.equal(cells[0].value, '{current}'); assert.equal(cells[0].unit, '遍');
+assert.equal(cells[0].detail, {json.dumps(detail)});
+assert.equal(summarize(state).lastCompletedPass, {json.dumps(completed)});
+assert.equal(cells[1].value, {json.dumps('3.0' if completed else '—')});
+assert.equal(cells[2].value, {json.dumps('75' if completed else '—')});
+if ({json.dumps(completed)} === null) assert.ok(cells.slice(1).every(cell => cell.detail === ''));
+view.dispose(); dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('mode,detail', [('idle', '空闲'), ('demo', '示范中'),
+                                       ('estop', '已急停'), ('fault', '故障')])
+def test_kpi_outside_practice_shows_mode(mode, detail):
+    jsdom_script(KPI_FIXTURE + f'''
+const cells = render({{...base, mode:'{mode}', passes:[{{pass:4, result:{{mean_mm:3, max_mm:4}}}}]}});
+assert.equal(cells[0].detail, {json.dumps(detail)});
+view.dispose(); dom.window.close();
+''')
+
+
+def test_kpi_correction_summary_groups_targets_and_keeps_signed_maximum_unit():
+    jsdom_script(KPI_FIXTURE + r'''
+const items = [
+ {target:'J1', delta:-.15, unit:'deg'}, {target:'夹爪', delta:-.4, unit:'mm'},
+ {target:'J1', delta:-.20, unit:'deg'}, {target:'J2', delta:.3, unit:'deg'},
+ {target:'J1', delta:.19, unit:'deg'}, {target:'夹爪', delta:.6, unit:'mm'},
+ {target:'J1', delta:-.12, unit:'deg'}, {target:'J2', delta:-.25, unit:'deg'},
+];
+let state = reduce(base, {type:'correction', pass:4, applied:true, items});
+state = reduce(state, {type:'correction', pass:1, applied:true, items:[{target:'J6', delta:9, unit:'deg'}]});
+const before = JSON.stringify(state), cells = render(state);
+assert.equal(cells[3].value, '2'); assert.equal(cells[3].unit, '次');
+assert.equal(cells[3].detail, '第 4 遍：J1 4 处，最大 −0.20°；夹爪 2 处，最大 +0.60 mm；J2 2 处，最大 +0.30°');
+assert.equal(JSON.stringify(state), before);
+view.dispose(); dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('items', ['[]', 'undefined'])
+def test_kpi_correction_without_items_needs_no_correction(items):
+    jsdom_script(KPI_FIXTURE + f'''
+const state = reduce(base, {{type:'correction', pass:4, applied:false, items:{items}}});
+const cells = render(state);
+assert.equal(cells[3].value, '0'); assert.equal(cells[3].unit, '次');
+assert.equal(cells[3].detail, '第 4 遍：无需修正');
+view.dispose(); dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('offline', ["link:{online:false}", 'hello:null'])
+def test_kpi_offline_clears_all_values_details_units_and_levels(offline):
+    jsdom_script(KPI_FIXTURE + f'''
+const state = reduce(base, {{type:'pass_result', pass:4, mean_mm:12, max_mm:15, valid_nodes:4, total_nodes:4}});
+render(state);
+assert.deepEqual(render({{...state, {offline}}}), Array.from({{length:4}}, () => ({{value:'—', unit:'', detail:'离线', level:'none'}})));
+assert.equal(document.querySelector('.kpi .v.badc'), null);
+view.dispose(); dom.window.close();
+''')
+
+
 @pytest.mark.parametrize('size', [(640, 480), (320, 240), (900, 360)])
 def test_camera_html_label_avoids_all_corner_chips_and_uses_letterboxing(size):
     jsdom_script(r'''

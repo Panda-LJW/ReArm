@@ -10,6 +10,7 @@ export function summarize(state, config = CONFIG) {
   const expected = state.laserCommand, actual = state.laser;
   return {
     pass: state.joint?.pass ?? state.passes.at(-1)?.pass ?? null,
+    lastCompletedPass: results.at(-1)?.pass ?? null,
     lastMeanMm, lastMaxMm, firstMeanMm,
     improvedPct: firstMeanMm > 0 && lastMeanMm !== null ? (firstMeanMm - lastMeanMm) / firstMeanMm * 100 : null,
     corrections: corrections.length ? corrections.filter(row => row.correction.applied === true).length : null,

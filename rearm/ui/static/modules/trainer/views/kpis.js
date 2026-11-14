@@ -1,4 +1,18 @@
-import { number, online, modeText, correctionText, lastCorrection, preserve, element } from "./format.js";
+import { number, online, modeText, correctionValue, lastCorrection, preserve, element } from "./format.js";
+
+function correctionSummary(correction) {
+  if (!correction) return "";
+  const groups = new Map();
+  for (const item of correction.items || []) {
+    const group = groups.get(item.target) ?? { count: 0, maximum: item };
+    group.count++;
+    if (Math.abs(item.delta) > Math.abs(group.maximum.delta)) group.maximum = item;
+    groups.set(item.target, group);
+  }
+  const detail = [...groups].map(([target, group]) =>
+    `${target} ${group.count} 处，最大 ${correctionValue(group.maximum)}`).join("；");
+  return `第 ${correction.pass} 遍：${detail || "无需修正"}`;
+}
 
 export function mount(root) {
   const dispose = preserve([root]);
@@ -15,19 +29,22 @@ export function mount(root) {
   }
   return { dispose, render(state, summary) {
     if (!online(state)) { cells.forEach((_, i) => set(i, "—", "", "离线")); return; }
-    const start = state.mode === "demo" ? "再次点‘示范’结束" : state.demo ? "点‘练习’开始" : "点‘示范’开始";
-    set(0, summary.pass == null ? "—" : String(summary.pass), "遍", `模式：${modeText(state)}`);
-    if (summary.pass == null && state.mode === "idle") cells[0].detail.textContent = start;
+    let detail = modeText(state);
+    if (state.mode === "practice") detail = summary.lastCompletedPass == null
+      ? "第 1 遍进行中" : `第 ${summary.lastCompletedPass} 遍已完成 · 练习中`;
+    else if (summary.pass == null && state.mode === "idle") detail = state.demo
+      ? "点“练习”开始" : "点“示范”，手扶机械臂做一遍";
+    set(0, summary.pass == null ? "—" : String(summary.pass), "遍", detail);
     const passed = summary.belowThreshold;
-    set(1, number(summary.lastMeanMm), "mm", passed == null ? start : passed
+    set(1, number(summary.lastMeanMm), "mm", passed == null ? "" : passed
       ? `✓ 达标（最大 ≤ ${summary.thresholdMm} mm）` : `▲ 未达标（最大 ${number(summary.lastMaxMm)} mm）`,
     passed == null ? "none" : passed ? "ok" : "bad");
     const pct = summary.improvedPct;
     const baseline = state.passes.filter(pass => pass.result).length === 1;
     const worse = !baseline && pct < 0;
-    set(2, baseline || pct == null ? "—" : number(Math.abs(pct), 0), "%", baseline ? "第 1 遍是基准" : pct == null ? start :
+    set(2, baseline || pct == null ? "—" : number(Math.abs(pct), 0), "%", baseline ? "第 1 遍是基准" : pct == null ? "" :
       `${worse ? "▲ 变差 ·" : pct > 0 ? "↓" : "持平 ·"} ${number(summary.firstMeanMm)} → ${number(summary.lastMeanMm)} mm`, worse ? "bad" : "none");
     set(3, summary.corrections == null ? "—" : String(summary.corrections), "次",
-      summary.corrections == null ? start : correctionText(lastCorrection(state)));
+      summary.corrections == null ? "" : correctionSummary(lastCorrection(state)));
   } };
 }
