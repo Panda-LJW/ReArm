@@ -2,6 +2,7 @@ import { canvasContext, px, token } from "./canvas.js";
 import { online, modeText, latestNode, number, element, preserve } from "./format.js";
 
 const point = p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 function svgNode(tag, attrs, text = "") {
   const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
@@ -16,6 +17,8 @@ export function mount(root) {
   badge.className = "chip trainer-camera-badge";
   const legend = root.querySelector(".chip.legend"); legend.hidden = true;
   const canvas = element("canvas", "trainer-camera-canvas"); canvas.setAttribute("aria-label", "模拟手眼相机画面"); root.prepend(canvas);
+  // HTML 浮层的字号直接使用屏幕 CSS 像素，不受 SVG viewBox 缩放。
+  const label = element("span", "num trainer-spot-label"); label.hidden = true; root.append(label);
   let stream = null, imageFailed = false;
   img.onerror = () => { imageFailed = true; img.hidden = true; };
   img.onload = () => { imageFailed = false; };
@@ -42,20 +45,45 @@ export function mount(root) {
         for (let y = -step; y < h + step; y += step) { g.moveTo(0, y + offsetY); g.lineTo(w, y + offsetY); } g.stroke();
       }
       g.font = `${px("--fs-lg")}px ${token("--sans")}`; g.fillStyle = token("--mute"); g.textAlign = "center";
-      g.fillText(!live ? "离线" : simulated ? "模拟画面" : imageFailed ? "相机画面不可用" : "等待相机画面", w / 2, h / 2);
+      // 激光光点落在画面中心略偏下，说明文字放到上方三分之一处，避免和光点标签挤在一起。
+      g.fillText(!live ? "离线" : simulated ? "模拟画面" : imageFailed ? "相机画面不可用" : "等待相机画面", w / 2, simulated && live ? h * 0.3 : h / 2);
     }
-    const width = img.naturalWidth || 640, height = img.naturalHeight || 480;
+    const width = img.naturalWidth || state.hello?.camera?.width || 640, height = img.naturalHeight || state.hello?.camera?.height || 480;
     overlay.setAttribute("viewBox", `0 0 ${width} ${height}`); overlay.replaceChildren();
+    label.hidden = true;
     const reference = state.demo?.nodes?.find(node => node.id === result?.node)?.ref_spot_px;
     if (!live || !result || !point(result.spot_px) || !point(reference)) return;
     const [x, y] = result.spot_px, [rx, ry] = reference;
-    const scale = Math.max(.01, Math.min(root.clientWidth / width, root.clientHeight / height));
+    const bounds = root.getBoundingClientRect(), frame = overlay.getBoundingClientRect();
+    const scale = Math.max(.01, Math.min(frame.width / width, frame.height / height));
+    const ox = (frame.left ?? 0) - (bounds.left ?? 0) + (frame.width - width * scale) / 2;
+    const oy = (frame.top ?? 0) - (bounds.top ?? 0) + (frame.height - height * scale) / 2;
+    const chips = [stateChip, laser, badge, error].filter(el => !el.hidden).map(el => {
+      const rect = el.getBoundingClientRect();
+      return { left: rect.left - bounds.left - 8, right: rect.right - bounds.left + 8,
+        top: rect.top - bounds.top - 8, bottom: rect.bottom - bounds.top + 8 };
+    });
     const radius = 4 / scale, angle = Math.atan2(y - ry, x - rx), size = 7 / scale;
     overlay.append(svgNode("line", { x1: rx, y1: ry, x2: x, y2: y, stroke: "var(--obs)", "stroke-width": 2 / scale }),
       svgNode("circle", { cx: rx, cy: ry, r: radius, fill: "none", stroke: "var(--pred)", "stroke-width": 2 / scale }),
       svgNode("circle", { cx: x, cy: y, r: radius, fill: "var(--obs)" }),
       svgNode("path", { d: `M${x - size * Math.cos(angle - .5)},${y - size * Math.sin(angle - .5)} L${x},${y} L${x - size * Math.cos(angle + .5)},${y - size * Math.sin(angle + .5)}`, fill: "none", stroke: "var(--obs)", "stroke-width": 2 / scale }));
-    const label = svgNode("text", { x: Math.min(width - 120 / scale, Math.max(8 / scale, (x + rx) / 2 + 10 / scale)), y: Math.max(30 / scale, (y + ry) / 2 - 12 / scale), fill: "var(--text)", class: "num trainer-spot-label" }, `${number(result.dev_norm_mm)} mm`);
-    label.style.fontSize = `calc(var(--fs-chart) / ${scale})`; overlay.append(label);
+    // 极端外部坐标不伪移光点；被芯片遮挡的标记隐藏，文字换到另一侧。
+    [...overlay.querySelectorAll("circle")].forEach((circle, i) => {
+      const cx = ox + [rx, x][i] * scale, cy = oy + [ry, y][i] * scale;
+      if (chips.some(chip => overlaps({ left: cx - 4, right: cx + 4, top: cy - 4, bottom: cy + 4 }, chip))) circle.setAttribute("visibility", "hidden");
+    });
+    label.textContent = `${number(result.dev_norm_mm)} mm`; label.hidden = false;
+    const sizeRect = label.getBoundingClientRect(), lw = sizeRect.width, lh = sizeRect.height;
+    const cx = ox + (x + rx) / 2 * scale, cy = oy + (y + ry) / 2 * scale, gap = 10;
+    const candidates = [[cx + gap, cy - lh - gap], [cx - lw - gap, cy - lh - gap],
+      [cx + gap, cy + gap], [cx - lw - gap, cy + gap],
+      ...chips.flatMap(chip => [[chip.left - lw - gap, cy], [chip.right + gap, cy], [cx, chip.bottom + gap], [cx, chip.top - lh - gap]])];
+    const positions = candidates.map(([left, top]) => ({
+      left: Math.max(8, Math.min(bounds.width - lw - 8, left)), top: Math.max(8, Math.min(bounds.height - lh - 8, top)),
+    }));
+    const placement = positions.find(p => !chips.some(chip => overlaps({ ...p, right: p.left + lw, bottom: p.top + lh }, chip)));
+    if (!placement) { label.hidden = true; return; }
+    label.style.left = `${placement.left}px`; label.style.top = `${placement.top}px`;
   } };
 }

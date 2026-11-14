@@ -119,30 +119,40 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       el.style.left = Math.round(at[0]) + "px"; el.style.top = Math.round(at[1]) + "px";
       el.textContent = shown ? `${driven[i].label.split(" ")[0]} ${signed(degrees[i])}` : driven[i].label.split(" ")[0];
     });
-    if (axes === 6 || overlayLabels.length) placeLabels();
+    placeLabels();
     scene.canvas.setAttribute("aria-label", shown ? `机械臂三维姿态：${driven.map((j, i) => `${j.label} ${degrees[i].toFixed(1)} 度`).join("，")}。数据状态：${MODE[mode].text}` : `机械臂三维模型，${MODE[mode].text}`);
     dirty = false;
     if (moving) schedule();
   }
   function schedule() { dirty = true; if (!raf && !disposed) raf = requestAnimationFrame(draw); }
 
-  // 六轴标签按实际尺寸避让；优先贴近关节，在左右偏移的基础上找最近的空行。
+  // 实测芯片尺寸留出 8px 禁入区；偏差 > 关节 > 节点，放不下的低优先级标签隐藏。
   function placeLabels() {
-    const placed = [], w = stage.clientWidth, h = stage.clientHeight, gap = 5;
-    const entries = [...labels.map((el, i) => ({ el, at: scene.project(driven[i].id) })),
-      ...overlayLabels.map(({ el, p }) => ({ el, at: scene.projectPoint(p) }))];
+    const w = stage.clientWidth, h = stage.clientHeight, gap = 5;
+    const bounds = stage.getBoundingClientRect(), chip = statusEl.getBoundingClientRect();
+    const reserved = { x: 0, y: 0, width: chip.right - bounds.left + 8, height: chip.bottom - bounds.top + 8 };
+    const placed = [reserved];
+    const entries = [...labels.map((el, i) => ({ el, at: scene.project(driven[i].id), priority: 1 })),
+      ...overlayLabels.map(({ el, p }) => ({ el, at: scene.projectPoint(p), priority: el.classList.contains("twin-dev-label") ? 0 : 2 }))]
+      .sort((a, b) => a.priority - b.priority);
     for (const { el, at } of entries) {
       el.hidden = !at;
       if (!at) continue;
-      const width = el.offsetWidth, height = el.offsetHeight;
-      const x = Math.max(gap, Math.min(w - width - gap, at[0] + (el.dataset.side === "left" ? -width - 14 : 14)));
-      const minY = 44, maxY = Math.max(minY, h - height - 30);
+      el.style.transform = "none";
+      const { width, height } = el.getBoundingClientRect();
+      const minY = gap, maxY = h - height - 30, maxX = w - width - gap;
+      const desiredX = Math.max(gap, Math.min(maxX, at[0] + (el.dataset.side === "left" ? -width - 14 : 14)));
       const desired = Math.max(minY, Math.min(maxY, at[1] - height / 2));
-      const candidates = [desired, minY, maxY, ...placed.flatMap(p => [p.y + p.height + gap, p.y - height - gap])]
+      const candidatesY = [desired, minY, maxY, ...placed.flatMap(p => [p.y + p.height + gap, p.y - height - gap])]
         .filter(y => y >= minY && y <= maxY).sort((a, b) => Math.abs(a - desired) - Math.abs(b - desired));
-      const y = candidates.find(y => placed.every(p => x + width + gap <= p.x || p.x + p.width + gap <= x || y + height + gap <= p.y || p.y + p.height + gap <= y)) ?? desired;
-      el.style.transform = "none"; el.style.left = Math.round(x) + "px"; el.style.top = Math.round(y) + "px";
-      placed.push({ x, y, width, height });
+      const candidatesX = [desiredX, gap, maxX, ...placed.flatMap(p => [p.x + p.width + gap, p.x - width - gap])]
+        .filter(x => x >= gap && x <= maxX);
+      const positions = candidatesX.flatMap(x => candidatesY.map(y => ({ x: Math.round(x), y: Math.round(y) })))
+        .sort((a, b) => Math.hypot(a.x - desiredX, a.y - desired) - Math.hypot(b.x - desiredX, b.y - desired));
+      const position = positions.find(({ x, y }) => placed.every(p => x + width + gap <= p.x || p.x + p.width + gap <= x || y + height + gap <= p.y || p.y + p.height + gap <= y));
+      if (!position) { el.hidden = true; continue; }
+      el.style.left = position.x + "px"; el.style.top = position.y + "px";
+      placed.push({ ...position, width, height });
     }
   }
 
@@ -222,7 +232,11 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     // 整体替换；所有字段可缺省，null 清空。坐标都是 base_link 下的 m。
     setOverlay(value) {
       if (disposed) return;
-      overlay = copyOverlay(value || {}); scene.setOverlay(overlay); makeOverlayLabels(); schedule();
+      overlay = copyOverlay(value || {}); scene.setOverlay(overlay); makeOverlayLabels();
+      // 调用方可能每帧都在孪生绘制之后重设叠加：新建的标签要立刻按上一帧的投影排好，
+      // 否则它们会停在左上角 (0,0)，盖住状态芯片，直到下一次绘制。
+      if (shown) placeLabels();
+      schedule();
     },
     // 供测试和调试读取当前显示状态
     state: () => ({ mode, shown: shown ? [...shown] : null, goal: goal ? [...goal] : null,

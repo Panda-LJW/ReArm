@@ -12,7 +12,7 @@ export function mount(root) {
   }));
   return { dispose() { restore(); canvas.onmousemove = move; canvas.onmouseleave = leave; canvas.setAttribute("aria-label", label); }, render(state, summary) {
     const rows = state.passes.filter(row => row.result).map(row => row.result);
-    const { ctx: g, width: w, height: h } = canvasContext(canvas), font = px("--fs-chart");
+    const { ctx: g, width: w, height: h } = canvasContext(canvas), font = Math.max(px("--fs-chart"), px("--fs-sm"));
     g.font = `${font}px ${token("--sans")}`; g.fillStyle = token("--mute");
     const empty = !online(state) ? "离线" : "完成一遍练习后显示";
     canvas.setAttribute("aria-label", !online(state) || !rows.length ? `偏差：${empty}` :

@@ -153,3 +153,17 @@
 - 设计差异：功能接口与设计一致；新增 views/canvas.js、format.js 共用字号解析、格式化和回退工具。初次打开不自动执行示范/练习，默认模拟主机在线，按“示范→结束→练习”启动。测试扫描范围与新入口文件的冲突及浏览器限制如上，待处理。
 - 未触碰：app.css、index.html、tokens.css、guide/theme/focus/presentation、arm/twin、T4 逻辑及 datasource、rearm 下 Python、config、docs、.venv、全部旧测试、仓库根海报素材包.zip。
 - 回滚：修改前文件在 /private/tmp/rearm-t5-e1w8cxcw/before/；只恢复 app.js、main.js，移除上列本轮新增 trainer 入口/样式/views 和 test_trainer_views.py，删除本日志条目及对应索引即可局部回退，保留 T4 文件和其他用户改动。临时 DOM 验证脚本在同一 /private/tmp 目录；仓库未新增临时产物。
+
+## 2026-11-14 T5 第一次验收返修 [T5R1-20261114]
+- 目标：修正验收列出的 8 项数字表达、单位、标签重叠、路演关节布局与模拟相机投影问题；保留 Claude 已修正的逻辑测试扫描范围和手动结束示范行为。
+- 修改文件：rearm/ui/static/modules/datasource/mock-host.js；modules/trainer/views/format.js、kpis.js、corrections.js、camera.js、deviation-chart.js；modules/trainer/trainer.css；modules/twin/twin.js（仅浮动标签避让）；tests/test_trainer_logic.py、test_trainer_views.py、test_twin_overlay.py、test_arm_kinematics.py；LOG.md、LOG-INDEX.md。新增 modules/trainer/format.js 纯格式化函数，无新依赖。
+- 数字：共享格式化先舍入绝对值，再确定正负号，输出 U+2212 且零不带符号；修正条目及摘要将 deg 显示为 °，mock 的 llm_text 共用数字格式，接口 items.unit 保持 deg。每项显示 target 加 note 中的节点编号；空 note 只显示 target。
+- 改善率：绝对百分数与独立 % 单位；改善副行用 ↓，变差用 ▲ 变差及 --bad；只有一遍已完成结果时显示 — / 第 1 遍是基准。持平和舍入为零均不出现负零；从变差转为改善或离线时清除红色数值状态。
+- 孪生：getBoundingClientRect 读取状态芯片和标签尺寸，左上角预留芯片右边界/下边界再加 8 px；按偏差、关节、节点优先级寻找邻近空位，找不到空位时隐藏低优先级标签。覆盖旧三轴入口及六轴入口，不改几何、运动、数据或样式文件。
+- 路演：移除两列布局的 max-height:800px 限制，1920×1080 与 1280×720 共用两列；显式覆盖 presentation 后加载的关节 margin 与读数字号，避免原规则恢复大行距；环境信息改为两列并收紧上下间距。字号仍取 --fs-sm，不缩小到路演最小值以下。
+- 相机：分辨率来自同一 hello.camera 对象，默认 640×480；焦距使用 ARM_PARAMS 中的 87°×58° 视场角。逆变换到相机局部坐标，+X 为深度、+Y 向左、+Z 向上，针孔投影使参考点位于约 (320,274.64)。实测世界坐标统一投影到对应示范节点的相机坐标系，以便和已保存的参考像素比较；不是把两个不同姿态的手眼相机像素直接相减，也不声称实物标定。接口世界坐标/FK/偏差/修正量未改变。
+- 相机标签：改为 HTML 浮层，使用 --fs-sm，处理 SVG 等比居中留边；按四个芯片实际边界加 8 px 选择光点另一侧空位。极端外部坐标遇芯片时隐藏被遮挡的圆点，不伪移坐标；无可用文字位置时隐藏标签。模拟中心附近的正常点保持显示。偏差图同步以 --fs-sm 为字号下限，避免日常模式原 --fs-chart=10px。
+- 测试：原 200 项保留，新增 8 项（包含相机 3 组参数化）。DOM 宿主补齐 getBoundingClientRect/classList.contains；原 SVG 文本断言改为验证 HTML 浮层及 SVG 无文字。新增改善率首遍/改善/变差/持平/近零/离线、单位/负零/节点名称、四角避让/不同画幅、针孔参考和实测投影/分辨率比例/llm_text、CSS 与孪生避让契约。相关 96 项通过。
+- 最终验证：.venv/bin/python -m pytest -q 为 208 passed in 11.93s；8 个改动/新增 JS 文件 node --check 通过；git diff --check 通过。开工时禁改路径 SHA-256 清单与结束时完全一致，两个 Claude 修正片段逐字保留。没有提交、推送或切分支。
+- 画面验证限制：127.0.0.1:8766 监听被运行环境拒绝，PermissionError: Operation not permitted；CUA 浏览器 host 不可用，原生 Google Chrome 访问被工具拒绝；独立无头 Chromium 启动退出，未获得新截图。仅查看了用户已有的返修前 1280×720、1920×1080 路演截图定位 CSS 层叠原因。四组最终浏览器字号、无裁切/无溢出、1920 路演至少 3 条事件仍需按原浏览器检查重跑，不能把 DOM/文本测试当成画面验收。浏览器错误证据：/private/tmp/rearm-t5r1-g86w8fav/browser-error.txt；测试输出：/private/tmp/rearm-t5r1-pytest-final.txt。
+- 回滚：本轮修改前文件保存在 /private/tmp/rearm-t5r1-g86w8fav/before/；仅恢复本条列出的文件，移除新增 modules/trainer/format.js，删除本日志条目及索引即可局部回滚。两个补充宿主测试文件从开工时干净的 HEAD 取原文备份。保留用户已有 docs/model-swap/决策日志.md 改动、screenshots/ 和海报素材包.zip；未改 README/SPEC。

@@ -1,4 +1,4 @@
-import { online, number, correctionText, preserve, element } from "./format.js";
+import { online, correctionValue, correctionTarget, correctionText, preserve, element } from "./format.js";
 
 export function mount(root) {
   const content = root.querySelector("#diag"), title = root.querySelector("#diagtitle"), aside = root.querySelector("#diagaside"), tab = root.querySelector('[data-t="diag"]');
@@ -14,7 +14,7 @@ export function mount(root) {
     explanation.textContent = last.llm_text || "主机未提供说明";
     const items = element("ul", "trainer-correction-items");
     for (const item of last.items || []) {
-      const row = element("li"); row.append(element("span", "", item.target), element("span", "num", `${item.delta > 0 ? "+" : ""}${number(item.delta, 2)} ${item.unit}`));
+      const row = element("li"); row.append(element("span", "", correctionTarget(item)), element("span", "num", correctionValue(item)));
       if (item.note) row.title = item.note;
       items.append(row);
     }

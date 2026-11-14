@@ -11,6 +11,7 @@ export function mount(root) {
     target.replaceChildren(document.createTextNode(value));
     if (unit && value !== "—") target.append(element("small", "", unit));
     desc.textContent = detail; cell.dataset.level = level;
+    target.classList.toggle("badc", level === "bad");
   }
   return { dispose, render(state, summary) {
     if (!online(state)) { cells.forEach((_, i) => set(i, "—", "", "离线")); return; }
@@ -20,10 +21,11 @@ export function mount(root) {
     const high = summary.lastMeanMm > summary.thresholdMm;
     set(1, number(summary.lastMeanMm), "mm", summary.lastMeanMm == null ? start :
       `${high ? "▲ 高于" : "✓ 低于"}阈值 ${summary.thresholdMm} mm · 最大 ${number(summary.lastMaxMm)} mm`, high ? "bad" : "ok");
-    cells[1].value.classList.toggle("badc", high);
     const pct = summary.improvedPct;
-    set(2, pct == null ? "—" : `${pct >= 0 ? "−" : "+"}${number(Math.abs(pct), 0)}`, "%", pct == null ? start :
-      `${number(summary.firstMeanMm)} → ${number(summary.lastMeanMm)} mm`);
+    const baseline = state.passes.filter(pass => pass.result).length === 1;
+    const worse = !baseline && pct < 0;
+    set(2, baseline || pct == null ? "—" : number(Math.abs(pct), 0), "%", baseline ? "第 1 遍是基准" : pct == null ? start :
+      `${worse ? "▲ 变差 ·" : pct > 0 ? "↓" : "持平 ·"} ${number(summary.firstMeanMm)} → ${number(summary.lastMeanMm)} mm`, worse ? "bad" : "none");
     set(3, summary.corrections == null ? "—" : String(summary.corrections), "次",
       summary.corrections == null ? start : correctionText(lastCorrection(state)));
   } };

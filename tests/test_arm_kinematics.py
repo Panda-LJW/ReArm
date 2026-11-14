@@ -207,13 +207,18 @@ class Element {
  constructor(tag='div') {
   this.tag=tag; this.children=[]; this.style={}; this.dataset={}; this.attrs={};
   this.clientWidth=800; this.clientHeight=560; this.offsetWidth=108; this.offsetHeight=24;
-  this.classList={add(){},remove(){}}; this.textContent=''; this.hidden=false;
+  this.classList={add(){},remove(){},contains:name=>(this.className||'').split(' ').includes(name)}; this.textContent=''; this.hidden=false;
  }
  set innerHTML(value) {
   this.html=value;
   if(value.includes('twin-stage')) this.slots=Object.fromEntries(['stage','status','labels','note'].map(s=>['.twin-'+s,new Element()]));
  }
  querySelector(s) {return this.slots[s];}
+ getBoundingClientRect() {
+  const status=(this.className||'').includes('twin-status');
+  const left=parseFloat(this.style.left)||(status?10:0), top=parseFloat(this.style.top)||(status?10:0);
+  return {left,top,width:this.offsetWidth,height:this.offsetHeight,right:left+this.offsetWidth,bottom:top+this.offsetHeight};
+ }
  appendChild(e) {this.children.push(e); return e;}
  append(...children) {this.children.push(...children);}
  replaceChildren(...children) {this.children=children;}

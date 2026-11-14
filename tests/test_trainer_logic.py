@@ -464,3 +464,37 @@ def test_logic_has_no_dom_and_frontend_has_no_literal_host_address():
             if token.startswith(('//', '/*')):
                 continue
             assert not re.search(r'wss?://[0-9A-Za-z]', token), path
+
+
+def test_mock_pinhole_projection_center_offset_small_deviation_and_degree_text():
+    node(RUN_PASSES + '''
+import {endPoses} from './arm/fk.js';
+const runData=await run(8), messages=runData.messages;
+const camera=messages.find(m=>m.type==='hello').camera;
+assert.equal(camera.width,640);assert.equal(camera.height,480);
+const demo=messages.find(m=>m.type==='demo_trajectory');
+const fy=480/(2*Math.tan(58*Math.PI/360)), fx=640/(2*Math.tan(87*Math.PI/360));
+for(const n of demo.nodes){
+ assert.ok(Math.abs(n.ref_spot_px[0]-320)<1e-9);
+ assert.ok(Math.abs(n.ref_spot_px[1]-(240+fy*20/250))<1e-9);
+}
+for(const result of messages.filter(m=>m.type==='node_result')){
+ const n=demo.nodes.find(n=>n.id===result.node), m=endPoses(ARM_PARAMS,n.q).camera;
+ const relative=result.spot_base_mm.map((v,i)=>v/1000-m[4*i+3]);
+ const local=[0,1,2].map(j=>relative.reduce((sum,v,i)=>sum+v*m[4*i+j],0));
+ const expected=[320-fx*local[1]/local[0],240-fy*local[2]/local[0]];
+ assert.ok(expected.every((v,i)=>Math.abs(v-result.spot_px[i])<1e-9));
+ assert.ok(Math.hypot(...result.spot_px.map((v,i)=>v-n.ref_spot_px[i]))<40);
+}
+for(const correction of messages.filter(m=>m.type==='correction')){
+ assert.ok(correction.llm_text.includes('°'));assert.ok(!correction.llm_text.includes('deg'));
+ assert.ok(!correction.llm_text.includes('-'));assert.ok(!correction.llm_text.includes('−0.00'));
+ assert.ok(correction.items.every(item=>item.unit==='deg'));
+}
+// 同一个 hello.camera 分辨率同时用于两类光点的投影，缺失时回退 640×480。
+const host=createMockHost({now:()=>0,setTimer:()=>0,clearTimer:()=>{},camera:{width:1280,height:960}}), doubled=[];
+host.subscribe(m=>doubled.push(m));host.start();await host.send('demo_start');host.advance(6000);await host.send('demo_stop');
+const d=doubled.find(m=>m.type==='demo_trajectory');
+for(let i=0;i<d.nodes.length;i++)assert.ok(d.nodes[i].ref_spot_px.every((v,j)=>Math.abs(v-demo.nodes[i].ref_spot_px[j]*2)<1e-9));
+host.stop();console.log('{}');
+''')

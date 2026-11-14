@@ -177,6 +177,100 @@ def test_trainer_mock_closed_loop_lifecycle_and_dom_rollback():
     jsdom_script(INTEGRATION)
 
 
+def test_display_numbers_round_before_sign_and_identify_correction_nodes():
+    node(r'''
+import assert from 'node:assert/strict';
+import {number, correctionValue, correctionTarget, correctionText} from './trainer/views/format.js';
+for(const value of [-0, -0.0001, -0.004, 0, 0.004]) {
+ assert.equal(number(value,2,true),'0.00');
+ assert.equal(correctionValue({delta:value,unit:'deg'}),'0.00°');
+}
+assert.equal(number(-0.006,2),'−0.01');
+assert.equal(correctionValue({delta:-1.23,unit:'deg'}),'−1.23°');
+assert.equal(correctionValue({delta:1.23,unit:'deg'}),'+1.23°');
+assert.equal(correctionValue({delta:-1.23,unit:'mm'}),'−1.23 mm');
+assert.equal(correctionTarget({target:'J1',note:''}),'J1');
+assert.equal(correctionTarget({target:'J1',note:'节点 2 的下一遍目标角修正'}),'J1 · 节点 2');
+assert.equal(correctionText({applied:true,items:[{target:'J1',delta:-0.001,unit:'deg'}]}),'J1 0.00°');
+''')
+
+
+def test_improvement_kpi_baseline_better_worse_equal_and_offline():
+    jsdom_script(r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const dom=new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+globalThis.document=dom.window.document;
+const {mount}=await import('./trainer/views/kpis.js');
+const {initialState}=await import('./trainer/store.js');
+const {summarize}=await import('./trainer/metrics.js');
+const view=mount(document.querySelector('.kpis')), cell=document.querySelectorAll('.kpi')[2];
+const render=values=>{
+ const state={...initialState(),link:{online:true},hello:{sim:true},passes:values.map((v,i)=>({pass:i+1,result:{mean_mm:v,max_mm:v},nodes:{}}))};
+ view.render(state,{...summarize(state),thresholdMm:5});
+ return {value:cell.querySelector('.v').childNodes[0].textContent,detail:cell.querySelector('.d').textContent};
+};
+assert.deepEqual(render([18]),{value:'—',detail:'第 1 遍是基准'});
+assert.equal(cell.querySelector('small'),null);
+assert.deepEqual(render([18,2.6]),{value:'86',detail:'↓ 18.0 → 2.6 mm'});
+assert.equal(cell.querySelector('small').textContent,'%');
+assert.deepEqual(render([18,20.2]),{value:'12',detail:'▲ 变差 · 18.0 → 20.2 mm'});
+assert.equal(cell.dataset.level,'bad');assert.ok(cell.querySelector('.v').classList.contains('badc'));
+assert.equal(render([18,18]).value,'0');assert.ok(!cell.querySelector('.v').classList.contains('badc'));
+assert.equal(render([18,17.9999]).value,'0');assert.equal(render([18,18.0001]).value,'0');
+view.render(initialState(),{});assert.equal(cell.querySelector('.v').textContent,'—');assert.equal(cell.querySelector('.d').textContent,'离线');
+dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('size', [(640, 480), (320, 240), (900, 360)])
+def test_camera_html_label_avoids_all_corner_chips_and_uses_letterboxing(size):
+    jsdom_script(r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const dom=new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+for(const name of ['document','window'])globalThis[name]=dom.window[name];
+const [width,height]=SIZE;
+const rect=(left,top,width,height)=>({left,top,width,height,right:left+width,bottom:top+height});
+dom.window.Element.prototype.getBoundingClientRect=function(){
+ if(this.classList.contains('trainer-spot-label'))return rect(0,0,70,24);
+ const boxes={chipstate:[0,0,120,40],chiplaser:[width-100,0,100,40],chipver:[0,height-40,80,40],chiperr:[width-120,height-40,120,40]};
+ return boxes[this.id]?rect(...boxes[this.id]):rect(0,0,width,height);
+};
+const ctx=new Proxy({measureText:t=>({width:t.length*10})},{get:(o,p)=>o[p]??(()=>{})});
+dom.window.HTMLCanvasElement.prototype.getContext=()=>ctx;
+globalThis.getComputedStyle=()=>({fontSize:'18px',getPropertyValue:()=> '#888888'});
+const {mount}=await import('./trainer/views/camera.js');
+const {initialState}=await import('./trainer/store.js');
+const view=mount(document.querySelector('#cam'));
+const intersects=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+for(const [x,y] of [[15,15],[width-15,15],[15,height-15],[width-15,height-15],[width/2,height*.56]]){
+ const s={...initialState(),link:{online:true},hello:{sim:true,camera:{width,height}},demo:{nodes:[{id:1,ref_spot_px:[x,y]}]},
+  passes:[{nodes:{1:{node:1,valid:true,t:1,spot_px:[x,y],dev_norm_mm:2.6}}}]};
+ view.render(s,{thresholdMm:5});
+ const label=document.querySelector('.trainer-spot-label');assert.equal(label.hidden,false);
+ assert.equal(document.querySelector('#overlay text'),null);assert.equal(document.querySelector('#overlay').getAttribute('viewBox'),`0 0 ${width} ${height}`);
+ const actual=rect(parseFloat(label.style.left),parseFloat(label.style.top),70,24);
+ assert.ok(actual.left>=0&&actual.right<=width&&actual.top>=0&&actual.bottom<=height);
+ for(const id of ['chipstate','chiplaser','chipver','chiperr'])assert.ok(!intersects(actual,document.getElementById(id).getBoundingClientRect()),id);
+ if(x!==width/2)assert.ok([...document.querySelectorAll('#overlay circle')].every(el=>el.getAttribute('visibility')==='hidden'));
+}
+view.render(initialState(),{});assert.equal(document.querySelector('.trainer-spot-label').hidden,true);
+view.dispose();assert.equal(document.querySelector('.trainer-spot-label'),null);
+dom.window.close();
+'''.replace('SIZE', json.dumps(size)))
+
+
+def test_show_joint_columns_and_fonts_are_not_limited_to_short_screens():
+    css = (TRAINER / 'trainer.css').read_text()
+    assert '@media(min-width:1081px) and (max-height:800px)' not in css
+    assert 'html[data-trainer="on"][data-mode="show"] #joints{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))' in css
+    show_joint = re.search(r'html\[data-trainer="on"\]\[data-mode="show"\] \.joint\{([^}]+)', css).group(1)
+    assert 'margin:0' in show_joint and 'font-size:var(--fs-sm)' in show_joint
+    label = re.search(r'\.trainer-spot-label\{([^}]+)', css).group(1)
+    assert 'font-size:var(--fs-sm)' in label and 'position:absolute' in label
+
+
 INTEGRATION = r'''
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -210,6 +304,8 @@ const completed=trainer.state().passes.filter(p=>p.result);assert.ok(completed.l
 assert.equal(calls.at(-1).q_rad.length,6);assert.equal(calls.at(-1).mode,'sim');assert.ok(overlays.at(-1).demoPath.length);assert.ok(overlays.at(-1).nodes.length===4);assert.ok(overlays.at(-1).runPath.length);
 assert.ok(document.querySelector('#feed').textContent.includes('遍结束：平均'));
 assert.ok(document.querySelector('#diag').textContent.includes('目标角'));
+assert.deepEqual([...document.querySelectorAll('.trainer-correction-items li span:first-child')].map(el=>el.textContent),[1,2,3,4].map(n=>`J1 · 节点 ${n}`));
+assert.ok(!document.querySelector('#diag').textContent.includes('deg'));
 assert.equal(document.querySelector('[data-trainer-action="laser"]').disabled,true);
 assert.equal(document.querySelector('#errchart').getAttribute('aria-label').includes('偏差'),true);
 
@@ -299,7 +395,7 @@ assert.match(document.querySelectorAll('#joints .joint')[2].textContent,/无效/
 assert.match(document.querySelector('.envrow').textContent,/40.0 °C/);assert.match(document.querySelector('.envrow').textContent,/0.70 A/);
 const view=camera(document.querySelector('#cam'));view.render(s,{thresholdMm:5,laserMismatch:true});
 assert.equal(document.querySelectorAll('#overlay circle').length,2);assert.equal(document.querySelector('#overlay rect'),null);
-assert.match(document.querySelector('#overlay text').textContent,/3.2 mm/);assert.match(document.querySelector('#chiplaser').textContent,/不一致/);
+assert.match(document.querySelector('.trainer-spot-label').textContent,/3.2 mm/);assert.equal(document.querySelector('#overlay text'),null);assert.match(document.querySelector('#chiplaser').textContent,/不一致/);
 view.render({...s,link:{online:false}},{thresholdMm:5});assert.equal(document.querySelector('#overlay').children.length,0);
 dom.window.close();
 ''')

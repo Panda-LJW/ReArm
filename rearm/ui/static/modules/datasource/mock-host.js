@@ -2,6 +2,7 @@
 import { ARM_PARAMS } from "../arm/arm-params.js";
 import { endPoses, laserRay } from "../arm/fk.js";
 import { CONFIG } from "../trainer/config.js";
+import { number } from "../trainer/format.js";
 import { createEmitter } from "./frame.js";
 
 const DEMO_MS = 6000, HOLD_MS = 800, MEASURE_MS = 400;
@@ -33,13 +34,25 @@ function end(q) {
   const matrix = endPoses(ARM_PARAMS, q).end_link;
   return [matrix[3], matrix[7], matrix[11]].map(v => v * 1000);
 }
-// 模拟相机像素与基座坐标保持可重复的映射，不冒充标定相机。
-const pixels = point => [320 + point[0] * 0.3, 240 - point[2] * 0.3];
+// 用示范节点的相机坐标作为共同投影平面，参考/实测点才可在同一画面比较。
+// 相机局部 +X 向前、+Y 向左、+Z 向上；R 的转置把基座坐标变回相机坐标。
+function pixels(point, q, camera) {
+  const matrix = endPoses(ARM_PARAMS, q).camera;
+  const relative = point.map((v, i) => v / 1000 - matrix[i * 4 + 3]);
+  const [depth, left, up] = [0, 1, 2].map(axis => relative.reduce((sum, v, i) => sum + matrix[i * 4 + axis] * v, 0));
+  if (depth <= 0) return null;
+  const fx = camera.width / (2 * Math.tan(ARM_PARAMS.camera.horizontalFovDeg * Math.PI / 360));
+  const fy = camera.height / (2 * Math.tan(ARM_PARAMS.camera.verticalFovDeg * Math.PI / 360));
+  return [camera.width / 2 - fx * left / depth, camera.height / 2 - fy * up / depth];
+}
 
 export function createMockHost({ now = Date.now, setTimer = setInterval, clearTimer = clearInterval,
-  rateHz = 20, seed = 1 } = {}) {
+  rateHz = 20, seed = 1, camera = {} } = {}) {
   if (!Number.isFinite(rateHz) || rateHz <= 0) throw new RangeError("rateHz 必须大于 0");
   const emitter = createEmitter(), received = [], period = 1000 / rateHz;
+  const cameraInfo = { url: null, format: null,
+    width: Number.isFinite(camera.width) && camera.width > 0 ? camera.width : 640,
+    height: Number.isFinite(camera.height) && camera.height > 0 ? camera.height : 480 };
   let clock = now(), timer = null, running = false, seq = 0, commandSeq = 0, demoId = 0;
   let nextFrame = Infinity, nextStatus = Infinity, mode = "idle", pose = poseAt(0);
   let demoStart = null, samples = [], demo = null, practice = null;
@@ -80,7 +93,7 @@ export function createMockHost({ now = Date.now, setTimer = setInterval, clearTi
     const nodes = [0.2, 0.45, 0.7, 1].map((fraction, index) => {
       const sample = samples[Math.round((samples.length - 1) * fraction)], ref = spot(sample.q);
       return { ...clone(sample), id: index + 1, gripper_state: sample.gripper_mm < 20 ? "closed" : "open",
-        ref_spot_base_mm: ref, ref_spot_px: pixels(ref), end_base_mm: end(sample.q) };
+        ref_spot_base_mm: ref, ref_spot_px: pixels(ref, sample.q, cameraInfo), end_base_mm: end(sample.q) };
     });
     demo = { demo_id: `mock-${++demoId}`, samples: clone(samples), nodes };
     mode = "idle"; demoStart = null;
@@ -127,7 +140,7 @@ export function createMockHost({ now = Date.now, setTimer = setInterval, clearTi
     const p = practice, node = demo.nodes[p.index], measured = valid ? spot(pose.q) : null;
     const dev = measured?.map((v, i) => v - node.ref_spot_base_mm[i]) ?? null;
     p.done = true; p.until = Math.max(p.started + HOLD_MS, clock);
-    const result = { pass: p.pass, node: node.id, spot_px: measured ? pixels(measured) : null,
+    const result = { pass: p.pass, node: node.id, spot_px: measured ? pixels(measured, node.q, cameraInfo) : null,
       depth_mm: valid ? 250 : null, spot_base_mm: measured, ref_spot_base_mm: [...node.ref_spot_base_mm],
       dev_mm: dev, dev_norm_mm: dev ? Math.hypot(...dev) : null,
       valid, invalid_reason: valid ? null : "spot_not_found", image_url: null, end_base_mm: end(pose.q) };
@@ -152,7 +165,7 @@ export function createMockHost({ now = Date.now, setTimer = setInterval, clearTi
     const worstItem = worst ? items[valid.indexOf(worst)] : null;
     emit("correction", { pass: p.pass, applied: !!worst,
       items,
-      llm_text: worst ? `第 ${p.pass} 遍在节点 ${worst.node} 偏差 ${worst.dev_norm_mm.toFixed(1)} mm，下一遍 J1 目标角调整 ${worstItem.delta.toFixed(2)}°。`
+      llm_text: worst ? `第 ${p.pass} 遍在节点 ${worst.node} 偏差 ${number(worst.dev_norm_mm)} mm，下一遍 J1 目标角调整 ${number(worstItem.delta, 2)}°。`
         : `第 ${p.pass} 遍未找到激光点，本遍未应用修正。` });
     emit("event", { name: "pass_finished", text: `第 ${p.pass} 遍结束，${valid.length}/${demo.nodes.length} 个节点测量有效。`, level: values.length ? "info" : "warning" });
     if (mode === "practice" && practice === p) beginPass(p.pass + 1, nextErrors);
@@ -196,7 +209,7 @@ export function createMockHost({ now = Date.now, setTimer = setInterval, clearTi
       running = true; clock = Math.max(clock, now()); nextFrame = clock + period; nextStatus = clock + 1000;
       emitter.emit({ type: "link", online: true, reason: "mock" });
       emit("hello", { proto: 1, host_version: "mock-v1", arm: { model: ARM_PARAMS.name, joints: 6 },
-        threshold_mm: CONFIG.thresholdMm, camera: { url: null, format: null }, sim: true,
+        threshold_mm: CONFIG.thresholdMm, camera: { ...cameraInfo }, sim: true,
         laser_ttl_ms: CONFIG.laserTtlMs, node_timeout_ms: CONFIG.nodeTimeoutMs });
       joint(); emit("heartbeat"); laserState();
       timer = setTimer(() => advance(Math.max(0, now() - clock)), period);

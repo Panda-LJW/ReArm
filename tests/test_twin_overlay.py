@@ -37,6 +37,16 @@ const fetchFiles=async url=>({
 '''
 
 
+def test_twin_labels_reserve_measured_chip_area_and_prioritize_deviation():
+    text = (MODULES / 'twin/twin.js').read_text()
+    placement = text.split('function placeLabels()', 1)[1].split('function renderStatus()', 1)[0]
+    assert 'statusEl.getBoundingClientRect()' in placement
+    assert 'chip.right - bounds.left + 8' in placement and 'chip.bottom - bounds.top + 8' in placement
+    assert 'el.classList.contains("twin-dev-label") ? 0 : 2' in placement
+    assert 'priority: 1' in placement and '.sort((a, b) => a.priority - b.priority)' in placement
+    assert 'if (!position) { el.hidden = true; continue; }' in placement
+
+
 @pytest.mark.parametrize('q', [[0, -1.57, -1.57, 0, 0, 0], [0.3, -1.1, -0.7, 0.4, -1.2, 1.5]])
 @pytest.mark.parametrize('fov,length', [([87, 58], 0.18), ([60, 40], 0.31)])
 def test_frustum_corners_follow_camera_frame_and_combined_half_fov(q, fov, length):
