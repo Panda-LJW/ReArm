@@ -1,6 +1,6 @@
 /* 数字孪生模块的样式。颜色全部走变量，主题只需覆盖这些 --twin-* 变量。 */
 :root{
-  --twin-body:#3a4250;--twin-plate:#aab3c0;--twin-joint:var(--accent);--twin-finger:#e7eaf0;
+  --twin-body:#3a4250;--twin-plate:#aab3c0;--twin-joint:var(--accent);--twin-finger:#e7eaf0;--twin-finger-2:#8b9098;
   --twin-edge:#7c8798;--twin-grid:var(--line2);--twin-laser:var(--obs);--twin-pedestal:#1b2028;
 }
 .twin{position:relative;min-height:0;min-width:0;overflow:hidden}

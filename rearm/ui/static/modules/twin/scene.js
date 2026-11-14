@@ -8,6 +8,7 @@ function palette(el) {
   return {
     body: cssVar(el, "--twin-body", "#3a4250"), plate: cssVar(el, "--twin-plate", "#aab3c0"),
     joint: cssVar(el, "--twin-joint", "#3d8bff"), finger: cssVar(el, "--twin-finger", "#e7eaf0"),
+    finger2: cssVar(el, "--twin-finger-2", "#8b9098"),
     edge: cssVar(el, "--twin-edge", "#7c8798"), grid: cssVar(el, "--twin-grid", "#2c323c"),
     laser: cssVar(el, "--twin-laser", "#ff6a4d"), pedestal: cssVar(el, "--twin-pedestal", "#1b2028"),
     skinDark: cssVar(el, "--twin-skin-dark", "#39414e"), skinDarker: cssVar(el, "--twin-skin-darker", "#262c35"),
@@ -33,10 +34,10 @@ export function createScene(container, config) {
   const materials = {}, edgeMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55 });
   for (const name of ["body", "plate", "joint", "finger", "pedestal"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: name === "plate" ? 0.55 : 0.2 });
   // 真实外形（压缩网格）用的材质：平面着色，省掉法线数据，也让机加工件的棱面更清楚
-  for (const name of ["skinDark", "skinDarker", "skinMetal", "skinTrim", "skinPlate", "skinFinger"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: /Metal|Plate/.test(name) ? 0.5 : 0.15, flatShading: true });
-  // 网格文件里的材质名 → 上面的材质。实物配色与官方不同（照片为白色夹指），这里按中性色处理。
-  const SKIN = { matte_black: "skinDark", hardware_black: "skinDarker", anodized_grey: "skinPlate", carriage_grey: "skinPlate", metal: "skinMetal", rack_metal: "skinMetal", silver_trim: "skinMetal", seeed_yellow: "skinTrim", travel_stop_yellow: "skinTrim", finger_black: "skinFinger" };
-  const THEME = { skinPlate: "plate", skinFinger: "finger" };
+  for (const name of ["skinDark", "skinDarker", "skinMetal", "skinTrim", "skinPlate", "skinFinger", "skinFinger2"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: /Metal|Plate/.test(name) ? 0.5 : 0.15, flatShading: true });
+  // 网格材质映射；自制夹指按照片一白一灰，颜色仍由 CSS 主题控制。
+  const SKIN = { matte_black: "skinDark", hardware_black: "skinDarker", anodized_grey: "skinPlate", carriage_grey: "skinPlate", metal: "skinMetal", rack_metal: "skinMetal", silver_trim: "skinMetal", seeed_yellow: "skinTrim", travel_stop_yellow: "skinTrim", finger_black: "skinFinger", finger_white: "skinFinger", finger_grey: "skinFinger2" };
+  const THEME = { skinPlate: "plate", skinFinger: "finger", skinFinger2: "finger2" };
   const gridMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 });
   const laserMaterial = new THREE.LineBasicMaterial({ transparent: true });
   const spotMaterial = new THREE.MeshBasicMaterial({ transparent: true });
@@ -182,27 +183,80 @@ export function createScene(container, config) {
   }
 
   // 换上真实外形：读清单和二进制顶点，挂到各自的连杆坐标系下。失败就保持简化外形。
-  let skinned = false;
-  async function loadSkin(manifestUrl) {
-    const manifest = await (await fetch(manifestUrl)).json();
-    const buffer = await (await fetch(new URL("b601.bin", manifestUrl))).arrayBuffer();
-    const added = [];
-    for (const item of manifest.parts) {
-      const group = item.frame === "base" ? world : links[item.frame];
-      if (!group || !SKIN[item.material]) continue;
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(buffer, item.positions.offset, item.positions.count), 3));
-      geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(buffer, item.indices.offset, item.indices.count), 1));
-      const mesh = new THREE.Mesh(geometry, materials[SKIN[item.material]]);
-      const mount = config.gripper.fingers.find(f => f.side === item.side);
-      if (mount) slidePart(mesh, mount);
-      added.push([group, mesh]);
+  let skinned = false, disposed = false;
+  async function readSkin(manifestUrl, custom = false) {
+    const response = await fetch(manifestUrl);
+    if (response.ok === false) throw new Error("外形清单不可用");
+    const manifest = await response.json();
+    if (manifest.units !== "m" || !Array.isArray(manifest.parts)) throw new Error("外形清单格式错误");
+    if (custom && (manifest.parts.length !== 2 || !["left", "right"].every(side =>
+      manifest.parts.some(p => p.side === side && p.frame === "tool" && ["finger_white", "finger_grey"].includes(p.material))))) {
+      throw new Error("自制夹指必须包含左右两个部件");
     }
-    if (!added.length) throw new Error("外形文件里没有可用的零件");
+    const binary = await fetch(new URL(manifestUrl.href.replace(/\.json$/, ".bin")));
+    if (binary.ok === false) throw new Error("外形网格不可用");
+    const buffer = await binary.arrayBuffer();
+    const added = [];
+    try {
+      for (const item of manifest.parts) {
+        const group = item.frame === "base" ? world : links[item.frame];
+        if (!group || !SKIN[item.material]) continue;
+        for (const key of ["positions", "indices"]) {
+          const block = item[key];
+          if (!block || !Number.isInteger(block.offset) || block.offset < 0 || block.offset % 4 ||
+              !Number.isInteger(block.count) || block.count <= 0 || block.count % 3 || block.offset + block.count * 4 > buffer.byteLength) {
+            throw new Error("外形网格数据不完整");
+          }
+        }
+        const positions = new Float32Array(buffer, item.positions.offset, item.positions.count);
+        const indices = new Uint32Array(buffer, item.indices.offset, item.indices.count);
+        if (!positions.every(Number.isFinite) || indices.some(i => i >= positions.length / 3)) throw new Error("外形网格索引错误");
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+        const mesh = new THREE.Mesh(geometry, materials[SKIN[item.material]]);
+        mesh.userData.skin = item;
+        mesh.userData.bakedInEndLink = custom;
+        added.push([group, mesh, item]);
+      }
+      if (!added.length) throw new Error("外形文件里没有可用的零件");
+      return added;
+    } catch (error) {
+      for (const [, mesh] of added) mesh.geometry.dispose();
+      throw error;
+    }
+  }
+  async function loadSkin(manifestUrl, { gripper = "custom" } = {}) {
+    let added = await readSkin(manifestUrl), selected = "official";
+    if (gripper !== "official") {
+      try {
+        const custom = await readSkin(new URL("gripper.json", manifestUrl), true);
+        // 两根自制指完整就绪后才移除官方尖头指；滑块、齿条、限位块全部保留。
+        added = added.filter(([, mesh, item]) => {
+          if (item.material !== "finger_black") return true;
+          mesh.geometry.dispose(); return false;
+        }).concat(custom);
+        selected = "custom";
+      } catch {
+        // 自制文件缺失、HTTP/解析失败或损坏：静默保留已加载的官方夹指。
+        selected = "official";
+      }
+    }
+    if (disposed) {
+      for (const [, mesh] of added) mesh.geometry.dispose();
+      return selected;
+    }
     world.traverse(o => { if (o.userData.simple) o.visible = false; });
-    for (const [group, mesh] of added) group.add(mesh);
+    for (const [group, mesh, item] of added) {
+      const mount = config.gripper.fingers.find(f => f.side === item.side);
+      // 自制网格已在 end_link 零开口坐标系，只叠加与滑块相同的 ±Y 行程。
+      if (mount) slidePart(mesh, mesh.userData.bakedInEndLink
+        ? { ...mount, xyz: [0, 0, 0], rpy: [0, 0, 0] } : mount);
+      group.add(mesh);
+    }
     setOpening(openingMm);
     skinned = true;
+    return selected;
   }
 
   function resize() {
@@ -220,6 +274,7 @@ export function createScene(container, config) {
     zoom(factor) { view.distance = Math.min(3, Math.max(0.7, view.distance * factor)); },
     resetView() { Object.assign(view, home); },
     dispose() {
+      disposed = true;
       scene.traverse(o => { o.geometry?.dispose(); });
       for (const m of [...Object.values(materials), edgeMaterial, gridMaterial, laserMaterial, spotMaterial]) m.dispose();
       renderer.dispose(); canvas.remove();

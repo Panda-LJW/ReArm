@@ -105,3 +105,20 @@
 - 设计差异：与第 2、3 节接口无冲突。保留单独的旧 setPose(urdfAngles)，新增内部 setPoseMatrices 消费未夹取矩阵；六轴相机/激光/轨迹叠加的实际绘制属于后续任务，不在本轮扩展。README 与 docs 未修改；执行期间出现的 docs/model-swap/决策日志.md、screenshots/ 非本轮产物，未触碰。
 - 遗留：浏览器里逐个拖动六个关节和夹爪，复核实际转动、开合与标签避让；相机外参、夹指尺寸、真实硬件均待实测。
 - 回滚：本轮开始时已备份至 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-t1-wme3n361/before/。按上述修改清单逐个恢复本轮文件、移除本轮新增的 arm/ 与测试文件即可回退；保留并发出现的文档和后续用户改动。全程保持 feat/model-swap，HEAD=f38ce81b0f54e056fe1ffe526717c88ed1fe7ed0，未提交、未推送、未切分支、未安装包。
+
+## 2026-11-14 T2a 自制夹指 STEP 网格与孪生安装 [T2a-20261114]
+- 目标：把 hardware/gripper/机械臂夹具.STEP 转为与 b601 同格式的轻量网格，默认装入孪生并保留官方夹指切换；不安装依赖、不提交、不推送、不切分支。
+- 新增：scripts/build_gripper_mesh.py；rearm/ui/static/modules/twin/meshes/gripper.json、gripper.bin；tests/test_gripper_mesh.py；output/playwright/t2a-gripper-offline.png。
+- 修改：rearm/ui/static/modules/arm/arm-params.js；rearm/ui/static/modules/twin/scene.js、twin.js、twin.css、demo.html；rearm/ui/static/modules/main.js（仅 createTwin 的 gripper 参数）；tests/test_arm_kinematics.py（外参期望与官方夹指测试显式选项）；LOG.md、LOG-INDEX.md。
+- 实体尺寸：gmsh 4.15.2 / OpenCASCADE 读到一个实体，包围盒 mm：X [-12.5,12.5]、Y [-20,20]、Z [0,65.5]，即 25×40×65.5。任务中的约 49×80×67 来自全部 CARTESIAN_POINT 的范围 [-31.89339828,-20,0] 至 [17.5,60,67.39339828]，包含实体外参考几何，不用作缩放尺寸。STEP SHA-256 为 b9f5851a8b50e8d74c0fe8a99124e55812df4ea8e2f6cd8c65fa827af39f8de2。
+- 朝向依据：实际打开斜前、斜后、俯视三张照片；矩形镂空框架从滑块向前伸出。STEP Z=0 面有四个安装孔，Z=65.5 为指尖，故 STEP +Z → end_link +X，STEP +X → end_link +Y（横向 25 mm），STEP +Y → end_link +Z（高 40 mm）。照片估算安装，尚未实测。
+- 安装参数：统一放在 gripper.customFinger；mount.xyz=(-0.065,0.0125,0) m，mount.rpy=(π/2,0,π/2) rad，约定 Rz·Ry·Rx；左指先安装，右指对安装后整个零件施加 flipRpy=(π,0,0)，绕 end_link X 轴翻转。脚本读取此处数值并烘焙到顶点，加载时仅叠加 ±Y 行程，不重复安装变换。根面 X=-65 mm，和官方滑块前端的误差不到 0.5 mm；指尖 X=0.5 mm，fingerLength=65.5 mm。
+- 外参：T_end_tcp 取两指尖中点 (0.5,0,0) mm；相机光心 (-69.5,0,40) mm，位于指尖后 70 mm；激光 (-69.5,0,20) mm，位于相机正下方 20 mm。二者均朝局部 +X。安装位置为照片估算，激光仍待装好实测；本任务未扩展相机和激光的绘制。
+- 网格：仅表面三角化，最小尺寸 2 mm、最大 4 mm、曲率 20、单线程；两指共 5760 面、每指 1430 顶点，二进制 103440 字节。小端 float32 positions 与 uint32 indices 连续排列，单位 m，parts 使用 frame=tool、side=left/right、finger_white/finger_grey。成功直接转换原 STEP，simplified=false，未使用简化方案。
+- 加载：默认 custom；?gripper=official 只加载官方夹指。自制左右两指完整解码后才替换 finger_black，官方滑块、齿条、限位块继续保留和运动。JSON/BIN 缺失、HTTP/网络失败、解析失败、缺一指、截断数据、非法索引均静默退回官方；官方主体失败仍保留既有简化外形。配色由 --twin-finger 和 --twin-finger-2 控制。异步完成前销毁场景时释放未挂载几何。
+- 几何验证：零开口时左指 Y∈[0,25] mm、右指 Y∈[-25,0] mm，全部三角形各自处于对应闭半空间，因此不仅顶点、三角形内部也不会相穿，接触面位于 Y=0；右指严格为左指绕 X 翻转。保留 URDF 单指 0–28.5 mm、总开口 0–57 mm；最大开口夹指外缘 ±53.5 mm，滑块与夹指均在导轨限位范围 ±85 mm 内。网格闭合、每条边恰连两面、无退化面、有向体积与 OCC 实体体积相差不到 0.2%。
+- 验证：开工 .venv/bin/python -m pytest -q 为 131 passed in 8.15s；最终同命令为 144 passed in 8.70s，原 131 项保留，新增 13 项。相关子集 45 passed；实际 scene.js + vendored Three 几何/矩阵/材质验证 0、20、57 mm 开合、加载前已有开口、CSS 重着色、官方选项和七种加载失败退路。四个 JS 文件与 demo 内联模块 node --check 通过，转换脚本语法和 git diff --check 通过。
+- 可重复性：用独立输出目录重跑转换，JSON/BIN 均逐字节一致。JSON SHA-256=7eb5ad39321b543751d56069571a3a588b1507777567d327b749db81d9e1601b；BIN SHA-256=53521fb97a8d7704a133f980489199b6d9dd2c7da2a3d7db6803041828d9cd7b。
+- 画面证据：从实际 scene.js 装配对象导出末端几何，离线光栅化 0、20、57 mm 的斜视及俯视，已打开 output/playwright/t2a-gripper-offline.png 对照照片核对矩形开孔、翻转方向、一白一灰、根部连接和导轨范围。该图是离线几何渲染，不是浏览器截图。导出数据 /private/tmp/rearm-t2a-render-scene.json，渲染脚本 /private/tmp/rearm-t2a-render.py。
+- 遗留：Playwright 启动独立 Chrome 以 SIGABRT 退出，清理时报 kill EPERM，未获得实际 WebGL 浏览器画面，未改变权限或启动服务。请在 /static/modules/twin/demo.html?source=manual 将夹爪从 0 拖到 57 mm，再加 &gripper=official 对比；真实安装位置仍待实测。没有连接硬件、没有启动 8000 端口服务。
+- 回滚：修改前文件备份位于 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-t2a-nfqr_e6z/before/；恢复上述本轮修改文件并移除本轮新增文件即可局部回退，保留后续用户改动。工作分支保持 feat/model-swap；app.js、app.css、index.html、guide/theme/focus/presentation、rearm 下 Python、config、docs 和项目 .venv 均未编辑。

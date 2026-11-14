@@ -20,7 +20,8 @@
 </head>
 <body>
 <!-- 这个页面只加载孪生和数据源两个模块，不加载主面板，用来证明模块可以独立运行。
-     ?source=sim（默认）用内置模拟数据；?source=manual 用下面的滑块；?source=device&device=ws://… 接下位机。 -->
+     ?source=sim（默认）用内置模拟数据；?source=manual 用下面的滑块；?source=device&device=ws://… 接下位机。
+     默认自制矩形夹指；?gripper=official 切回官方尖头指。 -->
 <header>
   <b>数字孪生单独演示</b><span id="src"></span>
   <span id="sliders" hidden></span>
@@ -32,7 +33,7 @@ import { createSource } from "../datasource/index.js";
 import { makeFrame } from "../datasource/frame.js";
 import { ARM_PARAMS } from "../arm/arm-params.js";
 const params = new URLSearchParams(location.search), kind = params.get("source") || "sim";
-const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple" });
+const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple", gripper: params.get("gripper") === "official" ? "official" : "custom" });
 window.demo = { twin };
 document.getElementById("src").textContent = "数据源：" + ({ sim: "内置模拟", manual: "手动滑块", device: "下位机 " + (params.get("device") || "") }[kind] || kind);
 if (kind === "manual") {

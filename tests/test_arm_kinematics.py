@@ -117,11 +117,11 @@ console.log(JSON.stringify({rows, center, tcp: P.T_end_tcp, camera: P.T_end_came
     assert (p['camera'][11] - out['center'][11]) * 1000 == pytest.approx(40, abs=1e-6)
     assert (p['camera'][11] - p['laser'][11]) * 1000 == pytest.approx(20, abs=1e-6)
     assert out['up'] == pytest.approx([-0.000007346410191, 0.000099999999832, 0.999999994973], abs=1e-12)
-    assert out['tcp'] == [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
-    assert [out['camera'][i] for i in [3, 7, 11]] == [0.01, 0, 0.04]
-    assert [out['laser'][i] for i in [3, 7, 11]] == [0.01, 0, 0.02]
+    assert out['tcp'] == [1, 0, 0, 0.0005, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    assert [out['camera'][i] for i in [3, 7, 11]] == [-0.0695, 0, 0.04]
+    assert [out['laser'][i] for i in [3, 7, 11]] == [-0.0695, 0, 0.02]
     assert out['gripper']['fingerTravel'] == [0, 0.0285] and out['gripper']['openingMm'] == [0, 57]
-    assert out['gripper']['fingerLength'] == 0.080
+    assert out['gripper']['fingerLength'] == 0.0655
     assert [f['axis'] for f in out['gripper']['fingers']] == [[0, 1, 0], [0, -1, 0]]
     assert out['cameraSpec'] == {'size': [0.025, 0.090, 0.025], 'horizontalFovDeg': 87, 'verticalFovDeg': 58}
 
@@ -299,7 +299,7 @@ const world=drawnScene.children.find(o=>o.type==='Group');
 const links=world.children.filter(o=>o.type==='Group' && !o.matrixAutoUpdate);
 const rowMajor=m=>[0,1,2,3].flatMap(r=>[0,1,2,3].map(c=>m.elements[c*4+r]));
 const actual=links.map(o=>rowMajor(o.matrix));
-await scene.loadSkin(new URL('./twin/meshes/b601.json',base));
+await scene.loadSkin(new URL('./twin/meshes/b601.json',base), {gripper:'official'});
 const manifest=JSON.parse(await readFile(new URL('./twin/meshes/b601.json',base),'utf8'));
 const parts=manifest.parts.filter(p=>p.frame==='tool'), tool=links[6];
 const meshParts=tool.children.filter(o=>o.type==='Mesh' && !o.userData.simple);
