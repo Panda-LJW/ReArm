@@ -630,6 +630,139 @@ view.dispose(); dom.window.close();
 ''')
 
 
+def test_camera_threshold_ring_uses_measurement_ratio_and_threshold_precedence():
+    node('''
+import assert from 'node:assert/strict';
+import {thresholdRing, thresholdStatus} from './trainer/views/camera.js';
+const ref = [320,240], result = {valid:true, spot_px:[350,280], dev_norm_mm:2.5};
+const hello = {threshold_mm:5, camera:{width:640,height:480}};
+const before = JSON.stringify({result,ref,hello});
+assert.deepEqual(thresholdRing(result,ref,hello), {cx:320,cy:240,rPx:100,inside:true});
+assert.deepEqual(thresholdStatus(result,hello), {thresholdMm:5,inside:true,color:'var(--cyan)'});
+assert.equal(JSON.stringify({result,ref,hello}), before);
+const outside = {...result,dev_norm_mm:6,spot_px:[350,240]};
+assert.equal(thresholdRing(outside,ref,{...hello,threshold_mm:7},{thresholdMm:3}).rPx,35);
+assert.equal(thresholdStatus(outside,{threshold_mm:7},{thresholdMm:3}).inside,true);
+assert.equal(thresholdRing(outside,ref,{camera:hello.camera},{thresholdMm:3}).rPx,15);
+assert.equal(thresholdRing(outside,ref,{camera:hello.camera}).rPx,25);
+assert.deepEqual(thresholdStatus(outside,{}), {thresholdMm:5,inside:false,color:'var(--bad)'});
+assert.equal(thresholdStatus({...result,dev_norm_mm:5},hello).inside,true);
+assert.equal(thresholdStatus({...result,dev_norm_mm:5.001},hello).inside,false);
+''')
+
+
+@pytest.mark.parametrize('deviation,spot', [(0, [320, 240]), (.49, [350, 280]), (2, [321, 241])])
+def test_camera_threshold_ring_falls_back_to_pinhole(deviation, spot):
+    node(f'''
+import assert from 'node:assert/strict';
+import {{thresholdRing}} from './trainer/views/camera.js';
+const hello = {{threshold_mm:50,camera:{{width:640,height:480}}}};
+const result = {{valid:true,spot_px:{json.dumps(spot)},dev_norm_mm:{deviation},depth_mm:250}};
+const ring = thresholdRing(result,[320,240],hello);
+const expected = 50 * 640 / (2 * Math.tan(87 * Math.PI / 360) * 250);
+assert.ok(Math.abs(ring.rPx - expected) < 1e-9);
+assert.equal(ring.inside,true);
+// 两个可靠性边界均含等号，不能提前切到针孔比例。
+assert.equal(thresholdRing({{...result,spot_px:[322,240],dev_norm_mm:.5}},[320,240],
+  {{...hello,threshold_mm:5}}).rPx,20);
+''')
+
+
+@pytest.mark.parametrize('scale', [.5, 1, 2])
+def test_camera_threshold_ring_clamps_screen_radius_without_changing_status(scale):
+    node(f'''
+import assert from 'node:assert/strict';
+import {{thresholdRing}} from './trainer/views/camera.js';
+const hello = {{camera:{{width:640,height:480}}}}, viewport = {{width:640,height:480,scale:{scale}}};
+const small = thresholdRing({{valid:true,spot_px:[322,240],dev_norm_mm:10}},[320,240],hello,{{}},viewport);
+assert.equal(small.rPx * viewport.scale,12); assert.equal(small.inside,false);
+const large = thresholdRing({{valid:true,spot_px:[500,240],dev_norm_mm:.5}},[320,240],hello,{{}},viewport);
+assert.equal(large.rPx * viewport.scale,480 * viewport.scale * .4); assert.equal(large.inside,true);
+// naturalWidth/naturalHeight 优先决定画面短边，针孔比例仍使用 hello.camera.width。
+assert.equal(thresholdRing({{valid:true,spot_px:[500,240],dev_norm_mm:.5}},[320,240],hello,{{}},
+  {{width:800,height:300,scale:{scale}}}).rPx,120);
+''')
+
+
+def test_camera_threshold_ring_rejects_invalid_or_unresolvable_measurements():
+    node('''
+import assert from 'node:assert/strict';
+import {thresholdRing, thresholdStatus} from './trainer/views/camera.js';
+const ref = [320,240], hello = {camera:{width:640,height:480}};
+const result = {valid:true,spot_px:[350,280],dev_norm_mm:2.5,depth_mm:250};
+for (const value of [null, {...result,valid:false,invalid_reason:'spot_not_found'}, {...result,valid:undefined},
+  ...[null,undefined,NaN,Infinity,-1].map(dev_norm_mm=>({...result,dev_norm_mm}))]) {
+ assert.equal(thresholdRing(value,ref,hello),null); assert.equal(thresholdStatus(value,hello),null);
+}
+for (const coords of [null,[],[1],[1,NaN],[1,Infinity]]) {
+ assert.equal(thresholdRing({...result,spot_px:coords},ref,hello),null);
+ assert.equal(thresholdRing(result,coords,hello),null);
+}
+for (const depth_mm of [null,undefined,0,-1,NaN,Infinity])
+ assert.equal(thresholdRing({...result,dev_norm_mm:0,depth_mm},ref,hello),null);
+for (const width of [null,undefined,0,-1,NaN,Infinity])
+ assert.equal(thresholdRing({...result,dev_norm_mm:.1},ref,{camera:{width,height:480}}),null);
+assert.equal(thresholdRing({...result,spot_px:ref},ref,{}),null);
+assert.equal(thresholdRing({...result,dev_norm_mm:0},ref,null),null);
+''')
+
+
+@pytest.mark.parametrize('size', [(640, 480), (320, 240), (900, 360), (1280, 960)])
+def test_camera_threshold_ring_render_colors_labels_scaling_and_cleanup(size):
+    jsdom_script(r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const dom = new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+globalThis.document = dom.window.document;
+const [width,height] = SIZE, scale = Math.min(width/640,height/480);
+dom.window.Element.prototype.getBoundingClientRect = function() {
+ const w = this.classList.contains('trainer-spot-label') ? 276 : this.classList.contains('chip') ? 0 : width;
+ const h = this.classList.contains('trainer-spot-label') ? 24 : this.classList.contains('chip') ? 0 : height;
+ return {left:0,top:0,right:w,bottom:h,width:w,height:h};
+};
+dom.window.HTMLCanvasElement.prototype.getContext = () => new Proxy({}, {get:(o,p)=>o[p]??(()=>{})});
+globalThis.getComputedStyle = () => ({fontSize:'18px',getPropertyValue:()=> '#888888'});
+const {mount} = await import('./trainer/views/camera.js');
+const {initialState} = await import('./trainer/store.js');
+const rootEl = document.querySelector('#cam'), original = rootEl.innerHTML, view = mount(rootEl);
+const state = {...initialState(),link:{online:true},hello:{sim:true,threshold_mm:5,camera:{width:640,height:480}},
+ demo:{nodes:[{id:1,ref_spot_px:[320,240]}]}};
+const render = result => view.render({...state,passes:[{nodes:{1:{node:1,t:1,...result}}}]},{thresholdMm:99});
+for (const [dev,spot,radius] of [[2.7,[350,280],5*50/2.7], [10,[322,240],12/scale], [.5,[500,240],192]]) {
+ render({valid:true,spot_px:spot,dev_norm_mm:dev});
+ const inside = dev <= 5, color = inside ? 'var(--cyan)' : 'var(--bad)';
+ const ring = document.querySelector('.trainer-threshold-ring');
+ assert.equal(ring.getAttribute('cx'),'320'); assert.equal(ring.getAttribute('cy'),'240');
+ assert.ok(Math.abs(Number(ring.getAttribute('r'))-radius)<1e-9);
+ assert.equal(ring.getAttribute('fill'),'none'); assert.equal(ring.getAttribute('stroke'),color);
+ assert.ok(ring.hasAttribute('stroke-dasharray'));
+ const spots = [...document.querySelectorAll('#overlay circle:not(.trainer-threshold-ring)')];
+ assert.equal(spots.length,2); assert.equal(spots[0].getAttribute('fill'),'none');
+ assert.equal(spots[1].getAttribute('fill'),color);
+ assert.equal(document.querySelector('#chiperr').className,`chip err ${inside?'s-ok':'s-bad'}`);
+ const label = document.querySelector('.trainer-spot-label');
+ assert.equal(label.hidden,false);
+ assert.equal(label.textContent,`${inside?'':'▲ '}偏差 ${dev.toFixed(1)} mm（阈值 5）`);
+}
+// 没有可靠比例时，保留数值与达标配色，单独省略圈。
+render({valid:true,spot_px:[321,240],dev_norm_mm:2.7});
+assert.equal(document.querySelector('.trainer-threshold-ring'),null);
+assert.equal(document.querySelectorAll('#overlay circle').length,2);
+assert.equal(document.querySelector('#chiperr').classList.contains('s-ok'),true);
+render({valid:false,spot_px:[350,280],dev_norm_mm:2.7,invalid_reason:'spot_not_found'});
+assert.equal(document.querySelector('#overlay').children.length,0);
+assert.equal(document.querySelector('.trainer-spot-label').hidden,true);
+assert.equal(document.querySelector('#chiperr').classList.contains('s-bad'),true);
+view.dispose(); assert.equal(rootEl.innerHTML,original); dom.window.close();
+'''.replace('SIZE', json.dumps(size)))
+
+
+def test_camera_deviation_chip_uses_threshold_color_tokens():
+    css = (TRAINER / 'trainer.css').read_text()
+    assert '.trainer-camera .chip.err.s-ok{color:var(--cyan)}' in css
+    assert '.trainer-camera .chip.err.s-bad{color:var(--bad)}' in css
+
+
 @pytest.mark.parametrize('size', [(640, 480), (320, 240), (900, 360)])
 def test_camera_html_label_avoids_all_corner_chips_and_uses_letterboxing(size):
     jsdom_script(r'''
@@ -640,7 +773,7 @@ for(const name of ['document','window'])globalThis[name]=dom.window[name];
 const [width,height]=SIZE;
 const rect=(left,top,width,height)=>({left,top,width,height,right:left+width,bottom:top+height});
 dom.window.Element.prototype.getBoundingClientRect=function(){
- if(this.classList.contains('trainer-spot-label'))return rect(0,0,70,24);
+ if(this.classList.contains('trainer-spot-label'))return rect(0,0,276,24);
  const boxes={chipstate:[0,0,120,40],chiplaser:[width-100,0,100,40],chipver:[0,height-40,80,40],chiperr:[width-120,height-40,120,40]};
  return boxes[this.id]?rect(...boxes[this.id]):rect(0,0,width,height);
 };
@@ -657,7 +790,7 @@ for(const [x,y] of [[15,15],[width-15,15],[15,height-15],[width-15,height-15],[w
  view.render(s,{thresholdMm:5});
  const label=document.querySelector('.trainer-spot-label');assert.equal(label.hidden,false);
  assert.equal(document.querySelector('#overlay text'),null);assert.equal(document.querySelector('#overlay').getAttribute('viewBox'),`0 0 ${width} ${height}`);
- const actual=rect(parseFloat(label.style.left),parseFloat(label.style.top),70,24);
+ const actual=rect(parseFloat(label.style.left),parseFloat(label.style.top),276,24);
  assert.ok(actual.left>=0&&actual.right<=width&&actual.top>=0&&actual.bottom<=height);
  for(const id of ['chipstate','chiplaser','chipver','chiperr'])assert.ok(!intersects(actual,document.getElementById(id).getBoundingClientRect()),id);
  if(x!==width/2)assert.ok([...document.querySelectorAll('#overlay circle')].every(el=>el.getAttribute('visibility')==='hidden'));
@@ -801,7 +934,7 @@ joints(document.querySelector('.jointcard')).render(s);
 assert.match(document.querySelectorAll('#joints .joint')[2].textContent,/无效/);
 assert.match(document.querySelector('.envrow').textContent,/40.0 °C/);assert.match(document.querySelector('.envrow').textContent,/0.70 A/);
 const view=camera(document.querySelector('#cam'));view.render(s,{thresholdMm:5,laserMismatch:true});
-assert.equal(document.querySelectorAll('#overlay circle').length,2);assert.equal(document.querySelector('#overlay rect'),null);
+assert.equal(document.querySelectorAll('#overlay circle').length,3);assert.equal(document.querySelector('#overlay rect'),null);
 assert.match(document.querySelector('.trainer-spot-label').textContent,/3.2 mm/);assert.equal(document.querySelector('#overlay text'),null);assert.match(document.querySelector('#chiplaser').textContent,/不一致/);
 view.render({...s,link:{online:false}},{thresholdMm:5});assert.equal(document.querySelector('#overlay').children.length,0);
 dom.window.close();
@@ -885,7 +1018,7 @@ let s={...initialState(),link:{online:true},hello:{sim:true,camera:{width:640,he
 const receive=m=>{s=reduce(s,m,now);view.render(s,{thresholdMm:5});};
 receive({type:'joint_state',pass:1,node:1,t:1,mode:'practice'});
 receive({type:'node_result',pass:1,node:1,t:2,valid:true,spot_px:[330,270],dev_norm_mm:3});
-assert.equal(document.querySelectorAll('#overlay circle').length,2);
+assert.equal(document.querySelectorAll('#overlay circle').length,3);
 // 即使无效载荷仍残留坐标，也必须隐藏整套光点、连线、箭头与偏差标签。
 receive({type:'node_result',pass:1,node:1,t:3,valid:false,spot_px:[330,270],dev_norm_mm:3,invalid_reason:REASON});
 const notice=document.querySelector('.trainer-measurement-status');
@@ -949,7 +1082,7 @@ await trainer.source.send('demo_start');advance(3000);await trainer.source.send(
 await trainer.source.send('practice_start');flush();
 let elapsed=0;
 while(!overlays.at(-1).spots.measured){advance(50);elapsed+=50;assert.ok(elapsed<10000);}
-assert.equal(document.querySelectorAll('#overlay circle').length,2);
+assert.equal(document.querySelectorAll('#overlay circle').length,3);
 const send=trainer.source.send.bind(trainer.source);
 trainer.source.send=(cmd,args)=>['laser_on','laser_renew'].includes(cmd)?Promise.resolve({ok:true}):send(cmd,args);
 await send('laser_off');

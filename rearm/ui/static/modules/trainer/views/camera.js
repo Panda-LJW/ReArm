@@ -1,7 +1,33 @@
 import { canvasContext, px, token } from "./canvas.js";
 import { online, modeText, latestNode, number, element, preserve } from "./format.js";
+import { CONFIG } from "../config.js";
 
 const point = p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+const positive = value => Number.isFinite(value) && value > 0;
+export function thresholdStatus(result, hello, config = CONFIG) {
+  const thresholdMm = hello?.threshold_mm ?? config.thresholdMm ?? CONFIG.thresholdMm;
+  if (result?.valid !== true || !Number.isFinite(result.dev_norm_mm) || result.dev_norm_mm < 0
+      || !Number.isFinite(thresholdMm) || thresholdMm < 0) return null;
+  const inside = result.dev_norm_mm <= thresholdMm;
+  return { thresholdMm, inside, color: inside ? "var(--cyan)" : "var(--bad)" };
+}
+// rPx 使用相机坐标；scale 是相机像素到屏幕 CSS 像素的比例（含留黑边）。
+export function thresholdRing(result, refPx, hello, config = CONFIG, viewport = {}) {
+  const status = thresholdStatus(result, hello, config);
+  if (!status || !point(result.spot_px) || !point(refPx)) return null;
+  const width = viewport.width ?? hello?.camera?.width ?? 640;
+  const height = viewport.height ?? hello?.camera?.height ?? 480, scale = viewport.scale ?? 1;
+  if (![width, height, scale].every(positive)) return null;
+  const distance = Math.hypot(result.spot_px[0] - refPx[0], result.spot_px[1] - refPx[1]);
+  let pxPerMm = distance / result.dev_norm_mm;
+  if (result.dev_norm_mm < .5 || distance < 2 || !positive(pxPerMm)) {
+    if (!positive(hello?.camera?.width) || !positive(result.depth_mm)) return null;
+    pxPerMm = hello.camera.width / (2 * Math.tan(87 * Math.PI / 360) * result.depth_mm);
+  }
+  if (!positive(pxPerMm)) return null;
+  const rPx = Math.min(Math.min(width, height) * .4, Math.max(12 / scale, status.thresholdMm * pxPerMm));
+  return { cx: refPx[0], cy: refPx[1], rPx, inside: status.inside };
+}
 const invalidReasons = new Map([["spot_not_found", "未找到光点"], ["depth_invalid", "深度无效"], ["timeout", "测量超时"]]);
 const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 function svgNode(tag, attrs, text = "") {
@@ -27,6 +53,7 @@ export function mount(root) {
   img.onload = () => { imageFailed = false; };
   return { dispose() { img.removeAttribute("src"); img.onload = img.onerror = null; restore(); }, render(state, summary) {
     const live = online(state), simulated = state.hello?.sim === true, result = latestNode(state);
+    const status = thresholdStatus(result, state.hello);
     const invalidText = result?.valid === false ? invalidReasons.get(result.invalid_reason) ?? "测量无效" : "";
     invalid.textContent = invalidText; invalid.hidden = !live || !invalidText;
     const url = live && state.hello?.camera?.url || null;
@@ -39,7 +66,7 @@ export function mount(root) {
     laser.className = "chip laser" + (state.laser?.on && live ? " laser-on" : "") + (summary.laserMismatch ? " trainer-mismatch" : "");
     badge.textContent = simulated ? "模拟" : ""; badge.hidden = !simulated;
     error.textContent = !live ? "离线" : invalidText ? "测量无效" : result ? `偏差 ${number(result.dev_norm_mm)} mm` : "等待测量";
-    error.className = "chip err " + (!live || invalidText || result?.dev_norm_mm > summary.thresholdMm ? "s-bad" : result ? "s-ok" : "s-info");
+    error.className = "chip err " + (!live || invalidText || status?.inside === false ? "s-bad" : status ? "s-ok" : "s-info");
     if (!canvas.hidden) {
       const { ctx: g, width: w, height: h } = canvasContext(canvas);
       g.fillStyle = token("--video"); g.fillRect(0, 0, w, h);
@@ -57,7 +84,7 @@ export function mount(root) {
     overlay.setAttribute("viewBox", `0 0 ${width} ${height}`); overlay.replaceChildren();
     label.hidden = true;
     const reference = state.demo?.nodes?.find(node => node.id === result?.node)?.ref_spot_px;
-    if (!live || result?.valid !== true || !point(result.spot_px) || !point(reference)) return;
+    if (!live || !status || !point(result.spot_px) || !point(reference)) return;
     const [x, y] = result.spot_px, [rx, ry] = reference;
     const bounds = root.getBoundingClientRect(), frame = overlay.getBoundingClientRect();
     const scale = Math.max(.01, Math.min(frame.width / width, frame.height / height));
@@ -69,16 +96,22 @@ export function mount(root) {
         top: rect.top - bounds.top - 8, bottom: rect.bottom - bounds.top + 8 };
     });
     const radius = 4 / scale, angle = Math.atan2(y - ry, x - rx), size = 7 / scale;
-    overlay.append(svgNode("line", { x1: rx, y1: ry, x2: x, y2: y, stroke: "var(--obs)", "stroke-width": 2 / scale }),
+    const ring = thresholdRing(result, reference, state.hello, CONFIG, { width, height, scale });
+    if (ring) overlay.append(svgNode("circle", { class: "trainer-threshold-ring", cx: ring.cx, cy: ring.cy, r: ring.rPx,
+      fill: "none", stroke: status.color, "stroke-width": 2 / scale, "stroke-dasharray": `${6 / scale} ${4 / scale}` }));
+    const spots = [
       svgNode("circle", { cx: rx, cy: ry, r: radius, fill: "none", stroke: "var(--pred)", "stroke-width": 2 / scale }),
-      svgNode("circle", { cx: x, cy: y, r: radius, fill: "var(--obs)" }),
-      svgNode("path", { d: `M${x - size * Math.cos(angle - .5)},${y - size * Math.sin(angle - .5)} L${x},${y} L${x - size * Math.cos(angle + .5)},${y - size * Math.sin(angle + .5)}`, fill: "none", stroke: "var(--obs)", "stroke-width": 2 / scale }));
+      svgNode("circle", { cx: x, cy: y, r: radius, fill: status.color }),
+    ];
+    overlay.append(svgNode("line", { x1: rx, y1: ry, x2: x, y2: y, stroke: status.color, "stroke-width": 2 / scale }),
+      ...spots,
+      svgNode("path", { d: `M${x - size * Math.cos(angle - .5)},${y - size * Math.sin(angle - .5)} L${x},${y} L${x - size * Math.cos(angle + .5)},${y - size * Math.sin(angle + .5)}`, fill: "none", stroke: status.color, "stroke-width": 2 / scale }));
     // 极端外部坐标不伪移光点；被芯片遮挡的标记隐藏，文字换到另一侧。
-    [...overlay.querySelectorAll("circle")].forEach((circle, i) => {
+    spots.forEach((circle, i) => {
       const cx = ox + [rx, x][i] * scale, cy = oy + [ry, y][i] * scale;
       if (chips.some(chip => overlaps({ left: cx - 4, right: cx + 4, top: cy - 4, bottom: cy + 4 }, chip))) circle.setAttribute("visibility", "hidden");
     });
-    label.textContent = `${number(result.dev_norm_mm)} mm`; label.hidden = false;
+    label.textContent = `${status.inside ? "" : "▲ "}偏差 ${number(result.dev_norm_mm)} mm（阈值 ${status.thresholdMm}）`; label.hidden = false;
     const sizeRect = label.getBoundingClientRect(), lw = sizeRect.width, lh = sizeRect.height;
     const cx = ox + (x + rx) / 2 * scale, cy = oy + (y + ry) / 2 * scale, gap = 10;
     const candidates = [[cx + gap, cy - lh - gap], [cx - lw - gap, cy - lh - gap],
