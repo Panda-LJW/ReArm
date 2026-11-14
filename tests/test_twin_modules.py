@@ -141,7 +141,7 @@ console.log(JSON.stringify({ kinds: Object.keys(SOURCES), inside, seen, tele,
   dirty: makeFrame({ angles_deg: [1, "a"], mode: "weird", online: true }), version: PROTOCOL_VERSION, timeout: HEARTBEAT_TIMEOUT_MS }));
 ''')
     assert out['kinds'] == ['panel', 'sim', 'device'] and out['inside']
-    keys = {'timestamp', 'angles_deg', 'mode', 'online', 'laser'}
+    keys = {'timestamp', 'q_rad', 'valid', 'gripper_mm', 'angles_deg', 'mode', 'online', 'laser'}
     assert all(set(frame) == keys for frame in out['seen'] + [out['tele'], out['dirty']])
     sim, live, offline, empty = out['seen']
     assert (sim['mode'], sim['angles_deg'], sim['laser'], sim['online']) == ('sim', [1, 2, -3], True, True)

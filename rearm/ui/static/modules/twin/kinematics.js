@@ -35,7 +35,7 @@ export function fromAxisAngle([x, y, z], angle) {
 export const position = m => [m[3], m[7], m[11]];
 export const clamp = (v, [lo, hi]) => Math.min(hi, Math.max(lo, v));
 
-// angles: { joint1: rad, ... }，缺省的关节按 0 处理。返回 { frames: {jointId: 矩阵}, tool: 矩阵 }。
+// angles: { joint1: rad, ... }，缺省的关节按 0 处理。返回 { frames: {jointId: 矩阵}, end_link: 矩阵, tool: 同值别名 }。
 // frames[id] 是该关节转动之后的坐标系，也就是它所带连杆的坐标系。
 export function forward(config, angles = {}) {
   const frames = {};
@@ -45,7 +45,8 @@ export function forward(config, angles = {}) {
     current = multiply(multiply(current, fromOrigin(joint.xyz, joint.rpy)), fromAxisAngle(joint.axis, q));
     frames[joint.id] = current;
   }
-  return { frames, tool: multiply(current, fromOrigin(config.tool.xyz, config.tool.rpy)) };
+  const end_link = multiply(current, fromOrigin(config.tool.xyz, config.tool.rpy));
+  return { frames, end_link, tool: end_link };
 }
 
 // 上位机读数（度，按 panelMapping 的顺序）→ URDF 关节角（弧度），未驱动的关节取 restPose。

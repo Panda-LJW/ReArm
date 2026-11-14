@@ -12,6 +12,9 @@
   header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;color:var(--sub);font-size:var(--fs-md)}
   header b{color:var(--text)}
   label{display:flex;gap:8px;align-items:center;font-family:var(--mono)}
+  #sliders:not([hidden]){display:flex;gap:12px 20px;flex-wrap:wrap}
+  #sliders label{flex-wrap:wrap}
+  #sliders output{min-width:7ch;text-align:right}
   #stage{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
 </style>
 </head>
@@ -20,23 +23,39 @@
      ?source=sim（默认）用内置模拟数据；?source=manual 用下面的滑块；?source=device&device=ws://… 接下位机。 -->
 <header>
   <b>数字孪生单独演示</b><span id="src"></span>
-  <span id="sliders" hidden>
-    <label>J1 <input type="range" id="q0" min="-90" max="90" value="0"></label>
-    <label>J2 <input type="range" id="q1" min="0" max="110" value="40"></label>
-    <label>J3 <input type="range" id="q2" min="-150" max="0" value="-100"></label>
-  </span>
+  <span id="sliders" hidden></span>
 </header>
 <div id="stage"></div>
 <script type="module">
 import { createTwin } from "./twin.js";
 import { createSource } from "../datasource/index.js";
+import { makeFrame } from "../datasource/frame.js";
+import { ARM_PARAMS } from "../arm/arm-params.js";
 const params = new URLSearchParams(location.search), kind = params.get("source") || "sim";
 const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple" });
 window.demo = { twin };
 document.getElementById("src").textContent = "数据源：" + ({ sim: "内置模拟", manual: "手动滑块", device: "下位机 " + (params.get("device") || "") }[kind] || kind);
 if (kind === "manual") {
   const sliders = document.getElementById("sliders"); sliders.hidden = false;
-  const send = () => twin.update({ angles_deg: [0, 1, 2].map(i => Number(document.getElementById("q" + i).value)), mode: "sim", online: true, laser: false });
+  // 显示度，发送 URDF rad；不经过旧面板映射。初始取各轴限位中点。
+  const controls = ARM_PARAMS.joints.map((joint, i) => ({ id: "q" + i, label: joint.label,
+    range: joint.limit, value: (joint.limit[0] + joint.limit[1]) / 2, scale: 180 / Math.PI, unit: "°" }));
+  controls.push({ id: "gripper", label: "夹爪开口", range: ARM_PARAMS.gripper.openingMm, value: 0, scale: 1, unit: " mm" });
+  for (const c of controls) {
+    const label = document.createElement("label"), input = document.createElement("input"), output = document.createElement("output");
+    label.textContent = c.label; input.type = "range"; input.id = c.id;
+    input.min = c.range[0]; input.max = c.range[1]; input.step = "any"; input.value = c.value;
+    output.htmlFor = c.id;
+    label.append(input, output); sliders.append(label); c.input = input; c.output = output;
+  }
+  const send = () => {
+    for (const c of controls) {
+      c.output.textContent = (Number(c.input.value) * c.scale).toFixed(1) + c.unit;
+      c.input.setAttribute("aria-valuetext", c.output.textContent);
+    }
+    twin.update(makeFrame({ q_rad: controls.slice(0, 6).map(c => Number(c.input.value)),
+      gripper_mm: Number(controls[6].input.value), mode: "sim", online: true, laser: false }));
+  };
   sliders.oninput = send; send();
 } else if (kind !== "none") {
   const source = createSource(kind, kind === "device" ? { url: params.get("device") } : {});

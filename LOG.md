@@ -91,3 +91,17 @@
 - 验证：.venv/bin/python -m pytest -q，57 passed in 7.55s；node --check rearm/ui/static/app.js、git diff --check 通过。临时 Node 回归脚本直接执行本轮摄像头函数与对话框渲染函数，覆盖首次失败隐藏、后续失败保帧、断线无请求、排队合并、迟到回调、JPEG/MJPEG 重连、MJPEG 连续帧更新与清理，以及负数、负零、舍入、缺值和两张表实际生成的单元格文本，全部通过；该测试使用图像与 DOM 替身，不等于浏览器画面验证。
 - 遗留：本轮 Playwright 启动独立无头 Chrome 时进程以 SIGABRT 退出（清理日志另报 kill EPERM），未获得浏览器画面，未修改系统权限或继续绕过。上述验收方记录不作为这次小修的浏览器复测结果；需复测首次图片失败、成功一帧后断线及 JPEG/MJPEG 重连的实际显示。
 - 证据与回滚：修改前 5 个文件已保存至 /private/tmp/rearm-panel-fix-2NyfIX/before/，临时回归脚本为同目录上层 regression.cjs；只恢复此次备份中的对应文件即可退回本轮开始状态，须保留之后的用户改动。未修改其余既有工作区变更。
+
+## 2026-11-14 T1 机械臂参数单一来源与六轴入口 [T1-20261114]
+- 目标：按 docs/model-swap/设计.md 第 2、3 节接入独立六轴 URDF FK、原始轨迹换算和孪生显示，保留旧三轴映射。
+- 新增：rearm/ui/static/modules/arm/arm-params.js、fk.js、trajectory.js；tests/test_arm_kinematics.py。
+- 修改：rearm/ui/static/modules/twin/arm-config.js、kinematics.js、twin.js、scene.js、fallback2d.js、demo.html；modules/datasource/frame.js；tests/test_twin_modules.py；LOG.md、LOG-INDEX.md。
+- 参数：关节原点、转轴、限位和旧映射逐值沿用原 arm-config；ARM_CONFIG.joints 与 ARM_PARAMS.joints 共享对象。end_link 保留原 tool 固定变换，旧 forward 的 tool 与 end_link 指向同一矩阵。夹指单指行程 0–28.5 mm、总开口 0–57 mm，安装原点/旋转为零，沿末端局部 ±Y 对称平移；右指把 URDF 的 +Y 负行程等价写成 -Y 正行程。URDF 证据为现存本地调研快照 /private/tmp/b601-fk-20261114-hhjjxts6/rebot-joycon/URDF/reBot_B601_DM/urdf/ReBot_Arm_DM.urdf 的 finger_left/finger_right。
+- 外参：T_end_tcp 为单位阵并注明待实测；自制夹指 +X 长度暂估 80 mm，相机位于局部 (10,0,40) mm、激光 (10,0,20) mm，二者 +X 为光轴/光束。Node 实算中间姿态 [0,-1.57,-1.57,0,0,0]：end_link +Z 在基座系为 [-0.000007346410191,0.000099999999832,0.999999994973]，抬高 40 mm 对应基座 Z 增加 39.999999799 mm。外形和 D435 标称视场角均标注估算/型号待确认。
+- 数据：JointFrame 总是包含 q_rad、valid、gripper_mm，旧字段转换不变；旧契约测试只更新精确字段集合断言，原有 110 项未删。checkJoints 拒绝缺轴/非有限数/越界；forwardUrdf 不夹限位、不补零；endPoses 右乘固定外参；buildPath 按原始帧换算，坏帧记录 dropped 并断段，超时断段且不补点。
+- 显示：六轴先校验再插值，坏帧冻结当前显示姿态并提示；有效帧通过 setPoseMatrices 直传矩阵，绕开旧 forward 的限位夹取。标签六轴显示 URDF 度数并按实际宽高避让；旧入口仍为三个标签。state 增加 axes/q_rad。官方网格左右部件按开口各移动一半，异步加载后保留当前开口；2D 回退也接收六轴矩阵和开口。manual demo 动态生成六个参数限位滑块和一个夹爪滑块，输入保留 rad，显示度，避免限位端点往返换算误差。
+- 验证：开工基线 .venv/bin/python -m pytest -q 为 110 passed in 7.92s；最终同命令为 131 passed in 8.31s（新增 21 项）。七组报告位置逐坐标容差 0.0006 mm、欧氏误差小于 0.001 mm；另测越界不夹取、固定外参、轨迹断段、安装台隔离、参数共享、六轴平滑/坏帧冻结/三轴回切、矩阵直通和官方夹指对称位移、manual 六轴逐个改变及两端限位。9 个 JS 文件 node --check 及 git diff --check 通过。
+- 验证边界：Node 用 DOM/画布宿主替身执行实际 twin、fallback2d、demo 脚本，WebGLRenderer 用替身但保留真实 vendored Three 的矩阵/几何和实际网格数据；不等于浏览器或硬件验收。尝试 127.0.0.1:8766 只读静态服务时绑定被拒绝（PermissionError: Operation not permitted）；独立无头 Chromium 因 bootstrap_check_in Permission denied (1100) 退出，未得到截图。未更改权限、未启动 8000 服务、未连接硬件。
+- 设计差异：与第 2、3 节接口无冲突。保留单独的旧 setPose(urdfAngles)，新增内部 setPoseMatrices 消费未夹取矩阵；六轴相机/激光/轨迹叠加的实际绘制属于后续任务，不在本轮扩展。README 与 docs 未修改；执行期间出现的 docs/model-swap/决策日志.md、screenshots/ 非本轮产物，未触碰。
+- 遗留：浏览器里逐个拖动六个关节和夹爪，复核实际转动、开合与标签避让；相机外参、夹指尺寸、真实硬件均待实测。
+- 回滚：本轮开始时已备份至 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-t1-wme3n361/before/。按上述修改清单逐个恢复本轮文件、移除本轮新增的 arm/ 与测试文件即可回退；保留并发出现的文档和后续用户改动。全程保持 feat/model-swap，HEAD=f38ce81b0f54e056fe1ffe526717c88ed1fe7ed0，未提交、未推送、未切分支、未安装包。

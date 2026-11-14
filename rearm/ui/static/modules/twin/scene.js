@@ -114,8 +114,24 @@ export function createScene(container, config) {
 
   // 末端：导轨 + 两根夹指（工具坐标系 +X 为指向）
   const tool = frame("tool"), rail = shape.gripperRail, finger = shape.finger;
+  const slidingParts = [];
+  let openingMm = finger.opening * 1000;
+  function slidePart(mesh, mount, center = [0, 0, 0]) {
+    mesh.rotation.set(...mount.rpy);
+    slidingParts.push({ mesh, mount, center });
+  }
+  function setOpening(value) {
+    if (Number.isFinite(value)) openingMm = value;
+    for (const { mesh, mount, center } of slidingParts) {
+      mesh.position.set(...mount.xyz.map((v, i) => v + center[i] + mount.axis[i] * openingMm / 2000));
+    }
+  }
   box(tool, rail.size, "body", rail.center);
-  for (const side of [-1, 1]) box(tool, [finger.length, finger.thickness, finger.height], "finger", [-finger.length / 2, side * (finger.opening + finger.thickness) / 2, 0]);
+  for (const mount of config.gripper.fingers) {
+    slidePart(box(tool, [finger.length, finger.thickness, finger.height], "finger"), mount,
+      [-finger.length / 2, mount.axis[1] * finger.thickness / 2, 0]);
+  }
+  setOpening(openingMm);
 
   // 激光束：从工具原点沿工具 +X 打到地面
   const laserGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
@@ -138,10 +154,14 @@ export function createScene(container, config) {
   }
 
   let lastFrames = null;
-  function setPose(urdfAngles, { laserOn = false, dimmed = false } = {}) {
-    const { frames, tool: toolMatrix } = forward(config, urdfAngles);
+  function setPose(urdfAngles, options = {}) {
+    setPoseMatrices(forward(config, urdfAngles), options);
+  }
+  // 六轴入口直接使用已算好的矩阵，禁止再调用带限位夹取的旧 forward。
+  function setPoseMatrices({ frames, end_link: toolMatrix }, { laserOn = false, dimmed = false, gripperMm = null } = {}) {
     lastFrames = { ...frames, tool: toolMatrix };
     for (const [id, matrix] of Object.entries(lastFrames)) { links[id].matrix.set(...matrix); links[id].matrixWorldNeedsUpdate = true; }
+    setOpening(gripperMm);
     const origin = position(toolMatrix), dir = [toolMatrix[0], toolMatrix[4], toolMatrix[8]], floor = -lift;
     const reach = dir[2] < -1e-3 ? (floor - origin[2]) / dir[2] : 0, hit = reach > 0 && reach < 3;
     laser.visible = spot.visible = hit;
@@ -174,12 +194,14 @@ export function createScene(container, config) {
       geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(buffer, item.positions.offset, item.positions.count), 3));
       geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(buffer, item.indices.offset, item.indices.count), 1));
       const mesh = new THREE.Mesh(geometry, materials[SKIN[item.material]]);
-      if (item.side) mesh.position.y = (item.side === "left" ? 1 : -1) * shape.finger.opening / 2;
+      const mount = config.gripper.fingers.find(f => f.side === item.side);
+      if (mount) slidePart(mesh, mount);
       added.push([group, mesh]);
     }
     if (!added.length) throw new Error("外形文件里没有可用的零件");
     world.traverse(o => { if (o.userData.simple) o.visible = false; });
     for (const [group, mesh] of added) group.add(mesh);
+    setOpening(openingMm);
     skinned = true;
   }
 
@@ -193,7 +215,7 @@ export function createScene(container, config) {
 
   applyTheme(); resize();
   return {
-    canvas, setPose, project, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
+    canvas, setPose, setPoseMatrices, project, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
     orbit(dAzimuth, dElevation) { view.azimuth += dAzimuth; view.elevation = Math.min(1.35, Math.max(-0.1, view.elevation + dElevation)); },
     zoom(factor) { view.distance = Math.min(3, Math.max(0.7, view.distance * factor)); },
     resetView() { Object.assign(view, home); },
