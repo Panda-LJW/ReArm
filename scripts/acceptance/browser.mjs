@@ -102,6 +102,13 @@ export async function fresh(ctx, name = 'production') {
   await ctx.page.reload();
   // 等连接就绪（急停可点）再开始量，否则会量到启动瞬间“连接就绪后可操作”的过渡态。
   await ctx.page.locator('[data-action="estop"]:not([aria-disabled="true"])').waitFor({ state: 'visible' });
+  // 再等“不可用按钮”的集合连续 500ms 不变：零件库等数据到达前的过渡态不算页面的稳定状态。
+  await ctx.page.waitForFunction(() => {
+    const now = [...document.querySelectorAll('button,[role="button"]')].map(el => el.getAttribute('aria-disabled') || '').join('|');
+    const w = window.__node1Settle ||= { key: null, since: 0 };
+    if (w.key !== now) { w.key = now; w.since = performance.now(); }
+    return performance.now() - w.since >= 500;
+  }, null, { polling: 100, timeout: 5000 });
   await ctx.page.locator(`[data-page="${name}"]`).waitFor({ state: 'visible' });
 }
 

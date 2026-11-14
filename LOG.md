@@ -316,3 +316,20 @@
 - 验证：保存 stateVersion 14；全部页面文字、位置、字号、字重、图片与目标备份核对无差异，11 个修改页重新渲染并查看整套拼版。
 - 遗留：视频尚未嵌入，未测试现场 PowerPoint 播放。
 - 回滚：优化版快照保存在 restore-v1-20261115/backup，仍可使用 attention-v2 的 applyFocus 重新切换；不修改项目其他工作。
+
+
+## NODE1-T5-20261115：零件库、文档与共用三步训练
+
+- 日期：2026-11-15（Asia/Taipei）。目标：仅完成路演节点① T5；运行完整 pytest 和 node --check，正式验收及提交由外部执行。
+- 修改文件：rearm/ui/static/modules/console/pages/parts/index.js；docs/路演/tasks/卡点.md；LOG.md、LOG-INDEX.md 仅追加。
+- 新增文件：console/pages/parts/parts.css；views/{part-list,recipe-list,library-list,part-doc,recipe-doc,library-doc,new-flow,identify-step,recipe-fields,training-record,shape,format}.js；console/widgets/line-chart.js；tests/test_console_parts.py。所有新控制台 JS 少于 200 行，没有新增依赖。
+- 目标与结构：供操作员查看零件/配方及训练结果，主操作为新增；沿用既有品牌、原生 ES 模块和 T2 数据层。组件为 parts→双分页列表/文档/new-flow；两种文档共用读取与训练记录组件，两种新增共用左侧三步流程，重训从第二步进入。没有全局改版、替换框架、改变协议、跨页导入或移动模块边界。
+- 展示：列表提供外形 SVG、名称、编号、版本和收录时间；文档覆盖清单 3.2/3.3，夹持力一位小数，依据使用原 force_basis 字段；配方展示工装、顺序和可打开的零件文档。训练记录包含逐轮偏差、阈值、试抓记录、图像数、用时和成功率；照片缺失时使用轮廓，无录像字段时不创建录像行，提供录像时可播放且默认静音。
+- 曲线：从旧 deviation-chart 的线性刻度与 1/2/5 取整规则独立重写，无旧模块 import；SVG 只画线和点，文字使用 HTML 与 --fs-sm，避免随 SVG 缩小。偏差用 --data、阈值用 --warn，同时以实线/虚线及文字区分。
+- 流程：拍照识别等待本次 part_candidate，名称编号保持用户输入；配方由 store 的工位和零件选择，支持顺序调整；train_start 后由真实进度消息增长曲线，train_done 才进入“训练完成 · 已收录”。新增零件/配方分别使列表 4→5、1→2；重训传原 draft.id，文档版本 1→2且列表不增加。
+- 互斥与错误：复用 trainReason/startReason 和统一 aria-disabled/data-reason，点击前重新读取 store；训练中顶栏显示训练中，生产开始不可用，生产期间训练不可用。主机拒绝、识别中断、急停和重置均不伪造成功；旧候选隔离，暂停 RAF 后仍能按同次完成记录恢复第三步。未更改任何急停、限位、安全实现。
+- 视觉与状态自查：用表格和单一详情区避免重复卡片；沿用颜色变量避免装饰色；输入控件和展开依据保持节点以避免高频刷新丢失；滚动限定在页面内部以容纳长文档；曲线文字不放进缩放 SVG。空列表、读取错误/重试、训练拒绝、禁用原因、键盘 tab 切换与焦点样式都有对应处理。实际浏览器渲染未验证。
+- 验证：开工 401 passed in 33.74s；最终 413 passed in 37.28s，新增 12 项，零失败/零跳过，原测试未删改。14 个新增/改动 JS 的 node --check 全过。测试使用既有 pytest→node/JSDOM、真实 store/模拟主机和虚拟时间，不启动浏览器或服务。
+- 验收对照：逐条核对 library-checks.mjs 的数量、钩子、文档曲线、夹持力格式、名称编号、三步、30 秒完成及同页增量判断，第 13 条预计转绿；其他界面的按钮、措辞、布局规则一并静态核对，但不提前宣称第 9、12、14 条通过。详细选择器映射已追加卡点.md。
+- 遗留：没有运行 node1.sh 或其他验收入口，没有实际画面、鼠标时序、三种分辨率及新截图证据；未更新正式报告。训练录像与正式 3D 素材未提供，后端联调仍待后续节点。未开始 T6，没有 git add/commit，没有修改 scripts/acceptance/、旧首页/训练模块、孪生、数据源、README 或 SPEC，保留开工时其他未跟踪文件。
+- 回滚：开工 HEAD 为 206feddb16eff00b9477f42c90dad05edf7f7e3d；改前 parts/index.js 和三份文档副本存于 /private/tmp/rearm-node1-t5-before。只恢复本轮 index.js、移除本轮新增 parts 文件/line-chart.js/测试，按段撤销本轮日志及卡点追加；不要整文件覆盖其他会话新增内容。
