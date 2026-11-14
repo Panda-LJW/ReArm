@@ -261,7 +261,8 @@ function drawOverlay(recent){
 function setupCanvas(cv){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=Math.max(1,r.width*d);cv.height=Math.max(1,r.height*d);const g=cv.getContext("2d");g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,r.width,r.height);return[g,r.width,r.height]}
 function nice(v){const p=10**Math.floor(Math.log10(v/4)),step=[1,2,5,10].map(m=>m*p).find(x=>v/x<=4);return[Math.ceil(v/step-1e-9)*step,step]}
 function axes(g,w,h,ymax,step,pad){const scale=px("--fs-chart")/10;g.font=chartFont();g.fillStyle=K.mute;g.strokeStyle=K.grid;g.lineWidth=1;g.textAlign="left";const d=step>=1?0:step>=.1?1:2;
-  for(let v=0;v<=ymax+1e-9;v+=step){const y=pad.t+(h-pad.t-pad.b)*(1-v/ymax);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(f(v,d),2*scale,y+3*scale)}}
+  /* On a short chart, skip tick labels that would sit on top of the previous one; grid lines stay. */
+  let lastY=Infinity;for(let v=0;v<=ymax+1e-9;v+=step){const y=pad.t+(h-pad.t-pad.b)*(1-v/ymax);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();if(Math.abs(lastY-y)>=11*scale){g.fillText(f(v,d),2*scale,y+3*scale);lastY=y}}}
 function emptyChart(g,h,pad,msg){g.fillStyle=K.mute;g.font=chartFont("--fs-chart-empty",V("--sans"));g.textAlign="left";g.fillText(msg,pad.l,h/2)}
 /* Log scale: a healthy arm sits near 1 mm and a damaged one near 100 mm, and both must stay readable. */
 function drawErr(){
@@ -271,7 +272,7 @@ function drawErr(){
   const vals=rec.map(s=>mag(s.residual)),FLOOR=.1,top=Math.max(alarm*3,...vals.filter(v=>v!=null))*1.5,lo=Math.log10(FLOOR),span=Math.log10(top)-lo;
   const X=i=>pad.l+(w-pad.l-pad.r)*(rec.length<2?.5:i/(rec.length-1)),Y=v=>pad.t+(h-pad.t-pad.b)*(1-(Math.log10(Math.max(v,FLOOR))-lo)/span),base=h-pad.b;
   g.font=chartFont();g.lineWidth=1;g.textAlign="left";
-  for(let t=FLOOR;t<=top;t*=10){const y=Y(t);g.strokeStyle=K.grid;g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillStyle=K.mute;g.fillText(t<1?"0.1":String(Math.round(t)),2*scale,y+3*scale)}
+  let lastTick=Infinity;for(let t=FLOOR;t<=top;t*=10){const y=Y(t);g.strokeStyle=K.grid;g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();if(Math.abs(lastTick-y)>=11*scale){g.fillStyle=K.mute;g.fillText(t<1?"0.1":String(Math.round(t)),2*scale,y+3*scale);lastTick=y}}
   g.strokeStyle=K.vline;g.setLineDash([2,3]);let lastLabel=-99*scale;
   for(let i=1;i<rec.length;i++)if(rec[i].version_id!==rec[i-1].version_id&&rec[i].role!=="preview"&&rec[i-1].role!=="preview"){g.beginPath();g.moveTo(X(i),pad.t);g.lineTo(X(i),base);g.stroke();
     if(X(i)-lastLabel>44*scale&&X(i)<w-pad.r-40*scale){g.fillStyle=K.mute;g.fillText(rec[i].version_id,X(i)+3*scale,pad.t+7*scale);lastLabel=X(i)}}

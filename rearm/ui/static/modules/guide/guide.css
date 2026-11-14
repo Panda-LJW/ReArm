@@ -1,0 +1,16 @@
+/* 解说条：一行字说明“现在在做什么、下一步做什么”。颜色、字号全部走变量，路演模式自动放大。 */
+.statusbars{display:grid;gap:6px}
+.statusbars:has(.guide:not([hidden])){margin-bottom:var(--gap)}
+.guide{display:flex;align-items:center;gap:.7em;min-width:0;padding:.35em .9em;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-size:var(--fs-md);line-height:1.35}
+.guide-icon{font-style:normal;flex:none;color:var(--cyan)}
+.guide-now{color:var(--text);font-weight:500;min-width:0}
+.guide-next{color:var(--sub);min-width:0;flex:1}
+.guide-step{flex:none;color:var(--sub);font-family:var(--mono);margin-left:auto}
+.guide-demo{flex:none;white-space:nowrap;padding:.2em .8em}
+.guide-next:empty{flex:1}
+.guide[data-tone="busy"]{border-color:var(--warn)}.guide[data-tone="busy"] .guide-icon{color:var(--warn)}
+.guide[data-tone="bad"]{border-color:var(--bad)}.guide[data-tone="bad"] .guide-icon{color:var(--bad)}
+.guide[data-tone="demo"]{border-color:var(--accent)}.guide[data-tone="demo"] .guide-icon{color:var(--accent-2)}
+/* 演示进行中：脚本台词是主角，放大一号 */
+.guide[data-tone="demo"] .guide-now,.guide:has(.guide-step:not([hidden])) .guide-now{font-size:var(--fs-lg)}
+@media(max-width:720px){.guide{flex-wrap:wrap}.guide-next{flex-basis:100%}}

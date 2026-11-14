@@ -48,6 +48,15 @@ await optional("twin", async () => {
   } catch (error) { card.hidden = true; document.body.classList.remove("has-twin"); throw error; }
 });
 
+// 解说条与一键演示：一句话说明“现在在做什么、下一步做什么”；仿真时可按脚本自动走完一次自愈。
+await optional("guide", async () => {
+  const slot = document.getElementById("guideslot");
+  if (!slot || params.get("guide") === "off") throw new Error("已关闭或页面没有挂载位");
+  const [{ initGuide }] = await Promise.all([import("./guide/guide.js"), loadCss("guide/guide.css")]);
+  initGuide({ slot, params });
+  document.dispatchEvent(new CustomEvent("rearm:modules-ready"));
+});
+
 // 路演模式
 await optional("presentation", async () => {
   const [{ initPresentation }] = await Promise.all([import("./presentation/presentation.js"), loadCss("presentation/presentation.css")]);
