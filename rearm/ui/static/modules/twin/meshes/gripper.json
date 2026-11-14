@@ -1,0 +1,78 @@
+{
+ "model": "ReArm 自制矩形夹指",
+ "units": "m",
+ "simplified": false,
+ "triangles": 5760,
+ "source": "hardware/gripper/机械臂夹具.STEP",
+ "source_sha256": "b9f5851a8b50e8d74c0fe8a99124e55812df4ea8e2f6cd8c65fa827af39f8de2",
+ "generator": "gmsh 4.15.2 / OpenCASCADE; mesh min 2 mm, max 4 mm, curvature 20",
+ "step_bounds_mm": {
+  "min": [
+   -12.5,
+   -20.0,
+   -0.0
+  ],
+  "max": [
+   12.5,
+   20.0,
+   65.5
+  ],
+  "size": [
+   25.0,
+   40.0,
+   65.5
+  ]
+ },
+ "assembly": {
+  "mount": {
+   "xyz": [
+    -0.065,
+    0.0125,
+    0
+   ],
+   "rpy": [
+    1.5707963267948966,
+    0,
+    1.5707963267948966
+   ]
+  },
+  "flipRpy": [
+   3.141592653589793,
+   0,
+   0
+  ],
+  "tipX": 0.0005
+ },
+ "opening_mm": 0,
+ "note": "照片估算安装；STEP +Z 伸出，Z=0 四孔根面贴滑块。右指绕 end_link X 翻转 180°。",
+ "parts": [
+  {
+   "frame": "tool",
+   "source": "custom_finger_left",
+   "side": "left",
+   "material": "finger_white",
+   "positions": {
+    "offset": 0,
+    "count": 4290
+   },
+   "indices": {
+    "offset": 17160,
+    "count": 8640
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "custom_finger_right",
+   "side": "right",
+   "material": "finger_grey",
+   "positions": {
+    "offset": 51720,
+    "count": 4290
+   },
+   "indices": {
+    "offset": 68880,
+    "count": 8640
+   }
+  }
+ ]
+}

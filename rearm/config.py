@@ -42,7 +42,7 @@ def load_config(root: str | Path = "config") -> Settings:
         "pool": ("seed", "samples", "size", "margin_mm", "jacobian_step", "condition_epsilon"),
         "ik": ("starts", "max_nfev", "tolerance_mm", "invalid_penalty"),
         "numeric": ("epsilon", "optimizer_tolerance"), "task": ("speed", "settle_seconds", "initial_q"),
-        "ui": ("host", "port", "history"),
+        "ui": ("host", "port", "history", "preview_valid_s", "undo_s", "camera_jpeg_quality"),
     }
     for section, keys in required.items():
         for key in keys:

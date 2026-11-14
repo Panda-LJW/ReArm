@@ -2,18 +2,20 @@ import ast
 import asyncio
 import json
 from pathlib import Path
+from urllib.parse import urlsplit
 from rearm.app import build_app
 from rearm.ui.server import create_server
 
 
 def request(app,path,method="GET",payload=None):
+    url = urlsplit(path)
     async def run():
         messages=[]
         body=json.dumps(payload or {}).encode()
         async def receive(): return {"type":"http.request","body":body,"more_body":False}
         async def send(message): messages.append(message)
         await app({"type":"http","asgi":{"version":"3.0","spec_version":"2.4"},"http_version":"1.1","method":method,
-                   "scheme":"http","path":path,"raw_path":path.encode(),"query_string":b"",
+                   "scheme":"http","path":url.path,"raw_path":url.path.encode(),"query_string":url.query.encode(),
                    "headers":[(b"content-type",b"application/json")],"server":("localhost",8000),"client":("test",0)},receive,send)
         status=next(m["status"] for m in messages if m["type"]=="http.response.start")
         return status,b"".join(m.get("body",b"") for m in messages if m["type"]=="http.response.body")
@@ -23,8 +25,11 @@ def request(app,path,method="GET",payload=None):
 def test_http_state_commands_and_static(config,tmp_path):
     controller=build_app(config,tmp_path)
     server=create_server(controller,controller.bus,controller.snapshot())
-    assert request(server,"/")[0]==200
-    assert b"WebSocket" in request(server,"/")[1]
+    assert request(server,"/?legacy=1")[0]==200
+    html=request(server,"/?legacy=1")[1]
+    assert b'/static/app.js' in html and b'/static/app.css' in html
+    assert b'<style>' not in html and b'<script>' not in html
+    assert b"WebSocket" in request(server,"/static/app.js")[1]
     status,body=request(server,"/api/state")
     assert status==200 and json.loads(body)["head"]["id"]=="v0001"
     assert request(server,"/api/command/inject","POST",{"kind":"j1","amount":1})[0]==200

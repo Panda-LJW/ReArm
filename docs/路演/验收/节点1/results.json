@@ -1,0 +1,740 @@
+{
+  "timestamp": "2026-11-14T21:07:22.947Z",
+  "mainBaseline": "57785e8f95837f0d2384b4f5968cba225821434c",
+  "results": [
+    {
+      "id": 1,
+      "name": "单元测试",
+      "ok": true,
+      "notes": [
+        "pytest exit=0，423 passed；原始输出：pytest.log"
+      ],
+      "shots": []
+    },
+    {
+      "id": 2,
+      "name": "页面报错",
+      "ok": true,
+      "notes": [
+        "pageerror/console.error 及浏览器错误共 0 条"
+      ],
+      "shots": []
+    },
+    {
+      "id": 3,
+      "name": "导航",
+      "ok": true,
+      "notes": [
+        "导航=[{\"page\":\"production\",\"text\":\"生产\",\"visible\":true},{\"page\":\"parts\",\"text\":\"零件库\",\"visible\":true},{\"page\":\"records\",\"text\":\"记录\",\"visible\":true},{\"page\":\"settings\",\"text\":\"设置\",\"visible\":true}]",
+        "四页逐个点击，根元素可见且文字非空"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-nav-production.png",
+        "2026-11-14T21-05-06-164Z-nav-parts.png",
+        "2026-11-14T21-05-06-164Z-nav-records.png",
+        "2026-11-14T21-05-06-164Z-nav-settings.png"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "二次确认",
+      "ok": true,
+      "notes": [
+        "未勾选不可用，鼠标/Enter/Space 无效；勾选后可用"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-confirm.png"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "生产流程",
+      "ok": true,
+      "notes": [
+        "状态=[\"自检中\",\"识别中\",\"抓取中\",\"放置中\",\"抓取中\",\"放置中\",\"检查中\",\"完成\",\"待命\"]；回待命耗时=38016.59999999404 ms"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-production-confirm.png",
+        "2026-11-14T21-05-06-164Z-production-selfcheck.png",
+        "2026-11-14T21-05-06-164Z-production-recognize.png",
+        "2026-11-14T21-05-06-164Z-production-pick.png",
+        "2026-11-14T21-05-06-164Z-production-place.png",
+        "2026-11-14T21-05-06-164Z-production-inspect.png",
+        "2026-11-14T21-05-06-164Z-production-done.png",
+        "2026-11-14T21-05-06-164Z-production-idle.png"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "检查结果",
+      "ok": true,
+      "notes": [
+        "检查结果=到位；完成套数 0 → 1"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-result.png"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "急停",
+      "ok": true,
+      "notes": [
+        "位置尺寸={\"top\":12,\"height\":48,\"right\":1416,\"rightmost\":true,\"gap\":24,\"abovePages\":true}",
+        "急停后 5 秒状态=急停；变化=[{\"text\":\"急停\",\"ms\":15.299999997019768}]；estop 指令=true"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-estop.png"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "一键重置",
+      "ok": true,
+      "notes": [
+        "急停后仅点一次重置即待命，套数=0；再点开始出现确认框"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-reset.png"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "状态和按钮分开",
+      "ok": true,
+      "notes": [
+        "确认: cursor=help，提示首现=866.8000000044703 ms，1.2秒采样={\"ms\":1216.6000000014901,\"visible\":true,\"text\":\"请先确认工作区附近无人\"}",
+        "检查 21 个按钮文案及 1 个不可用按钮悬停"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-disabled-tooltip.png"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "孪生标签",
+      "ok": true,
+      "notes": [
+        "6 个标签默认隐藏；锚点 (385.0743065712831, 543.231980860434) 悬停可见"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-twin-hover.png"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "空数据",
+      "ok": true,
+      "notes": [
+        "{\"state\":\"待命\",\"token\":\"#ff5d5d\",\"bad\":\"rgb(255, 93, 93)\",\"hits\":[]}"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-empty-data.png"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "措辞",
+      "ok": true,
+      "notes": [
+        "确认: cursor=help，提示首现=866.6999999955297 ms，1.2秒采样={\"ms\":1216.5,\"visible\":true,\"text\":\"请先确认工作区附近无人\"}",
+        "开始训练: cursor=help，提示首现=866.8000000044703 ms，1.2秒采样={\"ms\":1203.4000000059605,\"visible\":true,\"text\":\"正在训练，完成后可再次开始\"}",
+        "part 新增三步完成，训练自动结束并显示“训练完成 · 已收录”",
+        "确认配方: cursor=help，提示首现=867 ms，1.2秒采样={\"ms\":1216.3999999985099,\"visible\":true,\"text\":\"请填写名称和编号\"}",
+        "开始训练: cursor=help，提示首现=892.6000000014901 ms，1.2秒采样={\"ms\":1253.5,\"visible\":true,\"text\":\"正在训练，完成后可再次开始\"}",
+        "recipe 新增三步完成，训练自动结束并显示“训练完成 · 已收录”",
+        "已读取 innerText 的界面：production、parts、records、settings、确认框、part 文档、part 新增步骤1、part 开始训练前、part 新增步骤2、part 新增步骤3、recipe 文档、recipe 新增步骤1、recipe 开始训练前、recipe 新增步骤2、recipe 新增步骤3"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-part-doc.png",
+        "2026-11-14T21-05-06-164Z-part-step1.png",
+        "2026-11-14T21-05-06-164Z-part-step2.png",
+        "2026-11-14T21-05-06-164Z-part-step3.png",
+        "2026-11-14T21-05-06-164Z-recipe-doc.png",
+        "2026-11-14T21-05-06-164Z-recipe-step1.png",
+        "2026-11-14T21-05-06-164Z-recipe-step2.png",
+        "2026-11-14T21-05-06-164Z-recipe-step3.png"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "零件库",
+      "ok": true,
+      "notes": [
+        "零件=4；配方=1",
+        "零件文档偏差折线点数=8",
+        "零件文档偏差曲线可见，夹持力=11.6 N",
+        "配方文档偏差折线点数=10",
+        "part 新增三步完成，训练自动结束并显示“训练完成 · 已收录”",
+        "新增后零件数=5，原=4"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-part-doc.png",
+        "2026-11-14T21-05-06-164Z-recipe-doc.png",
+        "2026-11-14T21-05-06-164Z-part-step1.png",
+        "2026-11-14T21-05-06-164Z-part-step2.png",
+        "2026-11-14T21-05-06-164Z-part-step3.png",
+        "2026-11-14T21-05-06-164Z-library-after-training.png"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "布局",
+      "ok": true,
+      "notes": [
+        "1440×900 production: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":12,\"minEl\":\"production-muted:—\",\"textCount\":28,\"clipped\":[],\"clippedCards\":[]}",
+        "1440×900 parts: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":12,\"minEl\":\"TH:外形\",\"textCount\":32,\"clipped\":[],\"clippedCards\":[]}",
+        "1440×900 records: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":14,\"minEl\":\"A:生产\",\"textCount\":46,\"clipped\":[],\"clippedCards\":[]}",
+        "1440×900 settings: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":13,\"minEl\":\"P:只读\",\"textCount\":21,\"clipped\":[],\"clippedCards\":[]}",
+        "1512×982 production: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":12,\"minEl\":\"production-muted:—\",\"textCount\":28,\"clipped\":[],\"clippedCards\":[]}",
+        "1512×982 parts: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":12,\"minEl\":\"TH:外形\",\"textCount\":32,\"clipped\":[],\"clippedCards\":[]}",
+        "1512×982 records: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":14,\"minEl\":\"A:生产\",\"textCount\":46,\"clipped\":[],\"clippedCards\":[]}",
+        "1512×982 settings: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":13,\"minEl\":\"P:只读\",\"textCount\":21,\"clipped\":[],\"clippedCards\":[]}",
+        "1920×1080 production: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":12,\"minEl\":\"production-muted:—\",\"textCount\":28,\"clipped\":[],\"clippedCards\":[]}",
+        "1920×1080 parts: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":12,\"minEl\":\"TH:外形\",\"textCount\":32,\"clipped\":[],\"clippedCards\":[]}",
+        "1920×1080 records: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":14,\"minEl\":\"A:生产\",\"textCount\":46,\"clipped\":[],\"clippedCards\":[]}",
+        "1920×1080 settings: {\"pageScroll\":false,\"hOverflow\":false,\"minFont\":13,\"minEl\":\"P:只读\",\"textCount\":21,\"clipped\":[],\"clippedCards\":[]}"
+      ],
+      "shots": [
+        "2026-11-14T21-05-06-164Z-layout-production-1440x900.png",
+        "2026-11-14T21-05-06-164Z-layout-parts-1440x900.png",
+        "2026-11-14T21-05-06-164Z-layout-records-1440x900.png",
+        "2026-11-14T21-05-06-164Z-layout-settings-1440x900.png",
+        "2026-11-14T21-05-06-164Z-layout-production-1512x982.png",
+        "2026-11-14T21-05-06-164Z-layout-parts-1512x982.png",
+        "2026-11-14T21-05-06-164Z-layout-records-1512x982.png",
+        "2026-11-14T21-05-06-164Z-layout-settings-1512x982.png",
+        "2026-11-14T21-05-06-164Z-layout-production-1920x1080.png",
+        "2026-11-14T21-05-06-164Z-layout-parts-1920x1080.png",
+        "2026-11-14T21-05-06-164Z-layout-records-1920x1080.png",
+        "2026-11-14T21-05-06-164Z-layout-settings-1920x1080.png"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "不发激光指令",
+      "ok": true,
+      "notes": [
+        "跨页面累计指令=50，laser_ 指令=[]"
+      ],
+      "shots": []
+    },
+    {
+      "id": 16,
+      "name": "不写死地址",
+      "ok": true,
+      "notes": [
+        "扫描 88 个 JS；非 vendor 违规 0 处；vendor 命中 3 处（单列，不计失败）",
+        "不计失败（XML 命名空间标识符）：rearm/ui/static/modules/console/widgets/dom.js:9 http://www.w3.org",
+        "不计失败（占位写法，不是合法主机名）：rearm/ui/static/modules/datasource/device-source.js:2 ws://…",
+        "不计失败（占位写法，不是合法主机名）：rearm/ui/static/modules/datasource/index.js:17 ws://主机:端口",
+        "不计失败（XML 命名空间标识符）：rearm/ui/static/modules/trainer/views/camera.js:34 http://www.w3.org"
+      ],
+      "shots": []
+    },
+    {
+      "id": 17,
+      "name": "仓库卫生",
+      "ok": true,
+      "notes": [
+        "海报素材包.zip tracked=false；main=57785e8f95837f0d2384b4f5968cba225821434c；开工基线=57785e8f95837f0d2384b4f5968cba225821434c"
+      ],
+      "shots": []
+    }
+  ],
+  "infrastructure": null,
+  "errors": [],
+  "evidence": {
+    "confirm": "2026-11-14T21-05-06-164Z-production-confirm.png",
+    "selfcheck": "2026-11-14T21-05-06-164Z-production-selfcheck.png",
+    "recognize": "2026-11-14T21-05-06-164Z-production-recognize.png",
+    "pick": "2026-11-14T21-05-06-164Z-production-pick.png",
+    "place": "2026-11-14T21-05-06-164Z-production-place.png",
+    "inspect": "2026-11-14T21-05-06-164Z-production-inspect.png",
+    "done": "2026-11-14T21-05-06-164Z-production-done.png",
+    "idle": "2026-11-14T21-05-06-164Z-production-idle.png",
+    "part-doc": "2026-11-14T21-05-06-164Z-part-doc.png",
+    "recipe-doc": "2026-11-14T21-05-06-164Z-recipe-doc.png"
+  },
+  "vendorHits": [
+    {
+      "file": "rearm/ui/static/vendor/three.module.min.js",
+      "line": 6,
+      "value": "http://www.w3.org",
+      "host": "www.w3.org"
+    },
+    {
+      "file": "rearm/ui/static/vendor/three.module.min.js",
+      "line": 6,
+      "value": "https://discourse.threejs.org",
+      "host": "discourse.threejs.org"
+    },
+    {
+      "file": "rearm/ui/static/vendor/three.module.min.js",
+      "line": 6,
+      "value": "https://discourse.threejs.org",
+      "host": "discourse.threejs.org"
+    }
+  ],
+  "commands": [
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690307237
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690309001
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690310267
+    },
+    {
+      "recipe_id": "plate-tube",
+      "v": 1,
+      "cmd": "run_start",
+      "seq": 2,
+      "t": 1794690311369
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690350058
+    },
+    {
+      "recipe_id": "plate-tube",
+      "v": 1,
+      "cmd": "run_start",
+      "seq": 2,
+      "t": 1794690351108
+    },
+    {
+      "v": 1,
+      "cmd": "estop",
+      "seq": 3,
+      "t": 1794690360658
+    },
+    {
+      "v": 1,
+      "cmd": "reset_demo",
+      "seq": 4,
+      "t": 1794690365808
+    },
+    {
+      "v": 1,
+      "cmd": "reset_estop",
+      "seq": 5,
+      "t": 1794690365808
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690366215
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690367137
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690367969
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690369072
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690370340
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690372759
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690373900
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690375018
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690375963
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690376649
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690377856
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690379149
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690381353
+    },
+    {
+      "id": "plate",
+      "v": 1,
+      "cmd": "part_get",
+      "seq": 2,
+      "t": 1794690382207
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690382506
+    },
+    {
+      "v": 1,
+      "cmd": "part_capture",
+      "seq": 2,
+      "t": 1794690383406
+    },
+    {
+      "target": "part",
+      "draft": {
+        "name": "环形垫片",
+        "code": "P005",
+        "size_mm": [
+          28,
+          28,
+          6
+        ],
+        "outline": [
+          [
+            0,
+            7
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            21,
+            0
+          ],
+          [
+            28,
+            7
+          ],
+          [
+            28,
+            21
+          ],
+          [
+            21,
+            28
+          ],
+          [
+            7,
+            28
+          ],
+          [
+            0,
+            21
+          ]
+        ],
+        "v": 1,
+        "type": "part_candidate",
+        "seq": 53,
+        "t": 1794690384906
+      },
+      "v": 1,
+      "cmd": "train_start",
+      "seq": 3,
+      "t": 1794690385257
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690395266
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 2,
+      "t": 1794690396018
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690396257
+    },
+    {
+      "target": "recipe",
+      "draft": {
+        "fixture_id": "disc-fixture",
+        "steps": [
+          {
+            "index": 1,
+            "part_id": "plate",
+            "target_id": "post",
+            "target_name": "定位柱"
+          },
+          {
+            "index": 2,
+            "part_id": "tube",
+            "target_id": "post",
+            "target_name": "定位柱"
+          }
+        ],
+        "name": "验收配方-2026-11-14T21-05-06-164Z",
+        "code": "R002"
+      },
+      "v": 1,
+      "cmd": "train_start",
+      "seq": 2,
+      "t": 1794690398707
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690408830
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690409721
+    },
+    {
+      "id": "plate",
+      "v": 1,
+      "cmd": "part_get",
+      "seq": 2,
+      "t": 1794690410575
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690410806
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 2,
+      "t": 1794690411507
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690411768
+    },
+    {
+      "v": 1,
+      "cmd": "part_capture",
+      "seq": 2,
+      "t": 1794690412519
+    },
+    {
+      "target": "part",
+      "draft": {
+        "name": "环形垫片",
+        "code": "P005",
+        "size_mm": [
+          28,
+          28,
+          6
+        ],
+        "outline": [
+          [
+            0,
+            7
+          ],
+          [
+            7,
+            0
+          ],
+          [
+            21,
+            0
+          ],
+          [
+            28,
+            7
+          ],
+          [
+            28,
+            21
+          ],
+          [
+            21,
+            28
+          ],
+          [
+            7,
+            28
+          ],
+          [
+            0,
+            21
+          ]
+        ],
+        "v": 1,
+        "type": "part_candidate",
+        "seq": 51,
+        "t": 1794690414019
+      },
+      "v": 1,
+      "cmd": "train_start",
+      "seq": 3,
+      "t": 1794690414374
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690424684
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690425998
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690427020
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690428733
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690430420
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690431727
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690432838
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690434705
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690436722
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690438134
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690439207
+    },
+    {
+      "id": "plate-tube",
+      "v": 1,
+      "cmd": "recipe_get",
+      "seq": 1,
+      "t": 1794690441189
+    }
+  ],
+  "addresses": []
+}

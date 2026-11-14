@@ -27,7 +27,7 @@ class FileVersionStore:
         with self.lock:
             numbers = [int(p.stem[1:]) for p in self.path.glob("v[0-9]*.json")]
             version_id = f"v{max(numbers, default=0) + 1:04d}"
-            version = Version(version_id, params, residual_id, accepted, meta, reasons)
+            version = Version(version_id, params, residual_id, accepted, {"created": time.time()} | dict(meta), reasons)
             self._atomic(self.path / f"{version_id}.json", json.dumps(jsonable(version), ensure_ascii=False, indent=2, allow_nan=False))
             if accepted:
                 self._atomic(self.path / "HEAD", version_id + "\n")

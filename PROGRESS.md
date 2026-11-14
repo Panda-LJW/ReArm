@@ -38,7 +38,7 @@
 
 ## 最新完整实测
 
-报告：reports/eval_sim_report.md。每类 100 次。
+报告：/private/tmp/claude-501/-Users-superpanda-Library-Application-Support-Claude-scratch-workspaces-567cadb6-d4aa-47e0-be24-7a4504c407f1-50911e8b-fa63-478a-ad9b-b44b5063cb5d-scratch-2026-11-13-409819/e4129127-bffe-49cd-a439-97d927d9ad7f/scratchpad/eval/eval_sim_report.md。每类 100 次。
 
 - 基线：通过；全参数校准；随机靶点 20/20 命中（100.0%），命中半径 10 mm。
 - 误报：通过；无伤 100 发，报警 0 次。
@@ -51,4 +51,4 @@
 - 菜单外的伤：通过；随机松动：拒绝并保留原版本。
 - 残差模型：通过；几何 1.5113 → GP 0.1444 mm；加配重后旧 GP 1.3303 → 重训 0.1582 mm。
 - 回退：通过；重新加载 3 个已采纳版本，最大预测差 0 mm。
-- 测试：通过；pytest 39 项，失败 0，跳过 0；实际执行 True。
+- 测试：未达标；pytest 0 项，失败 0，跳过 0；实际执行 False。

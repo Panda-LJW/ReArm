@@ -1,0 +1,485 @@
+{
+ "model": "reBot Arm B601-DM",
+ "units": "m",
+ "cell_mm": 2.5,
+ "triangles": 64794,
+ "source": "box2ai-robotics/rebot-joycon @ dd97975, URDF/reBot_B601_DM/meshes/colored_*.stl（Seeed 原始设计，CERN-OHL-W-2.0）",
+ "parts": [
+  {
+   "frame": "base",
+   "source": "base_link_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 0,
+    "count": 2457
+   },
+   "indices": {
+    "offset": 9828,
+    "count": 4932
+   }
+  },
+  {
+   "frame": "base",
+   "source": "base_link_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 29556,
+    "count": 7437
+   },
+   "indices": {
+    "offset": 59304,
+    "count": 17292
+   }
+  },
+  {
+   "frame": "base",
+   "source": "base_link_silver_trim",
+   "material": "silver_trim",
+   "side": null,
+   "positions": {
+    "offset": 128472,
+    "count": 3702
+   },
+   "indices": {
+    "offset": 143280,
+    "count": 8022
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "gripper_base_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 175368,
+    "count": 360
+   },
+   "indices": {
+    "offset": 176808,
+    "count": 732
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "gripper_base_metal",
+   "material": "metal",
+   "side": null,
+   "positions": {
+    "offset": 179736,
+    "count": 1773
+   },
+   "indices": {
+    "offset": 186828,
+    "count": 4413
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "gripper_base_seeed_yellow",
+   "material": "seeed_yellow",
+   "side": null,
+   "positions": {
+    "offset": 204480,
+    "count": 2040
+   },
+   "indices": {
+    "offset": 212640,
+    "count": 4548
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "left_finger_carriage_grey",
+   "material": "carriage_grey",
+   "side": "left",
+   "positions": {
+    "offset": 230832,
+    "count": 216
+   },
+   "indices": {
+    "offset": 231696,
+    "count": 468
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "left_finger_finger_black",
+   "material": "finger_black",
+   "side": "left",
+   "positions": {
+    "offset": 233568,
+    "count": 606
+   },
+   "indices": {
+    "offset": 235992,
+    "count": 1263
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "left_finger_rack_metal",
+   "material": "rack_metal",
+   "side": "left",
+   "positions": {
+    "offset": 241044,
+    "count": 582
+   },
+   "indices": {
+    "offset": 243372,
+    "count": 1272
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "left_finger_travel_stop_yellow",
+   "material": "travel_stop_yellow",
+   "side": "left",
+   "positions": {
+    "offset": 248460,
+    "count": 252
+   },
+   "indices": {
+    "offset": 249468,
+    "count": 504
+   }
+  },
+  {
+   "frame": "joint1",
+   "source": "link1_anodized_grey",
+   "material": "anodized_grey",
+   "side": null,
+   "positions": {
+    "offset": 251484,
+    "count": 1758
+   },
+   "indices": {
+    "offset": 258516,
+    "count": 3789
+   }
+  },
+  {
+   "frame": "joint1",
+   "source": "link1_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 273672,
+    "count": 168
+   },
+   "indices": {
+    "offset": 274344,
+    "count": 393
+   }
+  },
+  {
+   "frame": "joint1",
+   "source": "link1_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 275916,
+    "count": 1689
+   },
+   "indices": {
+    "offset": 282672,
+    "count": 3588
+   }
+  },
+  {
+   "frame": "joint2",
+   "source": "link2_anodized_grey",
+   "material": "anodized_grey",
+   "side": null,
+   "positions": {
+    "offset": 297024,
+    "count": 5817
+   },
+   "indices": {
+    "offset": 320292,
+    "count": 13554
+   }
+  },
+  {
+   "frame": "joint2",
+   "source": "link2_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 374508,
+    "count": 1935
+   },
+   "indices": {
+    "offset": 382248,
+    "count": 3696
+   }
+  },
+  {
+   "frame": "joint2",
+   "source": "link2_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 397032,
+    "count": 10341
+   },
+   "indices": {
+    "offset": 438396,
+    "count": 25182
+   }
+  },
+  {
+   "frame": "joint2",
+   "source": "link2_seeed_yellow",
+   "material": "seeed_yellow",
+   "side": null,
+   "positions": {
+    "offset": 539124,
+    "count": 942
+   },
+   "indices": {
+    "offset": 542892,
+    "count": 2037
+   }
+  },
+  {
+   "frame": "joint3",
+   "source": "link3_anodized_grey",
+   "material": "anodized_grey",
+   "side": null,
+   "positions": {
+    "offset": 551040,
+    "count": 7302
+   },
+   "indices": {
+    "offset": 580248,
+    "count": 17244
+   }
+  },
+  {
+   "frame": "joint3",
+   "source": "link3_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 649224,
+    "count": 2646
+   },
+   "indices": {
+    "offset": 659808,
+    "count": 5136
+   }
+  },
+  {
+   "frame": "joint3",
+   "source": "link3_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 680352,
+    "count": 6321
+   },
+   "indices": {
+    "offset": 705636,
+    "count": 13554
+   }
+  },
+  {
+   "frame": "joint3",
+   "source": "link3_seeed_yellow",
+   "material": "seeed_yellow",
+   "side": null,
+   "positions": {
+    "offset": 759852,
+    "count": 1566
+   },
+   "indices": {
+    "offset": 766116,
+    "count": 3174
+   }
+  },
+  {
+   "frame": "joint4",
+   "source": "link4_anodized_grey",
+   "material": "anodized_grey",
+   "side": null,
+   "positions": {
+    "offset": 778812,
+    "count": 2826
+   },
+   "indices": {
+    "offset": 790116,
+    "count": 6198
+   }
+  },
+  {
+   "frame": "joint4",
+   "source": "link4_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 814908,
+    "count": 1557
+   },
+   "indices": {
+    "offset": 821136,
+    "count": 3195
+   }
+  },
+  {
+   "frame": "joint4",
+   "source": "link4_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 833916,
+    "count": 5925
+   },
+   "indices": {
+    "offset": 857616,
+    "count": 13044
+   }
+  },
+  {
+   "frame": "joint4",
+   "source": "link4_seeed_yellow",
+   "material": "seeed_yellow",
+   "side": null,
+   "positions": {
+    "offset": 909792,
+    "count": 1008
+   },
+   "indices": {
+    "offset": 913824,
+    "count": 2061
+   }
+  },
+  {
+   "frame": "joint5",
+   "source": "link5_anodized_grey",
+   "material": "anodized_grey",
+   "side": null,
+   "positions": {
+    "offset": 922068,
+    "count": 2550
+   },
+   "indices": {
+    "offset": 932268,
+    "count": 6039
+   }
+  },
+  {
+   "frame": "joint5",
+   "source": "link5_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 956424,
+    "count": 996
+   },
+   "indices": {
+    "offset": 960408,
+    "count": 1977
+   }
+  },
+  {
+   "frame": "joint5",
+   "source": "link5_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 968316,
+    "count": 3990
+   },
+   "indices": {
+    "offset": 984276,
+    "count": 8736
+   }
+  },
+  {
+   "frame": "joint6",
+   "source": "link6_hardware_black",
+   "material": "hardware_black",
+   "side": null,
+   "positions": {
+    "offset": 1019220,
+    "count": 504
+   },
+   "indices": {
+    "offset": 1021236,
+    "count": 990
+   }
+  },
+  {
+   "frame": "joint6",
+   "source": "link6_matte_black",
+   "material": "matte_black",
+   "side": null,
+   "positions": {
+    "offset": 1025196,
+    "count": 6093
+   },
+   "indices": {
+    "offset": 1049568,
+    "count": 13833
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "right_finger_carriage_grey",
+   "material": "carriage_grey",
+   "side": "right",
+   "positions": {
+    "offset": 1104900,
+    "count": 213
+   },
+   "indices": {
+    "offset": 1105752,
+    "count": 462
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "right_finger_finger_black",
+   "material": "finger_black",
+   "side": "right",
+   "positions": {
+    "offset": 1107600,
+    "count": 603
+   },
+   "indices": {
+    "offset": 1110012,
+    "count": 1251
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "right_finger_rack_metal",
+   "material": "rack_metal",
+   "side": "right",
+   "positions": {
+    "offset": 1115016,
+    "count": 582
+   },
+   "indices": {
+    "offset": 1117344,
+    "count": 1272
+   }
+  },
+  {
+   "frame": "tool",
+   "source": "right_finger_travel_stop_yellow",
+   "material": "travel_stop_yellow",
+   "side": "right",
+   "positions": {
+    "offset": 1122432,
+    "count": 264
+   },
+   "indices": {
+    "offset": 1123488,
+    "count": 531
+   }
+  }
+ ]
+}

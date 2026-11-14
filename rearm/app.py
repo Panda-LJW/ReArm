@@ -22,6 +22,7 @@ from rearm.residual.trainer import TemporalTrainer
 from rearm.residual.zero import ZeroResidual
 from rearm.sim.damage import damaged_params
 from rearm.sim.sim_arm import SimArm
+from rearm.sim.sim_camera import SimCamera
 from rearm.task.shooter import Shooter
 from rearm.types import Damage, Settings
 
@@ -82,11 +83,13 @@ def build_app(config: Settings | None = None, data_dir="runtime", sim=True, seed
                 inject(part)
         else:
             arm.true_params = damaged_params(arm.true_params, damage, config)
-    return Controller(config, arm, geometry, bus, store, JsonlShotLog(root / "shots.jsonl"),
-        Shooter(config, arm), AnomalyDetector(config), Diagnoser(config, geometry, fitter), fitter,
+    controller = Controller(config, arm, geometry, bus, store, JsonlShotLog(root / "shots.jsonl"),
+        Shooter(config, arm, lambda: controller.check_estop(), lambda on: controller.set_laser(on)),
+        AnomalyDetector(config), Diagnoser(config, geometry, fitter), fitter,
         CalibrationGuard(config, geometry), ResidualDataset(config, geometry), TemporalTrainer(config),
         NumericalIK(config, geometry), pool, probe_pool, residual_loader, lambda: GPResidual(config),
         lambda residual: SelfModel(geometry, residual), residual_saver, inject)
+    return controller
 
 
 def serve_ui():
@@ -98,11 +101,29 @@ def serve_ui():
     parser.add_argument("--sim", action="store_true", required=True)
     parser.add_argument("--data-dir", default="runtime")
     parser.add_argument("--nongeometric", action="store_true", help="enable backlash, sag and thermal drift")
+    parser.add_argument("--pace", type=float, default=None, metavar="SECONDS",
+                        help="pause before each shot so an audience can follow (overrides task.settle_seconds, 0-5)")
     args = parser.parse_args()
     config = load_config(Path(__file__).resolve().parents[1] / "config")
+    if args.pace is not None:
+        if not 0 <= args.pace <= 5:
+            parser.error("--pace must be between 0 and 5 seconds")
+        # Presentation pacing only: the same settle time a real arm would need, applied to the simulator.
+        config = replace(config, thresholds=config.thresholds | {"task": config.thresholds["task"] | {"settle_seconds": args.pace}})
     if args.nongeometric:
         config = replace(config, sim=config.sim | {"nongeometric": True})
     controller = build_app(config, data_dir=args.data_dir, sim=args.sim)
-    state = controller.snapshot() | {"history_limit": controller.config.thresholds["ui"]["history"]}
-    server = create_server(controller, controller.bus, state)
+    # Simulated overhead camera: shows the last measured laser spot on the marked board.
+    camera = SimCamera(config)
+    def follow_spot(event):
+        if event.kind == "shot":
+            camera.spot = event.data["shot"]["observed"]
+    controller.bus.subscribe(follow_spot)
+    ui = controller.config.thresholds["ui"]
+    state = controller.snapshot() | {"history_limit": ui["history"],
+        "camera": {k: config.camera[k] for k in ("width", "height", "pixels_per_mm")},
+        "board_mm": config.board_mm.tolist(), "joint_limits": config.joint_limits.tolist(), "alarm_mm": config.thresholds["detector"]["alarm_mm"],
+        "preview_valid_s": ui["preview_valid_s"], "undo_s": ui["undo_s"],
+        "pace_s": config.thresholds["task"]["settle_seconds"]}
+    server = create_server(controller, controller.bus, state, camera, ui["camera_jpeg_quality"])
     uvicorn.run(server, host=controller.config.thresholds["ui"]["host"], port=controller.config.thresholds["ui"]["port"])
