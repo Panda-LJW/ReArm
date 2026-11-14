@@ -1,0 +1,964 @@
+{
+  "note": "由当前 createMockConsole 实际产生；模拟数值不能作为硬件标定。type=link 为本地通知，未列入主机消息。",
+  "messages": {
+    "hello": {
+      "proto": 1,
+      "host_version": "console-v1",
+      "arm": {
+        "model": "reBot Arm B601-DM",
+        "joints": 6
+      },
+      "threshold_mm": 1,
+      "camera": {
+        "width": 640,
+        "height": 480,
+        "url": null,
+        "format": null
+      },
+      "sim": true,
+      "v": 1,
+      "type": "hello",
+      "seq": 1,
+      "t": 1794715200000
+    },
+    "library": {
+      "parts": [
+        {
+          "id": "plate",
+          "name": "薄片",
+          "code": "P001",
+          "shape": "ring",
+          "size_mm": [
+            36,
+            36,
+            5
+          ],
+          "collected_at": 1794616937000,
+          "version": 1
+        },
+        {
+          "id": "tube",
+          "name": "空心圆柱",
+          "code": "P002",
+          "shape": "tube",
+          "size_mm": [
+            26,
+            26,
+            35
+          ],
+          "collected_at": 1794620184000,
+          "version": 1
+        },
+        {
+          "id": "sleeve",
+          "name": "短轴套",
+          "code": "P003",
+          "shape": "tube",
+          "size_mm": [
+            30,
+            30,
+            18
+          ],
+          "collected_at": 1794623271000,
+          "version": 1
+        },
+        {
+          "id": "block",
+          "name": "方垫块",
+          "code": "P004",
+          "shape": "box",
+          "size_mm": [
+            30,
+            24,
+            16
+          ],
+          "collected_at": 1794626948000,
+          "version": 1
+        }
+      ],
+      "recipes": [
+        {
+          "id": "plate-tube",
+          "name": "薄片 + 空心圆柱配套件",
+          "code": "R001",
+          "collected_at": 1794637116000,
+          "version": 1
+        }
+      ],
+      "v": 1,
+      "type": "library",
+      "seq": 2,
+      "t": 1794715200000
+    },
+    "run_state": {
+      "run_id": null,
+      "recipe_id": null,
+      "step_index": 0,
+      "step_total": 0,
+      "part_id": null,
+      "phase": "idle",
+      "v": 1,
+      "type": "run_state",
+      "seq": 3,
+      "t": 1794715200000
+    },
+    "joint_state": {
+      "mode": "idle",
+      "q": [
+        0,
+        -2.85,
+        -2.75,
+        1.2,
+        0,
+        0
+      ],
+      "gripper_mm": 57,
+      "dq": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "current": [
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2
+      ],
+      "temp": [
+        28,
+        28,
+        28,
+        28,
+        28,
+        28
+      ],
+      "valid": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "gripper_valid": true,
+      "pass": null,
+      "node": null,
+      "settled": true,
+      "fault": null,
+      "v": 1,
+      "type": "joint_state",
+      "seq": 4,
+      "t": 1794715200000
+    },
+    "part_doc": {
+      "id": "plate",
+      "name": "薄片",
+      "code": "P001",
+      "shape": "ring",
+      "size_mm": [
+        36,
+        36,
+        5
+      ],
+      "photo_url": null,
+      "outline": [
+        [
+          36,
+          18
+        ],
+        [
+          34.62983158520316,
+          24.888301782571617
+        ],
+        [
+          30.727922061357855,
+          30.727922061357855
+        ],
+        [
+          24.888301782571617,
+          34.62983158520316
+        ],
+        [
+          18,
+          36
+        ],
+        [
+          11.111698217428385,
+          34.62983158520316
+        ],
+        [
+          5.272077938642146,
+          30.727922061357855
+        ],
+        [
+          1.3701684147968387,
+          24.888301782571617
+        ],
+        [
+          0,
+          18.000000000000004
+        ],
+        [
+          1.3701684147968367,
+          11.111698217428387
+        ],
+        [
+          5.272077938642141,
+          5.272077938642146
+        ],
+        [
+          11.111698217428374,
+          1.3701684147968427
+        ],
+        [
+          17.999999999999996,
+          0
+        ],
+        [
+          24.88830178257162,
+          1.3701684147968407
+        ],
+        [
+          30.727922061357855,
+          5.272077938642141
+        ],
+        [
+          34.629831585203156,
+          11.111698217428373
+        ]
+      ],
+      "force_n": 11.6,
+      "force_basis": {
+        "estimated_mass_kg": 0.01182466870540265,
+        "material": "铝合金",
+        "friction_coefficient": 0.03,
+        "safety_factor": 6,
+        "gravity_m_s2": 9.81,
+        "fingers": 2
+      },
+      "opening": "full",
+      "training": {
+        "threshold_mm": 1,
+        "rounds": [
+          {
+            "round": 1,
+            "deviation_mm": 4.8,
+            "grasp_ok": false,
+            "images": 490,
+            "elapsed_ms": 245000
+          },
+          {
+            "round": 2,
+            "deviation_mm": 3.9,
+            "grasp_ok": true,
+            "images": 980,
+            "elapsed_ms": 490000
+          },
+          {
+            "round": 3,
+            "deviation_mm": 3.1,
+            "grasp_ok": true,
+            "images": 1470,
+            "elapsed_ms": 735000
+          },
+          {
+            "round": 4,
+            "deviation_mm": 2.4,
+            "grasp_ok": true,
+            "images": 1960,
+            "elapsed_ms": 980000
+          },
+          {
+            "round": 5,
+            "deviation_mm": 1.9,
+            "grasp_ok": true,
+            "images": 2450,
+            "elapsed_ms": 1225000
+          },
+          {
+            "round": 6,
+            "deviation_mm": 1.4,
+            "grasp_ok": true,
+            "images": 2940,
+            "elapsed_ms": 1470000
+          },
+          {
+            "round": 7,
+            "deviation_mm": 1.1,
+            "grasp_ok": true,
+            "images": 3430,
+            "elapsed_ms": 1715000
+          },
+          {
+            "round": 8,
+            "deviation_mm": 0.7,
+            "grasp_ok": true,
+            "images": 3920,
+            "elapsed_ms": 1960000
+          }
+        ],
+        "grasp_records": [
+          {
+            "round": 1,
+            "ok": false
+          },
+          {
+            "round": 2,
+            "ok": true
+          },
+          {
+            "round": 3,
+            "ok": true
+          },
+          {
+            "round": 4,
+            "ok": true
+          },
+          {
+            "round": 5,
+            "ok": true
+          },
+          {
+            "round": 6,
+            "ok": true
+          },
+          {
+            "round": 7,
+            "ok": true
+          },
+          {
+            "round": 8,
+            "ok": true
+          }
+        ],
+        "images": 3920,
+        "elapsed_ms": 1960000,
+        "success_rate": 0.875,
+        "recorded_at": 1794616937000
+      },
+      "collected_at": 1794616937000,
+      "version": 1,
+      "v": 1,
+      "type": "part_doc",
+      "seq": 6,
+      "t": 1794715200000
+    },
+    "recipe_doc": {
+      "id": "plate-tube",
+      "name": "薄片 + 空心圆柱配套件",
+      "code": "R001",
+      "fixture_id": "disc-fixture",
+      "fixture_name": "圆盘定位工装",
+      "steps": [
+        {
+          "index": 1,
+          "part_id": "plate",
+          "target_id": "post",
+          "target_name": "定位柱"
+        },
+        {
+          "index": 2,
+          "part_id": "tube",
+          "target_id": "post",
+          "target_name": "定位柱"
+        }
+      ],
+      "part_ids": [
+        "plate",
+        "tube"
+      ],
+      "training": {
+        "threshold_mm": 1,
+        "rounds": [
+          {
+            "round": 1,
+            "deviation_mm": 5.2,
+            "grasp_ok": false,
+            "images": 574,
+            "elapsed_ms": 287000
+          },
+          {
+            "round": 2,
+            "deviation_mm": 4.4,
+            "grasp_ok": true,
+            "images": 1148,
+            "elapsed_ms": 574000
+          },
+          {
+            "round": 3,
+            "deviation_mm": 3.6,
+            "grasp_ok": true,
+            "images": 1722,
+            "elapsed_ms": 861000
+          },
+          {
+            "round": 4,
+            "deviation_mm": 2.9,
+            "grasp_ok": true,
+            "images": 2296,
+            "elapsed_ms": 1148000
+          },
+          {
+            "round": 5,
+            "deviation_mm": 2.3,
+            "grasp_ok": true,
+            "images": 2870,
+            "elapsed_ms": 1435000
+          },
+          {
+            "round": 6,
+            "deviation_mm": 1.8,
+            "grasp_ok": true,
+            "images": 3444,
+            "elapsed_ms": 1722000
+          },
+          {
+            "round": 7,
+            "deviation_mm": 1.4,
+            "grasp_ok": true,
+            "images": 4018,
+            "elapsed_ms": 2009000
+          },
+          {
+            "round": 8,
+            "deviation_mm": 1.1,
+            "grasp_ok": true,
+            "images": 4592,
+            "elapsed_ms": 2296000
+          },
+          {
+            "round": 9,
+            "deviation_mm": 0.6,
+            "grasp_ok": true,
+            "images": 5166,
+            "elapsed_ms": 2583000
+          },
+          {
+            "round": 10,
+            "deviation_mm": 0.4,
+            "grasp_ok": true,
+            "images": 5740,
+            "elapsed_ms": 2870000
+          }
+        ],
+        "grasp_records": [
+          {
+            "round": 1,
+            "ok": false
+          },
+          {
+            "round": 2,
+            "ok": true
+          },
+          {
+            "round": 3,
+            "ok": true
+          },
+          {
+            "round": 4,
+            "ok": true
+          },
+          {
+            "round": 5,
+            "ok": true
+          },
+          {
+            "round": 6,
+            "ok": true
+          },
+          {
+            "round": 7,
+            "ok": true
+          },
+          {
+            "round": 8,
+            "ok": true
+          },
+          {
+            "round": 9,
+            "ok": true
+          },
+          {
+            "round": 10,
+            "ok": true
+          }
+        ],
+        "images": 5740,
+        "elapsed_ms": 2870000,
+        "success_rate": 0.9,
+        "recorded_at": 1794637116000
+      },
+      "collected_at": 1794637116000,
+      "version": 1,
+      "v": 1,
+      "type": "recipe_doc",
+      "seq": 7,
+      "t": 1794715200000
+    },
+    "selfcheck_item": {
+      "run_id": "run-1",
+      "item": "comm",
+      "ok": true,
+      "v": 1,
+      "type": "selfcheck_item",
+      "seq": 14,
+      "t": 1794715200300
+    },
+    "recognition": {
+      "run_id": "run-1",
+      "image": {
+        "width": 640,
+        "height": 480
+      },
+      "targets": [
+        {
+          "id": "disc-fixture",
+          "kind": "fixture",
+          "name": "圆盘定位工装",
+          "confidence": 0.97,
+          "box_px": [
+            267.6713235638965,
+            188.51293802508252,
+            268.07664703399445,
+            102.9732436319751
+          ],
+          "angle_deg": null
+        },
+        {
+          "id": "post",
+          "kind": "post",
+          "name": "定位柱",
+          "confidence": 0.97,
+          "box_px": [
+            389.7951294349384,
+            233.99955984107007,
+            23.82903529191062,
+            12
+          ],
+          "angle_deg": null
+        },
+        {
+          "id": "plate",
+          "kind": "part",
+          "name": "薄片",
+          "confidence": 0.97,
+          "box_px": [
+            294.45286442319764,
+            129.38203514431348,
+            107.23065881359777,
+            41.189297452790036
+          ],
+          "angle_deg": 0
+        },
+        {
+          "id": "tube",
+          "kind": "part",
+          "name": "空心圆柱",
+          "confidence": 0.97,
+          "box_px": [
+            309.3492982266583,
+            315.14881179763563,
+            77.4443646987095,
+            29.747825938126137
+          ],
+          "angle_deg": 0
+        }
+      ],
+      "v": 1,
+      "type": "recognition",
+      "seq": 163,
+      "t": 1794715207200
+    },
+    "step_state": {
+      "run_id": "run-1",
+      "index": 1,
+      "action": "pick",
+      "part_id": "plate",
+      "status": "started",
+      "force_n": 11.6,
+      "angle_deg": 0,
+      "v": 1,
+      "type": "step_state",
+      "seq": 211,
+      "t": 1794715209500
+    },
+    "inspect_result": {
+      "run_id": "run-1",
+      "ok": true,
+      "deviation_mm": 0.4,
+      "v": 1,
+      "type": "inspect_result",
+      "seq": 683,
+      "t": 1794715232500
+    },
+    "run_done": {
+      "run_id": "run-1",
+      "recipe_id": "plate-tube",
+      "ok": true,
+      "deviation_mm": 0.4,
+      "duration_ms": 32500,
+      "v": 1,
+      "type": "run_done",
+      "seq": 685,
+      "t": 1794715232500
+    },
+    "part_candidate": {
+      "name": "环形垫片",
+      "code": "P005",
+      "size_mm": [
+        28,
+        28,
+        6
+      ],
+      "outline": [
+        [
+          0,
+          7
+        ],
+        [
+          7,
+          0
+        ],
+        [
+          21,
+          0
+        ],
+        [
+          28,
+          7
+        ],
+        [
+          28,
+          21
+        ],
+        [
+          21,
+          28
+        ],
+        [
+          7,
+          28
+        ],
+        [
+          0,
+          21
+        ]
+      ],
+      "v": 1,
+      "type": "part_candidate",
+      "seq": 34,
+      "t": 1794715201500
+    },
+    "train_progress": {
+      "train_id": "train-1",
+      "target": "part",
+      "round": 0,
+      "deviation_mm": null,
+      "grasp_ok": null,
+      "images": 0,
+      "elapsed_ms": 0,
+      "v": 1,
+      "type": "train_progress",
+      "seq": 36,
+      "t": 1794715201500
+    },
+    "train_done": {
+      "train_id": "train-1",
+      "doc_id": "part-5",
+      "v": 1,
+      "type": "train_done",
+      "seq": 238,
+      "t": 1794715211100
+    },
+    "demo_reset": {
+      "v": 1,
+      "type": "demo_reset",
+      "seq": 824,
+      "t": 1794715239000
+    }
+  },
+  "commands": {
+    "library_get": {
+      "request": {
+        "v": 1,
+        "cmd": "library_get",
+        "seq": 1,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 1
+      }
+    },
+    "part_get": {
+      "request": {
+        "id": "plate",
+        "v": 1,
+        "cmd": "part_get",
+        "seq": 2,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 2
+      }
+    },
+    "recipe_get": {
+      "request": {
+        "id": "plate-tube",
+        "v": 1,
+        "cmd": "recipe_get",
+        "seq": 3,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 3
+      }
+    },
+    "run_start": {
+      "request": {
+        "recipe_id": "plate-tube",
+        "v": 1,
+        "cmd": "run_start",
+        "seq": 4,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 4
+      }
+    },
+    "part_capture": {
+      "request": {
+        "v": 1,
+        "cmd": "part_capture",
+        "seq": 1,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 1
+      }
+    },
+    "train_start": {
+      "request": {
+        "target": "part",
+        "draft": {
+          "name": "环形垫片",
+          "code": "P005",
+          "size_mm": [
+            28,
+            28,
+            6
+          ],
+          "outline": [
+            [
+              0,
+              7
+            ],
+            [
+              7,
+              0
+            ],
+            [
+              21,
+              0
+            ],
+            [
+              28,
+              7
+            ],
+            [
+              28,
+              21
+            ],
+            [
+              21,
+              28
+            ],
+            [
+              7,
+              28
+            ],
+            [
+              0,
+              21
+            ]
+          ]
+        },
+        "v": 1,
+        "cmd": "train_start",
+        "seq": 2,
+        "t": 1794715201500
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 2
+      }
+    },
+    "estop": {
+      "request": {
+        "v": 1,
+        "cmd": "estop",
+        "seq": 6,
+        "t": 1794715201000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 6
+      }
+    },
+    "reset_estop": {
+      "request": {
+        "v": 1,
+        "cmd": "reset_estop",
+        "seq": 8,
+        "t": 1794715201000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 8
+      }
+    },
+    "reset_demo": {
+      "request": {
+        "v": 1,
+        "cmd": "reset_demo",
+        "seq": 10,
+        "t": 1794715239000
+      },
+      "response": {
+        "v": 1,
+        "ok": true,
+        "code": "ok",
+        "msg": "",
+        "seq": 10
+      }
+    }
+  },
+  "errors": {
+    "not_found": {
+      "request": {
+        "id": "missing",
+        "v": 1,
+        "cmd": "part_get",
+        "seq": 1,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": false,
+        "code": "not_found",
+        "msg": "文档不存在",
+        "seq": 1
+      }
+    },
+    "invalid_args": {
+      "request": {
+        "target": "part",
+        "draft": {},
+        "v": 1,
+        "cmd": "train_start",
+        "seq": 2,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": false,
+        "code": "invalid_args",
+        "msg": "请检查名称、编号和训练对象",
+        "seq": 2
+      }
+    },
+    "unknown_command": {
+      "request": {
+        "v": 1,
+        "cmd": "unsupported",
+        "seq": 3,
+        "t": 1794715200000
+      },
+      "response": {
+        "v": 1,
+        "ok": false,
+        "code": "unknown_command",
+        "msg": "未知指令",
+        "seq": 3
+      }
+    },
+    "busy": {
+      "request": {
+        "v": 1,
+        "cmd": "part_capture",
+        "seq": 5,
+        "t": 1794715201000
+      },
+      "response": {
+        "v": 1,
+        "ok": false,
+        "code": "busy",
+        "msg": "正在执行其他操作",
+        "seq": 5
+      }
+    },
+    "estop": {
+      "request": {
+        "v": 1,
+        "cmd": "library_get",
+        "seq": 7,
+        "t": 1794715201000
+      },
+      "response": {
+        "v": 1,
+        "ok": false,
+        "code": "estop",
+        "msg": "请先解除急停",
+        "seq": 7
+      }
+    },
+    "offline": {
+      "request": {
+        "v": 1,
+        "cmd": "library_get",
+        "seq": 12,
+        "t": 1794715239000
+      },
+      "response": {
+        "v": 1,
+        "ok": false,
+        "code": "offline",
+        "msg": "连接已关闭",
+        "seq": 12
+      }
+    }
+  }
+}
