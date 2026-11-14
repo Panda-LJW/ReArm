@@ -167,3 +167,17 @@
 - 最终验证：.venv/bin/python -m pytest -q 为 208 passed in 11.93s；8 个改动/新增 JS 文件 node --check 通过；git diff --check 通过。开工时禁改路径 SHA-256 清单与结束时完全一致，两个 Claude 修正片段逐字保留。没有提交、推送或切分支。
 - 画面验证限制：127.0.0.1:8766 监听被运行环境拒绝，PermissionError: Operation not permitted；CUA 浏览器 host 不可用，原生 Google Chrome 访问被工具拒绝；独立无头 Chromium 启动退出，未获得新截图。仅查看了用户已有的返修前 1280×720、1920×1080 路演截图定位 CSS 层叠原因。四组最终浏览器字号、无裁切/无溢出、1920 路演至少 3 条事件仍需按原浏览器检查重跑，不能把 DOM/文本测试当成画面验收。浏览器错误证据：/private/tmp/rearm-t5r1-g86w8fav/browser-error.txt；测试输出：/private/tmp/rearm-t5r1-pytest-final.txt。
 - 回滚：本轮修改前文件保存在 /private/tmp/rearm-t5r1-g86w8fav/before/；仅恢复本条列出的文件，移除新增 modules/trainer/format.js，删除本日志条目及索引即可局部回滚。两个补充宿主测试文件从开工时干净的 HEAD 取原文备份。保留用户已有 docs/model-swap/决策日志.md 改动、screenshots/ 和海报素材包.zip；未改 README/SPEC。
+
+## 2026-11-15 路演节点① T0 验收脚本 [NODE1-T0-20261115]
+- 目标：只实现 docs/路演/tasks/节点1-任务书.md 的 T0，按 A 节与清单 9.1/9.3/9.4 验收，不开始 T1。
+- 新增脚本：scripts/acceptance/node1.sh、node1.mjs、browser.mjs、production-checks.mjs、surface-checks.mjs、tooltip-check.mjs、library-checks.mjs、static-checks.mjs、report.mjs。
+- 新增测试与记录：tests/test_node1_acceptance.py（10 项反例测试）、docs/路演/tasks/卡点.md。修改 LOG.md、LOG-INDEX.md（仅追加）。
+- 本轮生成证据：docs/路演/验收/节点1/报告.md、results.json、pytest.log、server.log、infrastructure.log；screenshots/ 已创建但未取得画面。报告逐条列出17项、10张应有关键截图的缺口、vendor 命中与 git log main..HEAD --oneline。
+- 脚本决策：每条独立函数，异常不中断后面的只读检查；状态由 MutationObserver 记录，去相邻重复再去“就绪”后精确匹配9词，确认到待命最多90秒；抓取时急停观察5秒；重置仅点一次；不可用按钮统一检查 aria-disabled、help 指针及0.8/1.2秒提示时机；措辞覆盖四页、确认框、两个文档和两类新增流程；布局沿用 shots.mjs 的量法；跨页面保留模拟主机的全部命令记录。
+- 环境边界：只用已安装的 playwright-core 和缓存的 chrome-headless-shell，不安装包；服务固定 127.0.0.1:8031，--sim --nongeometric，独立临时数据目录，trap 关闭本次服务。没有连接真实硬件或另一主机，所有应用代码与旧页面保持不变。
+- 地址扫描：扫描37个JS，非vendor命中3处：modules/datasource/device-source.js:2 的 ws://…、modules/datasource/index.js:17 的 ws://主机:端口、modules/trainer/views/camera.js:34 的 http://www.w3.org/2000/svg。vendor另有3处，按规格单列不计失败。没有为命名空间或注释增加豁免，亦未改受保护的训练代码；任务预期第16条转绿与现有代码存在冲突，已在卡点.md说明。
+- 验证：新增测试10 passed in 0.22s；指定完整 pytest 334 passed in 21.24s；scripts/acceptance/node1.sh 内 pytest 334 passed in 21.53s，最终退出码1。第1、17条通过；第2–15条因浏览器无法启动未执行并记失败；第16条地址扫描失败。bash -n、全部8个mjs的 node --check 与 git diff --check 通过。没有通过截图验收，不声称页面已验证。
+- 阻拦证据：8031服务实际启动并正常关闭（server pid 88293）。Chromium pid 88306 启动时报 `browserType.launch: Target page, context or browser has been closed`；核心原文 `Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.88306: Permission denied (1100)`；清理另报 `Error: kill EPERM`，随后进程 SIGTRAP 退出。完整日志见 infrastructure.log，未重试、未更换浏览器/端口或绕过沙箱。
+- 提交状态：未提交、未暂存，因T0应转绿的第16条仍失败，且用户明确要求浏览器启动受阻时保留未提交改动。没有尝试 git add/commit，没有创建替代仓库或bundle。工作分支 feat/model-swap；HEAD=f0dc98c610cd437cbbfac954737fb5a7f2e0489d；main=57785e8f95837f0d2384b4f5968cba225821434c，未改变。海报素材包.zip 未跟踪。
+- 遗留：无头浏览器检查和截图未完成；第16条规则与现存受保护代码的冲突待决定，未自行放宽。原有 docs/路演/施工清单.md、tasks/节点1-任务书.md、Go_PPT.md 仍为开工时的未跟踪文件，未编辑；T1–T8未执行。
+- 回滚：移除本轮新增的9个验收脚本、测试文件、卡点文件与本轮5个报告证据文件，删除本日志块和对应索引行即可局部回退；保留开工前已有的路演文件、素材包及后续用户改动。应用与配置不需要回滚。
