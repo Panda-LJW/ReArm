@@ -43,7 +43,7 @@ export function createScene(container, config) {
       const transform = p => [0, 1, 2].map(r => m[r * 4 + 3] + p.reduce((sum, v, c) => sum + m[r * 4 + c] * v, 0));
       g.strokeStyle = css("--twin-finger") || "#e7eaf0"; g.lineWidth = 4;
       for (const mount of config.gripper.fingers) {
-        const at = mount.xyz.map((v, i) => v + mount.axis[i] * (opening + config.shape.finger.thickness) / 2);
+        const at = mount.xyz.map((v, i) => v + mount.axis[i] * (opening + config.shape.finger.width) / 2);
         g.beginPath(); g.moveTo(...to(transform(at)));
         g.lineTo(...to(transform([at[0] - config.shape.finger.length, at[1], at[2]]))); g.stroke();
       }

@@ -5,11 +5,7 @@
 [data-page="records"] .records-title { grid-column: 1 / -1; margin: 0; font-size: var(--fs-lg); font-weight: 500; }
 [data-page="records"] .records-summary { grid-column: 1 / -1; }
 [data-page="records"] .records-count { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-[data-page="records"] .records-section {
-  overflow: hidden;
-  animation: records-enter var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)) both;
-}
-[data-page="records"] .records-section + .records-section { animation-delay: 40ms; }
+[data-page="records"] .records-section { overflow: hidden; }
 [data-page="records"] .records-scroll { overflow: auto; overscroll-behavior: contain; }
 [data-page="records"] .records-scroll:focus-visible {
   outline: calc(var(--line-w) * 2) solid var(--focus); outline-offset: calc(var(--line-w) * -2);
@@ -17,23 +13,34 @@
 [data-page="records"] .records-table { table-layout: auto; }
 [data-page="records"] .records-table :is(th, td) { padding: calc(var(--sp-3) / 2); }
 [data-page="records"] .records-table th { position: sticky; top: 0; z-index: 1; background: var(--panel); white-space: nowrap; }
+[data-page="records"] .records-table th[aria-sort] { padding: 0; }
+[data-page="records"] .records-sort {
+  display: flex; align-items: center; gap: var(--sp-1); width: 100%; min-height: var(--ctl-h-sm);
+  padding: calc(var(--sp-3) / 2); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+[data-page="records"] .num .records-sort { justify-content: flex-end; }
+[data-page="records"] .records-sort:hover { background: var(--hover); color: var(--text); }
+[data-page="records"] .records-sort:focus-visible { outline-offset: calc(var(--line-w) * -2); }
+[data-page="records"] .records-sort::after {
+  content: ""; flex: none; width: var(--sp-1); height: var(--sp-1);
+  border-right: var(--line-w) solid currentColor; border-bottom: var(--line-w) solid currentColor;
+  transform: rotate(45deg); visibility: hidden;
+}
+[data-page="records"] [aria-sort="ascending"] .records-sort::after { visibility: visible; transform: rotate(225deg); }
+[data-page="records"] [aria-sort="descending"] .records-sort::after { visibility: visible; }
 [data-page="records"] .records-table :is(th, td):nth-child(2) { width: 40%; overflow-wrap: anywhere; }
 [data-page="records"] .records-table td { color: var(--text); }
 [data-page="records"] .records-table .num { white-space: nowrap; }
-[data-page="records"] .records-table tbody tr { transition: background-color var(--t-fast, 120ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)); }
+[data-page="records"] .records-table tbody tr { transition: background-color var(--t-fast) var(--ease-out); }
+[data-page="records"] .records-table tbody tr:hover { background: var(--hover); }
 [data-page="records"] .records-table tbody tr:has(.records-empty):hover { background: transparent; }
 [data-page="records"] .records-table tbody tr:last-child td { border-bottom: 0; }
 [data-page="records"] .records-table :is(.records-empty, .records-missing) { color: var(--mute); }
 [data-page="records"] .records-table .records-empty { padding: calc(var(--sp-5) - var(--line-w) * 2) var(--sp-1); text-align: center; }
-[data-page="records"] .records-kpi-number {
-  display: inline-block;
-  animation: records-value var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)) both;
-}
-@keyframes records-enter {
-  from { opacity: 0; transform: translateY(calc(var(--sp-3) / 2)); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes records-value { from { color: var(--sub); } to { color: var(--data); } }
+[data-page="records"] .records-empty-note { margin: var(--sp-1) 0 0; color: var(--mute); }
+[data-page="records"] .records-kpi-number { display: inline-block; }
 @media (max-width: 1080px) {
   [data-page="records"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; align-content: start; overflow: visible; }
   [data-page="records"] .records-scroll { max-height: 60dvh; }

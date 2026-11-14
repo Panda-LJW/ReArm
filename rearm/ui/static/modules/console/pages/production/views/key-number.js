@@ -3,12 +3,15 @@ import { productionSummary } from "../../../state/selectors.js";
 import { mount as mountSparkline } from "../../../widgets/sparkline.js";
 import { element } from "../../../widgets/dom.js";
 import { duration } from "../../../widgets/format.js";
+import { flash } from "../../../widgets/motion.js";
 
 // 只切换展示属性，数值变化的短暂强调由 CSS 完成。
 function displayValue(node, value) {
-  if (node.textContent === value) return;
-  node.textContent = value;
-  node.dataset.flash = node.dataset.flash === "a" ? "b" : "a";
+  if (node.textContent !== value) {
+    node.textContent = value;
+    node.dataset.flash = node.dataset.flash === "a" ? "b" : "a";
+  }
+  flash(node, value);
 }
 
 export function mount(root) {
@@ -29,8 +32,8 @@ export function mount(root) {
     if (runs === state.runs) return;
     runs = state.runs;
     const summary = productionSummary(state); displayValue(count, String(summary.sets));
+    rate.classList.toggle("production-muted", summary.passRate === null);
     displayValue(rate, summary.passRate === null ? "—" : `${Math.round(summary.passRate * 100)}%`);
-    rate.className = summary.passRate === null ? "production-muted" : "";
     const last = state.runs.at(-1);
     displayValue(latest, Number.isFinite(last?.deviation_mm) ? last.deviation_mm.toFixed(1) : "—");
     displayValue(time, duration(last?.duration_ms));

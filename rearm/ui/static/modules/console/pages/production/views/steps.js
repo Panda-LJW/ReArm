@@ -1,6 +1,8 @@
 import { frameView } from "../../../shell/view.js";
 import { mount as mountStepper } from "../../../widgets/stepper.js";
 import { element } from "../../../widgets/dom.js";
+import { productionRecipe } from "../../../state/selectors.js";
+import { reducedMotion } from "../../../widgets/motion.js";
 
 const CHECKS = [["comm", "通信"], ...Array.from({ length: 6 }, (_, i) => [`j${i + 1}`, `J${i + 1}`]),
   ["gripper", "夹爪"], ["depth_camera", "深度相机"]];
@@ -19,12 +21,17 @@ export function productionSteps(state, recipe) {
 
 export function mount(root, ctx) {
   const doc = root.ownerDocument, title = element(doc, "h2", "c-card-head", "生产步骤");
+  const count = element(doc, "span", "c-aside production-steps-count");
+  const bar = element(doc, "div", "c-progress"), fill = element(doc, "span");
+  bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-label", "生产步骤"); bar.setAttribute("aria-valuemin", "0");
+  bar.append(fill); title.append(count);
   const body = element(doc, "div", "production-steps-body c-card-body");
   const checks = element(doc, "div", "production-checks"), progress = element(doc, "div");
   const items = CHECKS.map(([id, label]) => {
     const el = element(doc, "span"); el.dataset.checkItem = id; checks.append(el); return { id, label, el };
   });
-  body.append(checks, progress); root.append(title, body); const stepper = mountStepper(progress);
+  body.append(checks, progress); root.append(title, bar, body); const stepper = mountStepper(progress);
+  let active = "";
   return frameView(state => {
     checks.hidden = state.phase !== "selfcheck"; progress.hidden = !checks.hidden;
     for (const { id, label, el } of items) {
@@ -32,7 +39,20 @@ export function mount(root, ctx) {
       el.dataset.ok = String(value === true);
       el.textContent = `${value === true ? "✓" : value === false ? "×" : "·"} ${label}`;
     }
-    const id = state.run && state.phase !== "idle" ? state.run.recipe_id : ctx.selection.id;
-    stepper.render(productionSteps(state, state.recipeDocs[id]));
+    const recipe = productionRecipe(state, ctx.selection.id), rows = productionSteps(state, recipe);
+    const index = rows.findIndex(row => row.current), completed = rows.filter(row => row.done).length;
+    const value = index < 0 ? completed : index + 1;
+    count.textContent = `${value} / ${rows.length}`;
+    bar.setAttribute("aria-valuemax", String(rows.length)); bar.setAttribute("aria-valuenow", String(value));
+    fill.style.width = `${value / rows.length * 100}%`;
+    stepper.render(rows);
+    const current = progress.querySelector('[aria-current="step"]');
+    if (current && !current.querySelector(".production-step-dot")) {
+      const dot = element(doc, "span", "production-step-dot c-pulse");
+      dot.setAttribute("aria-hidden", "true"); current.append(dot);
+    }
+    const next = current && !progress.hidden && !root.closest("[hidden]") ? `${recipe?.id}:${state.run?.run_id}:${index}` : "";
+    if (next && next !== active) current.scrollIntoView?.({ block: "nearest", behavior: reducedMotion(doc.defaultView) ? "auto" : "smooth" });
+    active = next;
   }, () => { stepper.dispose(); root.replaceChildren(); }, doc.defaultView);
 }

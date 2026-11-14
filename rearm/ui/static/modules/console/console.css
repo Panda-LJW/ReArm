@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: dark; view-transition-name: none;
   --t-fast: 120ms; --t-base: 200ms; --t-slow: 320ms;
   --ease-out: cubic-bezier(.2,.7,.2,1); --ease-in-out: cubic-bezier(.65,0,.35,1);
 }
@@ -10,12 +10,16 @@ body {
   font: var(--fs-base)/1.5 var(--sans);
   font-feature-settings: "tnum" 1, "zero" 1;
 }
-.console-shell { height: 100dvh; display: flex; flex-direction: column; }
+.console-shell { position: relative; height: 100dvh; display: flex; flex-direction: column; }
 .console-topbar {
   display: flex; align-items: center; flex: 0 0 auto; gap: var(--sp-4);
   height: var(--header-h); padding: 0 var(--sp-4); background: var(--bg);
   border-bottom: var(--line-w) solid var(--line);
+  transition: background-color var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease-out);
 }
+.console-topbar[data-estop] { background: var(--bad-bg); border-bottom-color: var(--bad); }
+/* 急停提示已承担状态说明，给中间内容保留空间。 */
+.console-topbar[data-estop] .console-status { display: none; }
 .console-brand { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
 .console-brand-name {
   display: inline-flex; align-items: center; gap: var(--sp-2);
@@ -41,7 +45,7 @@ body {
   transition: transform var(--t-base) var(--ease-out), width var(--t-base) var(--ease-out);
 }
 .console-status { white-space: nowrap; }
-.console-spacer { flex: 1; }
+.console-spacer { flex: 1; display: flex; align-items: center; justify-content: center; }
 /* .pill：连接来源、只读或简短状态；无实底，不代替状态文字。 */
 .pill { display: inline-flex; align-items: center; padding: var(--line-w) calc(var(--pad) / 2); border: var(--line-w) solid var(--line2); border-radius: var(--radius-sm); color: var(--sub); font-size: var(--fs-xs); }
 /* .c-btn：普通按钮；加 .primary 为主操作，disabled/aria-disabled 共用视觉。 */
@@ -63,15 +67,78 @@ body {
 /* 安全控件始终静止，不能因同时使用通用按钮类而获得动效。 */
 .console-estop { animation: none !important; transition: none !important; transform: none !important; }
 .console-estop-banner {
-  flex: none; padding: var(--sp-1) var(--sp-4); background: var(--estop); color: var(--on-estop);
-  font-weight: 600; text-align: center; animation: c-estop-enter var(--t-base) var(--ease-out);
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  color: var(--bad); font-weight: 600; white-space: nowrap; text-align: center;
+  animation: c-estop-enter var(--t-base) var(--ease-out);
 }
-@keyframes c-estop-enter { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+.console-estop-banner .console-button { color: var(--bad); border-color: currentColor; }
+@keyframes c-estop-enter { from { opacity: 0; } to { opacity: 1; } }
 :is(button, [role="button"])[aria-disabled="true"] { cursor: help; }
 :is(.c-btn, .console-button, .console-estop):is(:disabled, [aria-disabled="true"]) { opacity: .45; }
 :is(.c-btn, .console-button, .console-estop):disabled { cursor: default; }
-:is(button, a, input, select, textarea):focus-visible { outline: calc(var(--line-w) * 2) solid var(--focus); outline-offset: var(--line-w); }
-.console-pages { flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+/* 全局键盘焦点，也覆盖页面旧的蓝框规则。鼠标操作不显示轮廓。 */
+:focus:not(:focus-visible) { outline: none !important; }
+:focus-visible { outline: var(--line-w) solid var(--text) !important; outline-offset: calc(var(--line-w) * 2) !important; }
+.c-focus-row:focus-visible, .c-focus-row:has(:focus-visible) { outline: none !important; background: var(--hover) !important; }
+.c-focus-row :focus-visible { outline: none !important; }
+.c-focus-row:focus-visible > :first-child, .c-focus-row:has(:focus-visible) > :first-child { box-shadow: inset calc(var(--line-w) * 2) 0 var(--text); }
+input:is([type="checkbox"], [type="radio"]) {
+  appearance: none; display: inline-grid; place-content: center; flex: none; vertical-align: middle;
+  width: var(--sp-4); height: var(--sp-4); min-height: 0; padding: 0; margin: 0;
+  border: var(--line-w) solid var(--line2); border-radius: var(--radius-sm); background: var(--panel2); color: var(--on-accent); cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
+}
+input:is([type="checkbox"], [type="radio"]):hover { border-color: var(--mute); }
+input:is([type="checkbox"], [type="radio"]):checked { background: var(--text); border-color: var(--text); }
+input[type="checkbox"]::after { content: ""; width: var(--sp-2); height: var(--sp-1); border: solid currentColor; border-width: 0 0 var(--line-w) var(--line-w); transform: translateY(calc(var(--line-w) * -1)) rotate(-45deg); opacity: 0; }
+input[type="checkbox"]:checked::after { opacity: 1; }
+input[type="radio"] { border-radius: 50%; }
+input[type="radio"]::after { content: ""; width: var(--sp-2); height: var(--sp-2); border-radius: 50%; background: currentColor; opacity: 0; }
+input[type="radio"]:checked::after { opacity: 1; }
+input:is([type="checkbox"], [type="radio"]):disabled { cursor: default; opacity: .45; }
+/* 保留真实表单控件，局部页面的输入框尺寸不能把隐藏控件撑开。 */
+.c-select-native, .c-visually-hidden {
+  position: absolute !important; width: var(--line-w) !important; height: var(--line-w) !important; min-height: 0 !important;
+  padding: 0 !important; margin: 0 !important; border: 0 !important; overflow: hidden !important; clip-path: inset(50%); white-space: nowrap;
+}
+.c-select-native { pointer-events: none; }
+.c-select { display: block; position: relative; min-width: 0; }
+[data-page="production"] .c-select { margin-left: var(--pad); }
+.c-select-trigger {
+  display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: var(--ctl-h); padding: var(--sp-1) var(--sp-2);
+  appearance: none; border: var(--line-w) solid var(--line2); border-radius: var(--radius); background: var(--panel2); color: var(--text);
+  font: var(--fs-sm)/1.5 var(--sans); text-align: left; cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.c-select-trigger:hover { border-color: var(--mute); }
+.c-select-trigger[aria-disabled="true"] { cursor: help; color: var(--mute); }
+.c-select-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.c-select-meta { flex: none; color: var(--mute); font: var(--fs-xs)/1.5 var(--mono); white-space: nowrap; }
+.c-select-chevron {
+  flex: none; width: var(--sp-2); height: var(--sp-2); margin: 0 var(--line-w) var(--sp-1) var(--sp-1);
+  border-right: var(--line-w) solid var(--mute); border-bottom: var(--line-w) solid var(--mute); transform: rotate(45deg);
+  transition: transform var(--t-base) var(--ease-out);
+}
+.c-select-trigger[aria-expanded="true"] .c-select-chevron { transform: translateY(var(--sp-1)) rotate(225deg); }
+/* 浮层挂到 body，避免卡片 overflow 裁切；位置与可用高度由控件同步。 */
+.c-select-list {
+  position: fixed; z-index: 8; max-height: 280px; overflow: auto; overscroll-behavior: contain;
+  background: var(--panel2); border: var(--line-w) solid var(--line2); border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0,0,0,.6); color: var(--text); font: var(--fs-sm)/1.5 var(--sans);
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(calc(var(--sp-1) * -1));
+  transition: opacity var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out), visibility var(--t-fast);
+}
+.c-select-list[data-open="true"] { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.c-select-option {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: calc(var(--ctl-h) + var(--sp-1)); padding: var(--sp-1) var(--sp-2);
+  border-left: calc(var(--line-w) * 2) solid transparent; cursor: pointer;
+}
+.c-select-option.is-active { background: var(--hover); }
+.c-select-option[aria-selected="true"] { border-left-color: var(--text); }
+.c-select-tick { flex: none; width: var(--sp-3); opacity: 0; font-weight: 400; }
+.c-select-option[aria-selected="true"] .c-select-tick { opacity: 1; }
+.c-select-option[aria-disabled="true"] { color: var(--mute); cursor: default; }
+.console-pages { position: relative; flex: 1; min-height: 0; min-width: 0; overflow: hidden; view-transition-name: console-content; }
 .console-page { display: grid; height: 100%; min-height: 0; min-width: 0; gap: var(--gap); overflow: auto; }
 /* 页面只负责透明网格；双类权重防止旧页面的 padding:0 吞掉外壳留白。 */
 .console-pages > .console-page { padding: var(--sp-3) var(--sp-4); background: transparent; border: 0; border-radius: 0; }
@@ -79,23 +146,29 @@ body {
 
 /* .c-card > .c-card-head + .c-card-body；标题右侧放 .c-aside，body 可独立滚动。 */
 .c-card { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--panel); border: var(--line-w) solid var(--line); border-radius: var(--radius); }
-/* 默认按同层序号递增；页面可 style="--i: 0" 覆盖，0–5 六级、超出封顶。
-   router 重设页面 data-enter 后重播；数据刷新不改该属性，不重播。 */
-.c-card {
-  --enter-i: 0;
+/* stagger(cards) 或 c-enter + --i；0–5 六级，页面刷新不自动重播。 */
+.c-enter {
   animation: c-card-enter var(--t-slow) var(--ease-out) backwards;
-  animation-delay: calc(clamp(0, var(--i, var(--enter-i)), 5) * 40ms);
+  animation-delay: calc(clamp(0, var(--i, 0), 5) * 40ms);
 }
-.c-card:nth-child(2) { --enter-i: 1; }
-.c-card:nth-child(3) { --enter-i: 2; }
-.c-card:nth-child(4) { --enter-i: 3; }
-.c-card:nth-child(5) { --enter-i: 4; }
-.c-card:nth-child(n+6) { --enter-i: 5; }
-.console-page:not([data-enter]) .c-card { animation: none !important; }
 @keyframes c-card-enter {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(calc(var(--sp-3) / 2)); }
   to { opacity: 1; transform: translateY(0); }
 }
+.c-swap-out { animation: c-swap-out var(--t-fast) var(--ease-in-out) both; }
+.c-swap-in { animation: c-swap-in var(--t-fast) var(--ease-out) both; }
+@keyframes c-swap-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes c-swap-in { from { opacity: 0; } to { opacity: 1; } }
+/* 回退与 View Transition 都只动画内容区，160ms；旧页 inert，立即让新页可操作。 */
+.console-pages > .console-page:is(.c-swap-out, .c-swap-in) { animation-duration: calc(var(--t-slow) / 2); }
+.console-pages > .console-page[hidden].c-swap-out {
+  display: grid !important; position: absolute; inset: 0; pointer-events: none;
+}
+::view-transition-group(console-content) { animation-duration: calc(var(--t-slow) / 2); }
+::view-transition-old(console-content) { animation: c-swap-out calc(var(--t-slow) / 2) var(--ease-in-out) both; }
+::view-transition-new(console-content) { animation: c-swap-in calc(var(--t-slow) / 2) var(--ease-out) both; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition { pointer-events: none; }
 .c-card-head {
   display: flex; align-items: center; gap: var(--sp-2); flex: none;
   margin: 0 0 var(--sp-3); padding: calc(var(--sp-2) + var(--line-w)) var(--pad);
@@ -112,12 +185,10 @@ body {
 .c-kpis :is(.c-kpi-value, .v) { display: block; margin-top: var(--radius-sm); color: var(--text); font: 500 var(--fs-kpi-wide)/1.5 var(--mono); font-variant-numeric: tabular-nums; }
 .c-kpis :is(.c-kpi-value, .v) small { margin-left: var(--sp-1); color: var(--mute); font-size: var(--fs-sm); font-weight: 400; }
 .c-kpis :is(.c-kpi-note, .d) { margin-top: var(--radius-sm); color: var(--mute); font-size: var(--fs-xs); }
-/* KPI 更新后给数值元素加 .c-flash；监听 animationend，仅在
-   event.target === value && event.animationName === 'c-flash-text' 时移除类。
-   prefers-reduced-motion: reduce 时不要加类（无 animationend）；不改 widgets 数据逻辑。 */
+/* flash(value, next) 首次赋值不闪；replay 统一移除一次性动画类。 */
 .c-flash, .c-kpis .c-flash { position: relative; color: var(--data); animation: c-flash-text var(--t-slow) var(--ease-out); }
 .c-flash::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--line-w);
   background: var(--data); pointer-events: none; opacity: 0; transform-origin: left;
   animation: c-flash-line var(--t-slow) var(--ease-out);
 }
@@ -146,7 +217,7 @@ body {
 /* 页面以 viewport.toggleAttribute('data-busy', busy) 或 classList.toggle('busy', busy)
    开关扫描线；也支持 dataset.busy = String(busy)，"false" 与移除属性均关闭。 */
 .c-viewport:is([data-busy]:not([data-busy="false"]), .busy)::before {
-  content: ""; position: absolute; left: 0; top: 0; width: 25%; height: 1px;
+  content: ""; position: absolute; left: 0; top: 0; width: 25%; height: var(--line-w);
   background: var(--sub); opacity: .35; z-index: 1; pointer-events: none;
   animation: c-viewport-scan 2.4s linear infinite;
 }
@@ -161,7 +232,24 @@ body {
 .c-chip.ok::before { background: var(--ok); }
 .c-chip.busy::before { background: var(--warn); animation: c-pulse 1s infinite; }
 .c-chip.bad::before { background: var(--bad); }
+.c-pulse { animation: c-pulse 1s var(--ease-in-out) infinite; }
 @keyframes c-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+/* c-progress > span 的 width 由页面更新；原生 progress 也共用这套外观。 */
+.c-progress { display: block; width: 100%; height: calc(var(--line-w) * 2); overflow: hidden; border: 0; background: var(--line); color: var(--data); appearance: none; }
+.c-progress > * { display: block; height: 100%; background: var(--data); transition: width var(--t-base) var(--ease-out), transform var(--t-base) var(--ease-out); }
+.c-progress::-webkit-progress-bar { background: var(--line); }
+.c-progress::-webkit-progress-value { background: var(--data); transition: width var(--t-base) var(--ease-out); }
+.c-progress::-moz-progress-bar { background: var(--data); }
+button[aria-busy="true"] { position: relative; cursor: progress; }
+button[aria-busy="true"]::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--line-w) * 2);
+  background: currentColor; transform-origin: left; animation: c-pulse 1s var(--ease-in-out) infinite; pointer-events: none;
+}
+.console-estop[aria-busy="true"]::after { animation: none; }
+.console-toasts { position: fixed; right: var(--sp-4); bottom: var(--sp-4); z-index: 9; display: grid; gap: var(--sp-2); max-width: min(40rem, calc(100vw - var(--sp-4) * 2)); pointer-events: none; }
+.c-toast { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--pad); background: var(--panel2); color: var(--text); border: var(--line-w) solid var(--line2); border-left: calc(var(--line-w) * 2) solid var(--bad); border-radius: var(--radius); font-size: var(--fs-sm); pointer-events: auto; }
+.c-toast > span { min-width: 0; overflow-wrap: anywhere; }
+.c-toast > button { margin-left: auto; }
 /* table.c-table：数字单元格加 .num（或 .r）；当前行 .cur / aria-current=true，选中行 aria-selected=true。 */
 .c-table { width: 100%; border-collapse: collapse; color: var(--sub); font-size: var(--fs-sm); text-align: left; }
 .c-table :is(th, td) { padding: calc(var(--sp-3) / 2) var(--sp-2); border-bottom: var(--line-w) solid var(--line); vertical-align: middle; }
@@ -185,9 +273,9 @@ body {
 .c-empty { padding: calc(var(--sp-5) - var(--line-w) * 2); color: var(--mute); font-size: var(--fs-sm); text-align: center; overflow-wrap: anywhere; }
 
 .console-dialog {
-  width: min(40rem, calc(100vw - var(--sp-4) * 2));
+  width: min(440px, calc(100vw - var(--sp-4) * 2));
   max-height: calc(100dvh - var(--sp-4) * 2); overflow: auto;
-  padding: var(--sp-5); background: var(--panel); color: var(--text);
+  padding: 0; background: var(--panel); color: var(--text);
   border: var(--line-w) solid var(--line2); border-radius: var(--radius);
   box-shadow: 0 12px 32px rgba(0,0,0,.6); font: var(--fs-base)/1.5 var(--sans);
 }
@@ -212,9 +300,28 @@ body {
     .console-dialog[data-motion][open]::backdrop { opacity: 0; }
   }
 }
-.console-dialog h2 { margin: 0 0 var(--sp-2); font: 600 var(--fs-xl)/1.5 var(--mono); }
-.console-dialog-content { color: var(--sub); overflow-wrap: anywhere; }
-.console-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-4); }
+.console-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-4); }
+.console-dialog h2 { margin: 0; font: 500 var(--fs-xl)/1.5 var(--sans); overflow-wrap: anywhere; }
+.console-dialog-safety { flex: none; padding: var(--line-w) var(--sp-1); border: var(--line-w) solid var(--warn); border-radius: var(--radius-sm); color: var(--warn); font-size: var(--fs-xs); }
+.console-dialog-content { padding: 0 var(--sp-4) var(--sp-4); color: var(--sub); overflow-wrap: anywhere; }
+.console-dialog-content p { margin: 0; color: var(--sub); }
+.console-dialog-content p + p { margin-top: var(--sp-2); }
+.console-dialog-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-top: var(--line-w) solid var(--line); }
+.console-dialog-reason { flex: 1; min-width: 0; margin: 0; color: var(--mute); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.console-dialog .console-primary[aria-disabled="true"] { background: var(--panel2); color: var(--mute); border-color: var(--line2); opacity: 1; }
+.c-production-confirm { display: grid; gap: var(--sp-3); }
+.c-confirm-summary { padding: var(--sp-3); border: var(--line-w) solid var(--line); border-radius: var(--radius); background: var(--panel2); }
+.c-confirm-name { color: var(--text); font-size: var(--fs-lg); font-weight: 500; }
+.console-dialog-content .c-confirm-meta { margin-top: var(--sp-1); color: var(--mute); font: var(--fs-xs)/1.5 var(--mono); }
+.c-confirm-check { position: relative; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border: var(--line-w) solid var(--line2); border-radius: var(--radius); color: var(--text); cursor: pointer; transition: background-color var(--t-fast), border-color var(--t-fast); }
+.c-confirm-check:hover { background: var(--hover); }
+.c-confirm-check:has(:checked) { border-color: var(--text); }
+.c-confirm-check:has(:focus-visible) { outline: var(--line-w) solid var(--text); outline-offset: calc(var(--line-w) * 2); }
+.c-confirm-box { flex: none; width: var(--sp-4); height: var(--sp-4); border: var(--line-w) solid var(--line2); border-radius: var(--radius-sm); background: var(--panel2); transition: background-color var(--t-fast), border-color var(--t-fast); }
+.c-confirm-box svg { display: block; width: 100%; height: 100%; fill: none; stroke: var(--on-accent); stroke-width: 1.5; }
+.c-confirm-box path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset var(--t-fast) var(--ease-out); }
+:checked + .c-confirm-box { background: var(--text); border-color: var(--text); }
+:checked + .c-confirm-box path { stroke-dashoffset: 0; }
 .console-tooltip {
   position: fixed; z-index: 10; width: max-content;
   max-width: min(32ch, calc(100vw - var(--sp-4) * 2));
@@ -234,6 +341,7 @@ body {
   .console-topbar { display: grid; height: auto; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-1) var(--sp-2); padding: var(--sp-2); }
   .console-brand { grid-row: 1; grid-column: 1; }
   .console-spacer { display: none; }
+  .console-topbar[data-estop] .console-spacer { display: flex; grid-row: 3; grid-column: 1 / -1; padding-bottom: var(--sp-1); }
   .console-topbar > [data-action="reset"] { grid-row: 1; grid-column: 2; padding-inline: var(--sp-2); }
   .console-estop { grid-row: 1; grid-column: 3; padding-inline: var(--sp-3); }
   .console-nav { grid-row: 2; grid-column: 1; gap: 0; }
@@ -242,10 +350,17 @@ body {
   .console-connection[data-online="true"] .console-connection-label { display: none; }
   .console-status { grid-row: 2; grid-column: 3; justify-self: end; }
   .c-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .console-dialog { padding: var(--sp-4); }
+}
+@media (min-width: 721px) and (max-width: 1080px) {
+  .console-topbar[data-estop] { gap: var(--sp-1); }
+  .console-topbar[data-estop] .console-nav a { padding-inline: var(--sp-1); }
+  .console-topbar[data-estop] .console-source { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after, *::backdrop { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .c-progress::-webkit-progress-value { transition: none !important; }
+  .console-pages > .console-page[hidden].c-swap-out { display: none !important; }
   :is(.c-btn, .console-button):active { transform: none !important; }
   .c-viewport:is([data-busy], .busy)::before { content: none !important; }
 }

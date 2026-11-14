@@ -10,7 +10,6 @@ export function createPanelSource({ target = document } = {}) {
     emitter.emit(makeFrame({
       angles_deg: last?.q ?? null,
       mode: !connected || !state ? "offline" : state.simulation ? "sim" : "live",
-      laser: connected && state ? !!state.laser_on : null,
       timestamp: last?.timestamp,
     }));
   };

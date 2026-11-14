@@ -1,6 +1,7 @@
 import { element } from "../../../widgets/dom.js";
 import { setUnavailable } from "../../../shell/tooltip.js";
 import { button, field } from "./format.js";
+import { enhanceSelect } from "../../../widgets/select.js";
 
 export function recipeFields(root, state, changed) {
   const doc = root.ownerDocument, fixture = field(doc, "工装", "select");
@@ -35,7 +36,8 @@ export function recipeFields(root, state, changed) {
   }
   fixture.input.addEventListener("change", changed);
   root.append(fixture.label, choices, element(doc, "h3", "", "装配顺序"), order);
+  const picker = enhanceSelect(fixture.input);
   return { draft: () => ({ fixture_id: fixture.input.value,
     steps: selected.map((part_id, i) => ({ index: i + 1, part_id, target_id: post?.id, target_name: post?.name })) }),
-  reason: () => !fixture.input.value ? "请先选择工装" : !selected.length ? "请至少选择一个零件" : !post ? "缺少放置位置" : "" };
+  reason: () => { picker.render(); return !fixture.input.value ? "请先选择工装" : !selected.length ? "请至少选择一个零件" : !post ? "缺少放置位置" : ""; } };
 }

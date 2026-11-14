@@ -6,10 +6,9 @@
 //   angles_deg  上位机约定的关节角数组 [J1, J2, J3, ...]，单位度；没有读数时为 null
 //   mode        "live" 真机实时 | "sim" 模拟数据 | "offline" 数据中断
 //   online      数据链路是否正常；false 时显示端应提示离线并保留最后姿态
-//   laser       激光是否出光；未知为 null
 export const MODES = ["live", "sim", "offline"];
 
-export function makeFrame({ q_rad = null, valid, gripper_mm = null, angles_deg = null, mode = "offline", online, laser = null, timestamp } = {}) {
+export function makeFrame({ q_rad = null, valid, gripper_mm = null, angles_deg = null, mode = "offline", online, timestamp } = {}) {
   const clean = Array.isArray(angles_deg) && angles_deg.length && angles_deg.every(v => Number.isFinite(Number(v))) ? angles_deg.map(Number) : null;
   const safeMode = MODES.includes(mode) ? mode : "offline";
   return {
@@ -20,7 +19,6 @@ export function makeFrame({ q_rad = null, valid, gripper_mm = null, angles_deg =
     angles_deg: clean,
     mode: safeMode,
     online: typeof online === "boolean" ? online && safeMode !== "offline" : safeMode !== "offline",
-    laser: typeof laser === "boolean" ? laser : null,
   };
 }
 

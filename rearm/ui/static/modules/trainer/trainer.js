@@ -43,7 +43,7 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
     const joint = state.joint, ready = online(state);
     twin.update(makeFrame({ q_rad: joint?.q, valid: joint?.valid, gripper_mm: joint?.gripper_mm,
       mode: !ready ? "offline" : state.hello.sim ? "sim" : "live", online: ready,
-      laser: ready ? state.laser?.on ?? null : false, timestamp: joint?.t / 1000 }));
+      timestamp: joint?.t / 1000 }));
     if (demoCache !== state.demo) {
       demoCache = state.demo;
       demoPath = buildPath(ARM_PARAMS, state.demo?.samples || []).segments;
@@ -56,7 +56,6 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
     const result = ready ? latestNode(state) : null;
     twin.setOverlay({ demoPath, runPath: buildPath(ARM_PARAMS, samples).segments,
       nodes: nodes.map(node => ({ ...node, current: ready && node.id === state.currentNode?.node })),
-      laser: { on: ready && state.laser?.on === true },
       spots: result?.valid === true ? { measured: mmToM(result.spot_base_mm), reference: mmToM(result.ref_spot_base_mm), deviation_mm: result.dev_norm_mm ?? null } : {} });
   }
   const reason = reply => /[\u3400-\u9fff]/.test(reply?.msg || "") ? reply.msg : ({

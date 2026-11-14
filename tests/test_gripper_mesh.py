@@ -77,19 +77,21 @@ def test_closed_fingers_are_symmetric_touching_and_match_mount(params):
         assert np.ptp(vertices[:, 0]) == pytest.approx(gripper["fingerLength"], abs=0.001)
         assert vertices[:, 0].min() == pytest.approx(custom["mount"]["xyz"][0], abs=1e-7)
         assert vertices[:, 0].max() == pytest.approx(custom["tipX"], abs=1e-7)
-    assert params["T_end_tcp"][3] == custom["tipX"]
-    assert params["T_end_camera"][3] == pytest.approx(custom["tipX"] - 0.070)
-    assert [params["T_end_camera"][i] for i in (7, 11)] == [0, 0.04]
-    assert params["T_end_laser"][3] == params["T_end_camera"][3]
-    assert params["T_end_camera"][11] - params["T_end_laser"][11] == pytest.approx(0.020)
+    # TCP 取真机后端名义夹头（pick.frames）；STEP 指尖按照片估算安装，与之相差不超过 0.5 mm。
+    assert abs(params["T_end_tcp"][3] - custom["tipX"]) <= 0.0005 + 1e-9
+    # 相机安装位来自真机手眼标定，由 scripts/check_twin_vs_backend.py 与后端逐项核对；激光头已删除。
+    assert "T_end_laser" not in params
 
 
 def test_maximum_opening_stays_on_rail_and_root_meets_carriages(params):
     _, _, custom = read_mesh("gripper")
     _, _, official = read_mesh("b601")
     rail = next(a["positions"] for p, a in official if p["source"] == "gripper_base_seeed_yellow")
-    assert params["gripper"]["openingMm"] == [0, 57]
-    assert params["gripper"]["fingerTravel"] == [0, 0.0285]
+    # 真机 config/gripper.json：全开 110 mm。官方导轨网格按显示长度沿 Y 缩放（scene.js railLength）。
+    assert params["gripper"]["openingMm"] == [0, 110]
+    assert params["gripper"]["fingerTravel"] == [0, 0.055]
+    rail_part = next(p for p, a in official if "railLength" in p)
+    rail = rail * [1, params["shape"]["gripperRail"]["size"][1] / rail_part["railLength"], 1]
     for side, sign in (("left", 1), ("right", -1)):
         finger = next(a["positions"] for p, a in custom if p["side"] == side)
         carriage = next(a["positions"] for p, a in official if p["side"] == side and p["material"] == "carriage_grey")

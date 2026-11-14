@@ -61,6 +61,9 @@ def main(archive: str, cell_mm: float):
             after += len(indices)
             part = {"frame": LINKS[link], "source": stem, "material": material,
                     "side": "left" if link == "left_finger" else "right" if link == "right_finger" else None}
+            if link == "gripper_base" and material == "metal":
+                # 原网格导轨名义长度（m），供 scene 按当前夹爪显示尺寸缩放端挡。
+                part["railLength"] = round(float(np.ptp(points[:, 1])), 3)
             for key, array in (("positions", points), ("indices", indices)):
                 blob = array.tobytes()
                 part[key] = {"offset": offset, "count": int(array.size)}

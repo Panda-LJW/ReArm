@@ -1,8 +1,12 @@
 """HTTP/WebSocket adapter; receives state exclusively from subscribed events."""
 import asyncio
 from copy import deepcopy
+from http.client import HTTPConnection, HTTPSConnection, HTTPException as HTTPError
+from ipaddress import ip_address, ip_network
+import json
 from pathlib import Path
 from threading import RLock
+from urllib.parse import urlsplit
 from fastapi import Body, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, Response, StreamingResponse
@@ -11,9 +15,171 @@ from rearm.interfaces import CommandController, EventBus, FrameSource
 from rearm.types import Event, jsonable
 
 
+def validate_backend_url(value: str) -> str:
+    """Accept an origin using localhost or a literal loopback/LAN address only."""
+    message = "--backend 地址无效：仅支持 http/https 的 localhost、本机或局域网 IP，可带端口，不能带账号、路径、查询或片段"
+    try:
+        url = urlsplit(value)
+        if (url.scheme not in {"http", "https"} or not url.hostname
+                or url.username is not None or url.password is not None
+                or url.path not in {"", "/"} or "?" in value or "#" in value
+                or any(c.isspace() or ord(c) < 32 for c in value)
+                or "%" in value or url.netloc.endswith(":")
+                or (url.port is not None and not 1 <= url.port <= 65535)):
+            raise ValueError(message)
+        host = url.hostname
+        if host != "localhost":
+            address = ip_address(host)
+            lan = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
+            if not (address.is_loopback or address.is_link_local
+                    or any(address in ip_network(network) for network in lan)):
+                raise ValueError(message)
+        authority = f"[{host}]" if ":" in host else host
+        if url.port is not None:
+            authority += f":{url.port}"
+        if url.netloc.lower() != authority:
+            raise ValueError(message)
+        return f"{url.scheme}://{authority}"
+    except ValueError as error:
+        raise ValueError(message) from error
+
+
+def _backend_error(error: Exception, timeout: float) -> HTTPException:
+    reason = f"请求超时（{timeout:g} 秒）" if isinstance(error, TimeoutError) else f"连接或响应失败：{error}"
+    return HTTPException(status_code=502, detail=f"后端{reason}")
+
+
+def _open_backend(backend: str, path: str, timeout: float, body: bytes | None = None):
+    url = urlsplit(backend)
+    connection = (HTTPSConnection if url.scheme == "https" else HTTPConnection)(
+        url.hostname, url.port, timeout=timeout)
+    try:
+        # Fixed paths, no redirects, environment proxies, cookies or browser credentials.
+        connection.request("POST" if body is not None else "GET", path, body=body,
+                           headers={"Content-Type": "application/json"} if body is not None else {})
+        upstream = connection.getresponse()
+        if 300 <= upstream.status < 400:
+            upstream.close()
+            raise HTTPException(status_code=502, detail="后端返回重定向，已拒绝转发")
+        return connection, upstream
+    except BaseException:
+        connection.close()
+        raise
+
+
+def _backend_headers(upstream) -> dict:
+    headers = {"Cache-Control": "no-store"}
+    for name in ("Content-Type", "Content-Encoding"):
+        if value := upstream.getheader(name):
+            headers[name] = value
+    return headers
+
+
+def _read_backend(backend: str, path: str, timeout: float, body: bytes | None = None):
+    try:
+        connection, upstream = _open_backend(backend, path, timeout, body)
+        try:
+            return Response(upstream.read(), status_code=upstream.status, headers=_backend_headers(upstream))
+        finally:
+            upstream.close()
+            connection.close()
+    except (OSError, HTTPError) as error:
+        raise _backend_error(error, timeout) from error
+
+
+class _BackendStream(StreamingResponse):
+    """Own the upstream until the ASGI response ends, including failed sends."""
+
+    def __init__(self, request: Request, connection, upstream, first: bytes):
+        self.connection, self.upstream = connection, upstream
+
+        async def chunks():
+            chunk = first
+            while chunk and not await request.is_disconnected():
+                yield chunk
+                if await request.is_disconnected():
+                    break
+                try:
+                    # read1 returns available bytes without waiting to fill 64 KiB.
+                    # The worker is bounded by the socket timeout and never detached.
+                    chunk = await run_in_threadpool(upstream.read1, 65536)
+                except (OSError, HTTPError):
+                    # Headers are already sent; a mid-stream failure ends the stream.
+                    break
+
+        super().__init__(chunks(), status_code=upstream.status,
+                         headers=_backend_headers(upstream) | {"X-Accel-Buffering": "no"})
+
+    def close(self):
+        self.upstream.close()
+        self.connection.close()
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # Outside StreamingResponse's disconnect cancellation scope, wait for cleanup.
+            await run_in_threadpool(self.close)
+
+
+def _stream_backend(backend: str, request: Request):
+    timeout = 2
+    try:
+        connection, upstream = _open_backend(backend, "/api/camera/color.mjpg", timeout)
+        try:
+            if upstream.status != 200:
+                response = Response(upstream.read(), status_code=upstream.status, headers=_backend_headers(upstream))
+                upstream.close()
+                connection.close()
+                return response
+            # Fetch the first bytes before committing 200 so initial timeouts return 502.
+            first = upstream.read1(65536)
+            return _BackendStream(request, connection, upstream, first)
+        except BaseException:
+            upstream.close()
+            connection.close()
+            raise
+    except (OSError, HTTPError) as error:
+        raise _backend_error(error, timeout) from error
+
+
 def create_server(controller: CommandController, bus: EventBus, initial: dict,
-                  camera: FrameSource | None = None, jpeg_quality: int | None = None) -> FastAPI:
+                  camera: FrameSource | None = None, jpeg_quality: int | None = None,
+                  backend: str | None = None) -> FastAPI:
+    if backend is not None:
+        backend = validate_backend_url(backend)
     app = FastAPI(title="ReArm", docs_url=None, redoc_url=None)
+    if backend is not None:
+        @app.get("/backend/api/state")
+        async def backend_state():
+            return await run_in_threadpool(_read_backend, backend, "/api/state", 2)
+
+        @app.get("/backend/api/vision/overlay.jpg")
+        async def backend_overlay():
+            return await run_in_threadpool(_read_backend, backend, "/api/vision/overlay.jpg", 2)
+
+        @app.get("/backend/api/camera/color.mjpg")
+        async def backend_camera(request: Request):
+            return await run_in_threadpool(_stream_backend, backend, request)
+
+        @app.post("/backend/api/cmd")
+        async def backend_command(request: Request):
+            def invalid_constant(value):
+                raise ValueError(f"非法 JSON 常量：{value}")
+
+            body = bytearray()
+            async for chunk in request.stream():
+                if len(body) + len(chunk) > 4096:
+                    raise HTTPException(status_code=413, detail="指令 JSON 不能超过 4096 字节")
+                body.extend(chunk)
+            try:
+                payload = json.loads(body, parse_constant=invalid_constant)
+            except (ValueError, UnicodeError, RecursionError) as error:
+                raise HTTPException(status_code=400, detail="指令必须是合法的 JSON") from error
+            if not isinstance(payload, dict) or payload.get("action") != "estop":
+                raise HTTPException(status_code=403, detail="第一档只读：该指令未开放")
+            return await run_in_threadpool(_read_backend, backend, "/api/cmd", 5, bytes(body))
+
     view, lock, listeners = deepcopy(initial), RLock(), []
     # Recent notable events for the panel feed; kept across snapshots.
     feed_kinds = {"alarm", "switch", "version_committed", "rejected", "rollback", "retrained", "damage_injected", "manual_switch", "estop", "estop_reset"}

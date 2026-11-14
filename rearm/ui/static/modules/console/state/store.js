@@ -1,7 +1,7 @@
 import { initialWorkspace, movePart } from "./workspace.js";
 
 export function initialState() {
-  return { link: { online: false }, hello: null, joint: null, phase: "idle", run: null,
+  return { link: { online: false }, hello: null, joint: null, device: null, lastPick: null, phase: "idle", run: null,
     selfcheck: {}, recognition: null, step: null, inspection: null, runs: [], training: null, trains: [], archivedTrains: null,
     library: { parts: [], recipes: [] }, partDocs: {}, recipeDocs: {}, candidate: null, stamps: {}, reset: null,
     workspace: initialWorkspace() };
@@ -34,8 +34,15 @@ export function reduce(state, message) {
   const m = structuredClone(message);
   const next = { ...state, stamps: { ...state.stamps, [slot(m)]: { t: m.t, seq: m.seq } } };
   switch (m.type) {
-    case "hello": return { ...next, hello: m };
+    case "hello": return { ...next, hello: m,
+      ...(m.sim === false ? { workspace: { ...state.workspace, props: [] } } : {}) };
     case "joint_state": return { ...next, joint: m };
+    case "device_state": {
+      const image = m.camera?.image;
+      return { ...next, device: m, ...(image && (image.width !== state.workspace.image.width || image.height !== state.workspace.image.height) ?
+        { workspace: { ...state.workspace, image } } : {}) };
+    }
+    case "last_pick": return { ...next, lastPick: m.pick };
     case "demo_reset": return { ...initialState(), link: state.link, hello: state.hello, joint: state.joint,
       library: state.library, partDocs: state.partDocs, recipeDocs: state.recipeDocs, archivedTrains: state.archivedTrains,
       reset: { t: m.t, seq: m.seq } };
@@ -50,7 +57,7 @@ export function reduce(state, message) {
       return m.run_id === state.run?.run_id && state.phase !== "estop" ?
         { ...next, selfcheck: { ...state.selfcheck, [m.item]: m } } : state;
     case "recognition":
-      return m.run_id === state.run?.run_id && state.phase !== "estop" ? { ...next, recognition: m } : state;
+      return m.run_id === state.run?.run_id && (state.phase !== "estop" || m.live === true) ? { ...next, recognition: m } : state;
     case "step_state":
       return m.run_id === state.run?.run_id && ["pick", "place"].includes(state.phase) &&
         m.action === state.phase && m.index === state.run.step_index && m.part_id === state.run.part_id &&

@@ -6,33 +6,28 @@
   flex: 1; min-height: 0; overflow: auto; display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; align-items: start; gap: var(--gap);
 }
-[data-page="settings"] .settings-section {
-  overflow: hidden;
-  animation: settings-enter var(--t-slow, 320ms) var(--ease-out, cubic-bezier(.2,.7,.2,1)) both;
-}
-[data-page="settings"] .settings-section + .settings-section { animation-delay: 40ms; }
+[data-page="settings"] .settings-section { overflow: hidden; }
 [data-page="settings"] .settings-section .c-card-head { margin-bottom: 0; }
 [data-page="settings"] .settings-values { margin: 0; }
 [data-page="settings"] .settings-pair {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: baseline; gap: var(--sp-4);
   padding: var(--sp-3) 0; border-bottom: var(--line-w) solid var(--line);
-  transition: background-color var(--t-fast, 120ms) var(--ease-out, cubic-bezier(.2,.7,.2,1));
+  transition: background-color var(--t-fast) var(--ease-out);
 }
 [data-page="settings"] .settings-pair:hover { background: var(--hover); }
 [data-page="settings"] .settings-pair:last-child { border-bottom: 0; }
 [data-page="settings"] dt { color: var(--sub); font-size: var(--fs-xs); letter-spacing: var(--tracking-label); }
-[data-page="settings"] dd { margin: 0; color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+[data-page="settings"] dd {
+  margin: 0; color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+  -webkit-user-select: text; user-select: text; cursor: text;
+}
 [data-page="settings"] .settings-missing { color: var(--mute); }
 [data-page="settings"] [data-setting="connection"] { display: flex; align-items: center; gap: calc(var(--sp-3) / 2); }
 [data-page="settings"] [data-setting="connection"]::before {
   content: ""; flex: none; width: calc(var(--pad) / 2); height: calc(var(--pad) / 2); border-radius: var(--radius-round);
-  background: var(--mute); transition: background-color var(--t-base, 200ms) var(--ease-out, cubic-bezier(.2,.7,.2,1));
+  background: var(--mute); transition: background-color var(--t-base) var(--ease-out);
 }
 [data-page="settings"] [data-online="true"]::before { background: var(--ok); }
-@keyframes settings-enter {
-  from { opacity: 0; transform: translateY(calc(var(--sp-3) / 2)); }
-  to { opacity: 1; transform: translateY(0); }
-}
 @media (max-width: 1080px) {
   [data-page="settings"] { overflow: visible; }
   [data-page="settings"] .settings-content { flex: auto; overflow: visible; grid-template-columns: minmax(0, 1fr); }

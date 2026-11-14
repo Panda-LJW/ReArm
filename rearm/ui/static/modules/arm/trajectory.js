@@ -2,7 +2,7 @@
 import { checkJoints, endPoses } from "./fk.js";
 
 export function buildPath(params, samples, { point = "tcp", maxGapMs = 500 } = {}) {
-  if (!["end_link", "tcp", "camera", "laser"].includes(point)) throw new RangeError("未知末端参考点：" + point);
+  if (!["end_link", "tcp", "camera"].includes(point)) throw new RangeError("未知末端参考点：" + point);
   if (!Number.isFinite(maxGapMs) || maxGapMs < 0) throw new RangeError("maxGapMs 必须是非负毫秒数");
   const segments = [], dropped = [];
   let segment = null, previous = null;

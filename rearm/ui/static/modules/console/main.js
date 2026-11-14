@@ -5,6 +5,7 @@ import { mount as mountDialog } from "./shell/dialog.js";
 import { PAGES } from "./shell/nav.js";
 import { createStore } from "./state/store.js";
 import { createReset } from "./shell/reset.js";
+import { mount as mountToast, commandFeedback } from "./shell/toast.js";
 
 const css = document.createElement("link");
 css.rel = "stylesheet"; css.href = new URL("./console.css", import.meta.url).href;
@@ -12,8 +13,12 @@ document.head.append(css);
 
 const store = createStore();
 let source = null, unsubscribeSource = () => {};
-const ctx = { store, send: (cmd, args) => source ? source.send(cmd, args) :
-  Promise.resolve({ v: 1, ok: false, code: "offline", msg: "连接已关闭", seq: 0 }) };
+const toast = mountToast(document.body);
+const ctx = { store, send: commandFeedback(async (cmd, args) => {
+  const reply = source ? await source.send(cmd, args) : { v: 1, ok: false, code: "offline", msg: "连接已关闭", seq: 0 };
+  if (reply?.ok && reply.msg) toast.show(reply.msg);
+  return reply;
+}, toast) };
 const tooltip = mountTooltip(document, ctx), dialog = mountDialog(document.body, ctx);
 ctx.dialog = dialog; ctx.reset = createReset(ctx);
 const topbar = mountTopbar(document.querySelector("[data-topbar]"), ctx);
@@ -42,8 +47,10 @@ async function optional(name, mount) {
 }
 
 await optional("datasource", async () => {
-  const { createMockConsole } = await import("../datasource/mock-console.js");
-  source = createMockConsole();
+  const backend = new URL(window.location.href).searchParams.get("arm") === "backend";
+  const moduleName = backend ? "backend-source" : "mock-console";
+  const adapter = await import(`../datasource/${moduleName}.js`);
+  source = backend ? adapter.createBackendSource() : adapter.createMockConsole();
   window.__rearmMock = { commands: source.commands };
   unsubscribeSource = source.subscribe(message => store.dispatch(message));
   source.start();
@@ -70,5 +77,5 @@ window.addEventListener("pagehide", event => {
   if (event.persisted) return;
   unsubscribeSource(); source?.stop(); unsubscribeStore();
   for (const view of views) view.dispose();
-  router.dispose(); topbar.dispose(); dialog.dispose(); tooltip.dispose();
+  router.dispose(); topbar.dispose(); dialog.dispose(); tooltip.dispose(); toast.dispose();
 }, { once: true });
