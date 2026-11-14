@@ -168,7 +168,7 @@ const manual=P.joints.map(j=>(j.limit[0]+j.limit[1])/2);frame(s,manual);
 const manualFrustum=frustumCorners(P,manual,0.18).map(p=>s.projectPoint(p));
 s.dispose();console.log(JSON.stringify({{rows,reset,manualFrustum}}));
 ''')
-    distance = 0.45 if view == 'gripper' else 1.5
+    distance = 0.45 if view == 'gripper' else 2.05  # arm-params.js 的 scene.cameraDistance
     for row in out['rows']:
         assert math.dist(row['expected'], row['at']) == pytest.approx(distance)
         assert [a + d * distance for a, d in zip(row['at'], row['direction'])] == pytest.approx(row['expected'])
