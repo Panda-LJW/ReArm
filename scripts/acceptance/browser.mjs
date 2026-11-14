@@ -98,6 +98,10 @@ export async function shot(ctx, name, evidenceKey) {
 export async function fresh(ctx, name = 'production') {
   await flushCommands(ctx);
   await ctx.page.goto(`${BASE}/#${name}`);
+  // 只换 hash 的 goto 不会重新加载文档，上一条检查留下的弹窗和状态会带过来；这里强制重载。
+  await ctx.page.reload();
+  // 等连接就绪（急停可点）再开始量，否则会量到启动瞬间“连接就绪后可操作”的过渡态。
+  await ctx.page.locator('[data-action="estop"]:not([aria-disabled="true"])').waitFor({ state: 'visible' });
   await ctx.page.locator(`[data-page="${name}"]`).waitFor({ state: 'visible' });
 }
 

@@ -54,9 +54,12 @@ def test_console_has_no_transport_legacy_imports_or_cross_page_dependencies():
         assert len(source.splitlines()) <= 200, path
         for spec in re.findall(r'(?:from\s*|import\s*\()["\x27]([^"\x27]+)', source):
             target = (path.parent / spec).resolve()
-            assert target.is_relative_to(CONSOLE) or (
-                path == CONSOLE / 'main.js' and target == STATIC / 'modules/datasource/mock-console.js'
-            ), (path, spec)
+            # T4 使用 T3 的公开孪生入口；工位常量仅进入纯状态层，视图仍不读取数据源。
+            public_imports = {
+                CONSOLE / 'main.js': {STATIC / 'modules/datasource/mock-console.js', STATIC / 'modules/twin/twin.js'},
+                CONSOLE / 'state/workspace.js': {STATIC / 'modules/datasource/fixtures/workspace.js'},
+            }
+            assert target.is_relative_to(CONSOLE) or target in public_imports.get(path, set()), (path, spec)
             if path.is_relative_to(CONSOLE / 'pages') and target.is_relative_to(CONSOLE / 'pages'):
                 assert target.relative_to(CONSOLE / 'pages').parts[0] == path.relative_to(CONSOLE / 'pages').parts[0]
     css = (CONSOLE / 'console.css').read_text()
@@ -219,7 +222,13 @@ win.Element.prototype.replaceChildren=function(...children) {
 };
 const warnings=[];const warn=console.warn;console.warn=(...args)=>warnings.push(args);
 await import('./console/main.js');tick(32);console.warn=warn;
-assert.equal(failed,true);assert.equal(warnings.length,1);
+assert.equal(failed,true);
+// JSDOM 无 WebGL/ResizeObserver，孪生失败应独立降级，不能覆盖生产页或影响急停。
+assert.equal(warnings.length,2);
+assert.equal(warnings.filter(args=>args[0].includes('页面 parts')).length,1);
+assert.equal(warnings.filter(args=>args[0].includes('页面 twin')).length,1);
+assert.match(doc.querySelector('[data-twin-stage]').textContent,/刷新重试/);
+assert.ok(doc.querySelector('[data-action="start"]'));
 assert.equal(doc.querySelectorAll('[data-page][data-ready="true"]').length,3);
 assert.match(doc.querySelector('[data-page="parts"]').textContent,/刷新重试/);
 assert.equal(doc.querySelectorAll('[data-nav]').length,4);

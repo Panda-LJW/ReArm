@@ -29,7 +29,9 @@ export function mount(root, ctx = {}) {
   const view = frameView(state => {
     const text = state ? statusWord(state) : WORDS.idle;
     if (status.textContent !== text) status.textContent = text;
-    setUnavailable(reset, state?.link?.online && typeof ctx.reset === "function" ? "" : "连接就绪后可操作");
+    const resetReason = !state?.link?.online || typeof ctx.reset !== "function" ? "连接就绪后可操作" :
+      state.hello?.sim !== true && state.phase !== "estop" ? "当前无需解除急停" : "";
+    setUnavailable(reset, resetReason);
     estop.render(state);
   }, () => {
     nav.dispose(); estop.dispose(); reset.removeEventListener("click", click); root.replaceChildren();

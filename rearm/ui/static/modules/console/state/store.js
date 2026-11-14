@@ -1,7 +1,10 @@
+import { initialWorkspace, movePart } from "./workspace.js";
+
 export function initialState() {
   return { link: { online: false }, hello: null, joint: null, phase: "idle", run: null,
     selfcheck: {}, recognition: null, step: null, inspection: null, runs: [], training: null, trains: [],
-    library: { parts: [], recipes: [] }, partDocs: {}, recipeDocs: {}, candidate: null, stamps: {}, reset: null };
+    library: { parts: [], recipes: [] }, partDocs: {}, recipeDocs: {}, candidate: null, stamps: {}, reset: null,
+    workspace: initialWorkspace() };
 }
 function newer(a, b) {
   return !b || (a.t === b.t ? a.seq > b.seq : a.t > b.t);
@@ -34,6 +37,7 @@ export function reduce(state, message) {
       const changed = m.run_id !== state.run?.run_id;
       return { ...next, run: m, phase: m.phase, step: null,
         ...(changed ? { selfcheck: {}, recognition: null, inspection: null } : {}),
+        ...(changed && m.run_id ? { workspace: initialWorkspace() } : {}),
         ...(m.phase === "estop" || (m.phase === "idle" && m.run_id === null) ? { training: null, candidate: null } : {}) };
     }
     case "selfcheck_item":
@@ -42,7 +46,8 @@ export function reduce(state, message) {
     case "recognition":
       return m.run_id === state.run?.run_id && state.phase !== "estop" ? { ...next, recognition: m } : state;
     case "step_state":
-      return m.run_id === state.run?.run_id && ["pick", "place"].includes(state.phase) ? { ...next, step: m } : state;
+      return m.run_id === state.run?.run_id && ["pick", "place"].includes(state.phase) ?
+        { ...next, step: m, workspace: movePart(state.workspace, m) } : state;
     case "inspect_result":
       return m.run_id === state.run?.run_id && state.phase !== "estop" ? { ...next, inspection: m } : state;
     case "run_done": {

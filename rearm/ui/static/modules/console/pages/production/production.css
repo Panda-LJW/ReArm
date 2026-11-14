@@ -1,0 +1,49 @@
+[data-page="production"] {
+  display: grid; grid-template-columns: minmax(0, 7fr) minmax(20rem, 3fr);
+  gap: var(--sp-5); padding: 0; overflow: hidden; background: var(--bg); border: 0;
+}
+[data-page="production"] .production-twin {
+  min-width: 0; min-height: 0; background: var(--panel);
+  border: var(--line-w) solid var(--line); border-radius: var(--radius);
+  color: var(--sub);
+}
+[data-page="production"] .production-side { min-width: 0; overflow: auto; background: var(--panel); padding: var(--sp-4); }
+[data-page="production"] .production-section { padding-block: var(--sp-2); }
+[data-page="production"] .production-section + .production-section { border-top: var(--line-w) solid var(--line); }
+[data-page="production"] h2 { margin: 0 0 var(--sp-2); font-size: var(--fs-md); font-weight: 500; color: var(--sub); }
+[data-page="production"] .production-field { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-3); color: var(--sub); }
+[data-page="production"] select {
+  width: 100%; min-width: 0; min-height: var(--ctl-h-lg); padding: var(--sp-2);
+  border: var(--line-w) solid var(--line2); border-radius: var(--radius);
+  background: var(--panel2); color: var(--text); font: var(--fs-md)/1.5 var(--sans);
+}
+[data-page="production"] select[aria-disabled="true"] { cursor: help; color: var(--mute); }
+[data-page="production"] [data-action="start"] { width: 100%; }
+[data-page="production"] .production-message { margin-top: var(--sp-2); color: var(--warn); overflow-wrap: anywhere; }
+[data-page="production"] .production-count { display: block; font: 500 calc(var(--fs-kpi) * 2)/1.15 var(--mono); color: var(--data); }
+[data-page="production"] .production-pass { margin-block: var(--sp-1) var(--sp-2); }
+[data-page="production"] .production-muted { color: var(--mute); font-size: var(--fs-sm); }
+[data-page="production"] .production-trend { height: var(--sp-6); display: grid; align-items: center; }
+[data-page="production"] .production-sparkline { width: 100%; height: 100%; overflow: visible; }
+[data-page="production"] .production-sparkline polyline { fill: none; stroke: var(--data); stroke-width: 2; }
+[data-page="production"] .production-sparkline circle { fill: var(--data); }
+[data-page="production"] .production-stepper { list-style: none; margin: 0; padding: 0; display: grid; }
+[data-page="production"] .production-stepper li { color: var(--mute); font-size: var(--fs-sm); line-height: 1.4; padding-left: var(--sp-3); border-left: var(--line-w) solid var(--line2); }
+[data-page="production"] .production-stepper [data-progress="current"] { color: var(--text); border-color: var(--accent); font-weight: 600; }
+[data-page="production"] .production-stepper [data-progress="done"] { color: var(--sub); }
+[data-page="production"] .production-checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); font-size: var(--fs-sm); color: var(--mute); }
+[data-page="production"] .production-checks [data-ok="true"] { color: var(--ok); }
+[data-page="production"] .production-camera { position: relative; width: min(100%, calc(var(--sp-6) * 6)); aspect-ratio: 4 / 3; margin-inline: auto; background: var(--video); }
+[data-page="production"] .production-observe { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+[data-page="production"] [data-object] { fill: var(--panel2); stroke: var(--sub); stroke-width: 2; }
+[data-page="production"] [data-kind="post"] { fill: var(--text); }
+[data-page="production"] [data-target-box] { fill: none; stroke: var(--ok); stroke-width: 2; }
+[data-page="production"] [data-target-leader] { stroke: var(--mute); stroke-width: 1; }
+[data-page="production"] .production-targets { position: absolute; inset: 0; list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); }
+[data-page="production"] .production-targets li { position: absolute; display: flex; flex-wrap: wrap; gap: var(--sp-1); max-width: calc(50% - var(--sp-2)); padding: var(--sp-1); background: var(--panel2); color: var(--text); border-radius: var(--radius); }
+[data-page="production"] .production-result { margin-top: var(--sp-2); font-size: var(--fs-xl); color: var(--mute); }
+[data-page="production"] .production-result[data-outcome="ok"] { color: var(--ok); }
+[data-page="production"] .production-result[data-outcome="deviation"] { color: var(--warn); }
+@media (max-width: 64rem) {
+  [data-page="production"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(16rem, 1fr) minmax(0, 1fr); gap: var(--sp-3); }
+}
