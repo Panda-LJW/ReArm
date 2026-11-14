@@ -122,3 +122,18 @@
 - 画面证据：从实际 scene.js 装配对象导出末端几何，离线光栅化 0、20、57 mm 的斜视及俯视，已打开 output/playwright/t2a-gripper-offline.png 对照照片核对矩形开孔、翻转方向、一白一灰、根部连接和导轨范围。该图是离线几何渲染，不是浏览器截图。导出数据 /private/tmp/rearm-t2a-render-scene.json，渲染脚本 /private/tmp/rearm-t2a-render.py。
 - 遗留：Playwright 启动独立 Chrome 以 SIGABRT 退出，清理时报 kill EPERM，未获得实际 WebGL 浏览器画面，未改变权限或启动服务。请在 /static/modules/twin/demo.html?source=manual 将夹爪从 0 拖到 57 mm，再加 &gripper=official 对比；真实安装位置仍待实测。没有连接硬件、没有启动 8000 端口服务。
 - 回滚：修改前文件备份位于 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-t2a-nfqr_e6z/before/；恢复上述本轮修改文件并移除本轮新增文件即可局部回退，保留后续用户改动。工作分支保持 feat/model-swap；app.js、app.css、index.html、guide/theme/focus/presentation、rearm 下 Python、config、docs 和项目 .venv 均未编辑。
+
+## 2026-11-14 T4 主机数据源、模拟练习与激光守护 [T4-20261114]
+- 目标：按设计第 5、6 节和任务接口 v1 实现纯逻辑；保持 feat/model-swap，不接真实地址、不改页面、不提交、不推送、不安装包。
+- 新增：rearm/ui/static/modules/datasource/host-source.js、mock-host.js；modules/trainer/config.js、store.js、metrics.js、laser-guard.js；tests/test_trainer_logic.py。
+- 修改：rearm/ui/static/modules/datasource/index.js（注册 host/mock、增加 trainerSourceFromParams）；tests/test_twin_modules.py（仅把数据源完整名单从 3 项扩展为 5 项，其他断言保留）；LOG.md、LOG-INDEX.md。
+- host-source：原始 v1 消息发布、非对象/错误版本过滤、连接/断开/静默超时通知、错误和断线重连、停止后的旧回调隔离；WebSocket 地址转换为同主机同端口的 HTTP(S) /api/v1/command，POST 自增 seq，网络异常转为 network 应答。构造时不连接，无模拟回退。
+- mock-host：同样的原始消息和 Promise 指令接口；hello 标明 sim；实时计时与 advance 共用事件循环。六轴平滑抓取 6 秒，样本逐帧取自已经发出的 joint_state，自动 4 节点；复用 ARM_PARAMS、laserRay、endPoses 计算限位内姿态、250 mm 光束点和 end_link 基座坐标。支持示范/练习互斥、缺示范拒绝、停止、急停/解除、完整指令记录、TTL 自动关灯、每秒心跳和软件激光状态。
+- 模拟偏差：第 p 遍各节点目标 d=max(2.5,18×0.62^(p−1))+ε mm，ε 为固定种子 LCG 的 [-0.1,0.1) mm 噪声。由参考光点到 J1 轴的基座 XY 半径 r 反算 Δq1=2×asin(d/(2r))，对 J1 加偏置后再次运行 FK 得到实测点和三维 dev；并非只填入预定 dev_norm_mm。修正 items 是下一遍各节点实际 J1 目标角差，中文说明随数值生成。
+- 8 遍证据：seed=1，mean_mm 为 [17.9907425747, 11.1475506758, 6.8856284093, 4.3220812869, 2.6798317016, 2.4354951016, 2.4899630522, 2.5060913849]；改善 86.0701059199%；32/32 个节点 valid=true，停稳后 400 ms 返回；同 seed 整个消息序列相同，不同 seed 数值不同。未接守护器时 4/4 节点在 2000 ms 超时，valid=false、spot_not_found、缺测坐标及统计保留 null。
+- store/metrics：不可变归并、按遍及节点键去重、按时间/序号拒绝槽位内旧消息、迟到历史补齐、最多 100 条事件；断线保留 mode 并置 stale。指标按完成遍统计，已应用 correction 按遍计数；无数据、首遍缺测或零基线改善率为 null。laserMismatch 用最新消息时间 state.t 与 panel_laser.t 比较，heartbeat 推进计时，纯函数不读墙钟。
+- laser-guard：在线练习停稳节点开灯并续期，同节点结果或超时关闭，重复节点不重开；手动开关只在在线且非练习/急停/故障时允许，示范可保留手动灯，进入练习先关闭。急停、故障、断线和四种 shutdown 均清理计时并尝试关灯；发送同步异常/Promise 拒绝均不外抛。shutdown 即使已关也发送安全兜底，连续间隔小于 200 ms 合并；生命周期 shutdown 后抑制遥测自动重开，重新装配需新 guard，显式合法 manual(true) 可恢复手动意图。
+- 设计差异：与第 5、6 节和本任务接口无冲突。细化约定：成功节点停留 800 ms，未见光点则停留至 2000 ms 超时后离开；mark_node 是预留指令，mock 返回 unsupported；mock 不提供图像流，hello.camera 和 image_url 为 null，不伪造相机内容；界面装配及 panel_laser 消息接线属于后续页面任务，本轮未实现。
+- 验证：开工 .venv/bin/python -m pytest -q 为 156 passed in 8.68s；最终同命令 179 passed in 9.64s，原 156 项全部保留，新增 23 项。测试使用 Node ES 模块和虚拟时钟，不依赖真实等待；所有激光指令送 mock，真实 WebSocket/fetch 设为失败哨兵，host 仅使用假 WebSocket/fetch。覆盖 8 遍闭环、无光点失败、各类守护规则、TTL、急停、重连和 3 秒静默、不可变/乱序/去重、空指标、无 DOM 和无硬编码主机地址。7 个相关 JS 文件 node --check、git diff --check 通过。
+- 遗留与范围：真实硬件/网络及页面集成未验证，按任务要求未连接或修改；未启动服务或占用 8000 端口。执行中出现的 docs/model-swap/tasks/T3-接口文档.md、docs/model-swap/遥控面板方案.md 是外部并发新增，未触碰。app.js、app.css、index.html、main.js、arm/、twin/、guide/theme/focus/presentation、rearm 下 Python、config/、docs/、.venv 均未编辑。
+- 回滚：修改前 index.js、test_twin_modules.py、LOG.md、LOG-INDEX.md 保存在 /private/tmp/rearm-t4-2mhxj_6h/before/。只恢复本轮对应文件、移除上列新增的 6 个 JS 与 test_trainer_logic.py 即可局部回退；日志只移除本 T4 条目，保留后续用户或并发改动。

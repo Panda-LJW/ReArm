@@ -140,7 +140,7 @@ console.log(JSON.stringify({ kinds: Object.keys(SOURCES), inside, seen, tele,
   gripper: parseTelemetry({ v: 1, type: "telemetry", t_ms: 1, joints: [{ id: 1, pos_deg: 0 }, { id: 2, pos_deg: 40 }, { id: 3, pos_deg: -90 }, { id: 7, pos_deg: 12 }] }).angles_deg,
   dirty: makeFrame({ angles_deg: [1, "a"], mode: "weird", online: true }), version: PROTOCOL_VERSION, timeout: HEARTBEAT_TIMEOUT_MS }));
 ''')
-    assert out['kinds'] == ['panel', 'sim', 'device'] and out['inside']
+    assert out['kinds'] == ['panel', 'sim', 'device', 'host', 'mock'] and out['inside']
     keys = {'timestamp', 'q_rad', 'valid', 'gripper_mm', 'angles_deg', 'mode', 'online', 'laser'}
     assert all(set(frame) == keys for frame in out['seen'] + [out['tele'], out['dirty']])
     sim, live, offline, empty = out['seen']

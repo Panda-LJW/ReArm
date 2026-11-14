@@ -1,10 +1,12 @@
-// 数据源层的入口。所有数据源接口相同：{ kind, start(), stop(), subscribe(cb) → 取消函数 }，
-// 回调收到的都是 frame.js 定义的 JointFrame。换数据源只改这里的选择，显示模块不用动。
+// 数据源层入口：旧源输出 JointFrame；host/mock 输出接口 v1 原始消息并提供 send。
 import { createPanelSource } from "./panel-source.js";
 import { createSimSource } from "./sim-source.js";
 import { createDeviceSource } from "./device-source.js";
+import { createHostSource } from "./host-source.js";
+import { createMockHost } from "./mock-host.js";
 
-export const SOURCES = { panel: createPanelSource, sim: createSimSource, device: createDeviceSource };
+export const SOURCES = { panel: createPanelSource, sim: createSimSource, device: createDeviceSource,
+  host: createHostSource, mock: createMockHost };
 
 export function createSource(kind = "panel", options = {}) {
   const factory = SOURCES[kind];
@@ -25,3 +27,8 @@ export function sourceFromParams(params) {
 }
 
 export { makeFrame, MODES } from "./frame.js";
+
+export function trainerSourceFromParams(params) {
+  if (params.has("backend")) return createSource("host", { url: params.get("backend") });
+  return createSource("mock");
+}
