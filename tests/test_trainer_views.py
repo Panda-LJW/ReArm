@@ -132,6 +132,82 @@ def test_untrusted_llm_text_is_never_html_and_chart_uses_computed_probe():
         assert color in chart
 
 
+@pytest.mark.parametrize('max_value,threshold,expected', [
+    (18, 5, {'top': 20, 'step': 5, 'ticks': [0, 5, 10, 15, 20]}),
+    (4.3, 5, {'top': 6, 'step': 2, 'ticks': [0, 2, 4, 6]}),
+    (120, 5, {'top': 150, 'step': 50, 'ticks': [0, 50, 100, 150]}),
+    (0, 5, {'top': 6, 'step': 2, 'ticks': [0, 2, 4, 6]}),
+])
+def test_deviation_nice_ticks_examples(max_value, threshold, expected):
+    node(f'''
+import assert from 'node:assert/strict';
+import {{ niceTicks }} from './trainer/views/deviation-chart.js';
+assert.deepEqual(niceTicks({max_value}, {threshold}), {json.dumps(expected)});
+''')
+
+
+def test_deviation_nice_ticks_boundaries_and_finite_fallback():
+    node('''
+import assert from 'node:assert/strict';
+import { niceTicks } from './trainer/views/deviation-chart.js';
+for (const max of [0, 2, 4, 4.01, 5, 8, 8.01, 18, 20, 20.01, 40, 40.01, 100, 120, 1e6]) {
+ for (const threshold of [5, 20, 120]) {
+  const {top, step, ticks} = niceTicks(max, threshold), limit = Math.max(max, threshold);
+  assert.ok(top >= limit && top - step < limit);
+  assert.ok(Number.isInteger(step) && step >= 1);
+  assert.ok([1, 2, 5].includes(step / 10 ** Math.floor(Math.log10(step))));
+  assert.ok(ticks.length >= 3 && ticks.length <= 5);
+  assert.equal(ticks[0], 0); assert.equal(ticks.at(-1), top);
+  ticks.forEach((value, i) => assert.equal(value, i * step));
+ }
+}
+for (const value of [NaN, Infinity, undefined, null]) {
+ assert.deepEqual(niceTicks(value, 5), niceTicks(0, 5));
+ assert.deepEqual(niceTicks(18, value), niceTicks(18, 0));
+}
+assert.deepEqual(niceTicks(0, 0), {top:2, step:1, ticks:[0, 1, 2]});
+''')
+
+
+@pytest.mark.parametrize('font', [14, 18, 24])
+def test_deviation_chart_integer_labels_threshold_line_and_token_font(font):
+    jsdom_script(r'''
+import assert from 'node:assert/strict';
+const dom = new JSDOM('<section><h3></h3><div class="legendline"></div><canvas id="errchart" aria-label="original"></canvas></section>');
+globalThis.document = dom.window.document;
+globalThis.getComputedStyle = () => ({fontSize:'FONTpx', getPropertyValue:name=>name==='--sans'?'sans-serif':name});
+const labels = [], strokes = [];
+let path = [];
+const context = new Proxy({
+ measureText:s=>({width:s.length * FONT * .6}),
+ fillText(text,x,y) { labels.push({text,x,y,font:this.font}); },
+ beginPath() { path = []; }, moveTo(x,y) { path.push([x,y]); }, lineTo(x,y) { path.push([x,y]); },
+ stroke() { strokes.push({color:this.strokeStyle, path:[...path], dash:this.dash}); },
+ setLineDash(dash) { this.dash = dash; },
+}, {get:(o,p)=>o[p]??(()=>{})});
+const canvas = document.querySelector('canvas');
+canvas.getContext = () => context;
+canvas.getBoundingClientRect = () => ({width:500, height:250});
+const {mount, niceTicks} = await import('./trainer/views/deviation-chart.js');
+const view = mount(document.querySelector('section'));
+for (const [max, threshold] of [[18,5], [4.3,5], [120,5], [0,5], [20,20], [5,0]]) {
+ labels.length = strokes.length = 0;
+ view.render({link:{online:true},hello:{},passes:[{result:{pass:1,mean_mm:max/2,max_mm:max}}]},
+   {lastMeanMm:max/2,lastMaxMm:max,thresholdMm:threshold});
+ const {top,ticks} = niceTicks(max,threshold);
+ assert.deepEqual(labels.filter(l=>l.x===0).map(l=>l.text), ticks.filter(v=>v!==threshold).map(String));
+ assert.equal(labels.filter(l=>l.text===`阈值 ${threshold}`).length,1);
+ assert.ok(labels.every(l=>l.font==='FONTpx sans-serif'));
+ const line = strokes.find(s=>s.color==='--warn');
+ assert.equal(line.path.length,2); assert.equal(line.path[0][1],line.path[1][1]);
+ assert.ok(Math.abs(line.path[0][1]-(FONT*1.4+(250-FONT*3.2)*(1-threshold/top)))<1e-9);
+ assert.ok(line.dash.length>0);
+ assert.equal(strokes.filter(s=>s.color==='--grid').length,ticks.length);
+}
+view.dispose(); assert.equal(canvas.getAttribute('aria-label'),'original'); dom.window.close();
+'''.replace('FONT', str(font)))
+
+
 def test_protocol_field_manifest_tracks_accesses_and_t4_payloads():
     text = '\n'.join(p.read_text() for p in TRAINER.rglob('*.js'))
     # 包括 ?. 访问和图表遍历时的动态字段名；排除已知的 UI / store 槽位。

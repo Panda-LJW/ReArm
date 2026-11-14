@@ -1,6 +1,15 @@
 import { canvasContext, px, token } from "./canvas.js";
 import { online, number, preserve, element } from "./format.js";
 
+export function niceTicks(maxValue, threshold) {
+  // 含 0 共 3–5 个刻度；极小或空范围按最小整数步长 1 展开。
+  const limit = Math.max(2, ...[maxValue, threshold].filter(Number.isFinite));
+  const target = limit / 4, scale = 10 ** Math.max(0, Math.floor(Math.log10(target)));
+  const step = [1, 2, 5, 10].map(value => value * scale).find(value => value >= target);
+  const count = Math.ceil(limit / step), top = count * step;
+  return { top, step, ticks: Array.from({ length: count + 1 }, (_, i) => i * step) };
+}
+
 export function mount(root) {
   const canvas = root.querySelector("#errchart"), heading = root.querySelector("h3"), legend = root.querySelector(".legendline");
   const restore = preserve([heading, legend]), label = canvas.getAttribute("aria-label");
@@ -18,15 +27,15 @@ export function mount(root) {
     canvas.setAttribute("aria-label", !online(state) || !rows.length ? `偏差：${empty}` :
       `偏差：${rows.length} 遍，最近平均 ${number(summary.lastMeanMm)} 毫米，最大 ${number(summary.lastMaxMm)} 毫米，阈值 ${summary.thresholdMm} 毫米`);
     if (!online(state) || !rows.length) { g.textAlign = "center"; g.fillText(empty, w / 2, h / 2); return; }
-    const top = Math.max(summary.thresholdMm, ...rows.flatMap(r => [r.mean_mm, r.max_mm]).filter(Number.isFinite)) * 1.25;
+    const maxValue = Math.max(0, ...rows.flatMap(r => [r.mean_mm, r.max_mm]).filter(Number.isFinite));
+    const { top, ticks } = niceTicks(maxValue, summary.thresholdMm);
     const left = Math.max(g.measureText(number(top, 0)).width + font, font * 2.5), right = font * 2.5, bottom = font * 1.8, upper = font * 1.4;
     const x = i => left + (w - left - right) * (rows.length === 1 ? 0.5 : i / (rows.length - 1));
     const y = value => upper + (h - upper - bottom) * (1 - value / top);
-    const ticks = Math.max(1, Math.min(4, Math.floor((h - upper - bottom) / (font * 1.7))));
     g.lineWidth = 1; g.textAlign = "left";
-    for (let i = 0; i <= ticks; i++) {
-      const v = top * i / ticks; g.strokeStyle = token("--grid"); g.beginPath(); g.moveTo(left, y(v)); g.lineTo(w - right, y(v)); g.stroke();
-      g.fillStyle = token("--mute"); g.fillText(number(v, v === 0 ? 0 : 1), 0, y(v) + font * 0.3);
+    for (const v of ticks) {
+      g.strokeStyle = token("--grid"); g.beginPath(); g.moveTo(left, y(v)); g.lineTo(w - right, y(v)); g.stroke();
+      if (v !== summary.thresholdMm) { g.fillStyle = token("--mute"); g.fillText(number(v, 0), 0, y(v) + font * 0.3); }
     }
     g.strokeStyle = token("--warn"); g.setLineDash([font * .4, font * .3]);
     g.beginPath(); g.moveTo(left, y(summary.thresholdMm)); g.lineTo(w - right, y(summary.thresholdMm)); g.stroke();
