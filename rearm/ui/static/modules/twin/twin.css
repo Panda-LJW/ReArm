@@ -2,6 +2,7 @@
 :root{
   --twin-body:#3a4250;--twin-plate:#aab3c0;--twin-joint:var(--accent);--twin-finger:#e7eaf0;--twin-finger-2:#8b9098;
   --twin-edge:#7c8798;--twin-grid:var(--line2);--twin-laser:var(--obs);--twin-pedestal:#1b2028;
+  --twin-camera:var(--text);--twin-frustum:var(--sub);--twin-demo-path:var(--sub);--twin-run-path:var(--accent-2);
 }
 .twin{position:relative;min-height:0;min-width:0;overflow:hidden}
 .twin-stage{position:absolute;inset:0}
@@ -15,3 +16,6 @@
 .twin-note{position:absolute;left:10px;right:10px;bottom:8px;text-align:center;color:var(--sub);font-size:var(--fs-sm);pointer-events:none}
 .twin[data-mode="offline"] .twin-label,.twin[data-mode="waiting"] .twin-label{color:var(--mute)}
 .twin-label[data-side="left"]{transform:translate(calc(-100% - 14px),-50%)}
+.twin-node-label,.twin-dev-label{position:absolute;padding:2px 6px;white-space:nowrap;font:var(--fs-sm) var(--mono);border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--text)}
+.twin-node-label[data-current="true"]{color:var(--twin-joint);border-color:var(--twin-joint);font-weight:600}
+.twin-dev-label{color:var(--twin-laser)}

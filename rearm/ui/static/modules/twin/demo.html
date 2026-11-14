@@ -15,16 +15,21 @@
   #sliders:not([hidden]){display:flex;gap:12px 20px;flex-wrap:wrap}
   #sliders label{flex-wrap:wrap}
   #sliders output{min-width:7ch;text-align:right}
+  #manual-actions:not([hidden]){display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line2);border-radius:4px;padding:6px 10px;cursor:pointer}
+  button:hover{background:var(--hover)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   #stage{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
 </style>
 </head>
 <body>
 <!-- 这个页面只加载孪生和数据源两个模块，不加载主面板，用来证明模块可以独立运行。
      ?source=sim（默认）用内置模拟数据；?source=manual 用下面的滑块；?source=device&device=ws://… 接下位机。
-     默认自制矩形夹指；?gripper=official 切回官方尖头指。 -->
+     默认自制矩形夹指；?gripper=official 切回官方尖头指；?view=gripper 跟随 TCP 看近景。 -->
 <header>
   <b>数字孪生单独演示</b><span id="src"></span>
   <span id="sliders" hidden></span>
+  <span id="manual-actions" hidden><label><input id="laser" type="checkbox">激光</label><button id="overlay-demo" type="button">演示叠加</button></span>
 </header>
 <div id="stage"></div>
 <script type="module">
@@ -32,12 +37,16 @@ import { createTwin } from "./twin.js";
 import { createSource } from "../datasource/index.js";
 import { makeFrame } from "../datasource/frame.js";
 import { ARM_PARAMS } from "../arm/arm-params.js";
+import { buildPath } from "../arm/trajectory.js";
+import { laserRay } from "../arm/fk.js";
 const params = new URLSearchParams(location.search), kind = params.get("source") || "sim";
-const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple", gripper: params.get("gripper") === "official" ? "official" : "custom" });
+const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple", gripper: params.get("gripper") === "official" ? "official" : "custom", view: params.get("view") === "gripper" ? "gripper" : "arm" });
 window.demo = { twin };
 document.getElementById("src").textContent = "数据源：" + ({ sim: "内置模拟", manual: "手动滑块", device: "下位机 " + (params.get("device") || "") }[kind] || kind);
 if (kind === "manual") {
   const sliders = document.getElementById("sliders"); sliders.hidden = false;
+  document.getElementById("manual-actions").hidden = false;
+  const laser = document.getElementById("laser");
   // 显示度，发送 URDF rad；不经过旧面板映射。初始取各轴限位中点。
   const controls = ARM_PARAMS.joints.map((joint, i) => ({ id: "q" + i, label: joint.label,
     range: joint.limit, value: (joint.limit[0] + joint.limit[1]) / 2, scale: 180 / Math.PI, unit: "°" }));
@@ -55,9 +64,22 @@ if (kind === "manual") {
       c.input.setAttribute("aria-valuetext", c.output.textContent);
     }
     twin.update(makeFrame({ q_rad: controls.slice(0, 6).map(c => Number(c.input.value)),
-      gripper_mm: Number(controls[6].input.value), mode: "sim", online: true, laser: false }));
+      gripper_mm: Number(controls[6].input.value), mode: "sim", online: true, laser: laser.checked }));
   };
-  sliders.oninput = send; send();
+  sliders.oninput = send; laser.onchange = send; send();
+  document.getElementById("overlay-demo").onclick = () => {
+    const q = controls.slice(0, 6).map(c => Number(c.input.value)), t = Date.now();
+    const bounded = (value, i) => Math.max(ARM_PARAMS.joints[i].limit[0], Math.min(ARM_PARAMS.joints[i].limit[1], value));
+    const samples = Array.from({ length: 41 }, (_, i) => ({ t: t + i * 50,
+      q: q.map((v, axis) => bounded(v + (axis === 0 ? (i - 20) * 0.004 : axis === 1 ? Math.sin((i - 20) * Math.PI / 40) * 0.05 : 0), axis)) }));
+    const demoPath = buildPath(ARM_PARAMS, samples).segments;
+    const runPath = buildPath(ARM_PARAMS, samples.map(s => ({ ...s, q: s.q.map((v, i) => bounded(v + (i === 1 ? 0.012 : 0), i)) }))).segments;
+    const points = demoPath.flat(), ray = laserRay(ARM_PARAMS, q);
+    const measured = ray.origin.map((v, i) => v + ray.direction[i] * 0.13);
+    twin.setOverlay({ demoPath, runPath,
+      nodes: [0, 20, 40].map((index, i) => ({ id: i + 1, p: points[index].p, current: i === 1 })),
+      spots: { measured, reference: measured.map((v, i) => v + (i === 2 ? 0.0032 : 0)), deviation_mm: 3.2 } });
+  };
 } else if (kind !== "none") {
   const source = createSource(kind, kind === "device" ? { url: params.get("device") } : {});
   source.subscribe(frame => twin.update(frame)); source.start(); window.demo.source = source;

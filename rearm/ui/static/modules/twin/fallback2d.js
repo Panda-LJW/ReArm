@@ -51,5 +51,6 @@ export function createScene(container, config) {
     g.globalAlpha = 1;
   }
   resize();
-  return { canvas, setPose, setPoseMatrices, project: id => points[id] || null, resize, render, applyTheme() {}, orbit() {}, zoom() {}, resetView() {}, dispose() { canvas.remove(); } };
+  return { canvas, setPose, setPoseMatrices, setOverlay() {}, projectPoint: () => null,
+    project: id => points[id] || null, resize, render, applyTheme() {}, orbit() {}, zoom() {}, resetView() {}, dispose() { canvas.remove(); } };
 }

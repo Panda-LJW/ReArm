@@ -44,3 +44,14 @@ export function laserRay(params, q) {
   // 激光固定变换的 +X 是光束方向。
   return { origin: position(laser), direction: [laser[0], laser[4], laser[8]] };
 }
+
+// 视锥远平面的四角，按周向排列；length 是沿光轴 +X 的距离（m）。
+export function frustumCorners(params, q, length = 0.18) {
+  if (!Number.isFinite(length) || length <= 0) throw new RangeError("视锥长度必须大于 0");
+  const { camera } = endPoses(params, q);
+  const halfWidth = length * Math.tan(params.camera.horizontalFovDeg * Math.PI / 360);
+  const halfHeight = length * Math.tan(params.camera.verticalFovDeg * Math.PI / 360);
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([y, z]) =>
+    [0, 1, 2].map(r => camera[r * 4 + 3] + camera[r * 4] * length
+      + camera[r * 4 + 1] * y * halfWidth + camera[r * 4 + 2] * z * halfHeight));
+}

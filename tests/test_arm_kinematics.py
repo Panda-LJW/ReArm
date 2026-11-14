@@ -330,7 +330,7 @@ const url=pathToFileURL(process.cwd()+'/twin/demo.html');
 const html=await readFile(url,'utf8');
 let code=html.split('<script type="module">')[1].split('</script>')[0];
 code=code.replace(/from "([^"]+)"/g,(_,relative)=>'from '+JSON.stringify(new URL(relative,url).href));
-const nodes=Object.fromEntries(['stage','sliders','src'].map(id=>[id,new Element()]));
+const nodes=Object.fromEntries(['stage','sliders','src','manual-actions','laser','overlay-demo'].map(id=>[id,new Element()]));
 document.getElementById=id=>nodes[id];
 globalThis.window={};globalThis.location={search:'?source=manual&render=2d&skin=simple'};
 await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));settle();

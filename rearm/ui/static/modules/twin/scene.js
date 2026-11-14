@@ -1,6 +1,6 @@
 // three.js 渲染：把 kinematics.forward() 给出的连杆位姿画出来。不读页面状态，不知道数据从哪来。
 import * as THREE from "../../vendor/three.module.min.js";
-import { forward, position } from "./kinematics.js";
+import { forward, position, multiply } from "./kinematics.js";
 
 const cssVar = (el, name, fallback) => getComputedStyle(el).getPropertyValue(name).trim() || fallback;
 
@@ -11,12 +11,14 @@ function palette(el) {
     finger2: cssVar(el, "--twin-finger-2", "#8b9098"),
     edge: cssVar(el, "--twin-edge", "#7c8798"), grid: cssVar(el, "--twin-grid", "#2c323c"),
     laser: cssVar(el, "--twin-laser", "#ff6a4d"), pedestal: cssVar(el, "--twin-pedestal", "#1b2028"),
+    camera: cssVar(el, "--twin-camera", "#e7eaf0"), frustum: cssVar(el, "--twin-frustum", "#9aa3b1"),
+    demoPath: cssVar(el, "--twin-demo-path", "#9aa3b1"), runPath: cssVar(el, "--twin-run-path", "#6aa6ff"),
     skinDark: cssVar(el, "--twin-skin-dark", "#39414e"), skinDarker: cssVar(el, "--twin-skin-darker", "#262c35"),
     skinMetal: cssVar(el, "--twin-skin-metal", "#cdd4de"), skinTrim: cssVar(el, "--twin-skin-trim", "#8f99a8"),
   };
 }
 
-export function createScene(container, config) {
+export function createScene(container, config, { view: viewMode = "arm" } = {}) {
   const canvas = document.createElement("canvas");
   canvas.className = "twin-canvas";
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -32,7 +34,7 @@ export function createScene(container, config) {
   scene.add(key);
 
   const materials = {}, edgeMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55 });
-  for (const name of ["body", "plate", "joint", "finger", "pedestal"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: name === "plate" ? 0.55 : 0.2 });
+  for (const name of ["body", "plate", "joint", "finger", "pedestal", "camera"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: name === "plate" ? 0.55 : 0.2 });
   // 真实外形（压缩网格）用的材质：平面着色，省掉法线数据，也让机加工件的棱面更清楚
   for (const name of ["skinDark", "skinDarker", "skinMetal", "skinTrim", "skinPlate", "skinFinger", "skinFinger2"]) materials[name] = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: /Metal|Plate/.test(name) ? 0.5 : 0.15, flatShading: true });
   // 网格材质映射；自制夹指按照片一白一灰，颜色仍由 CSS 主题控制。
@@ -41,6 +43,14 @@ export function createScene(container, config) {
   const gridMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 });
   const laserMaterial = new THREE.LineBasicMaterial({ transparent: true });
   const spotMaterial = new THREE.MeshBasicMaterial({ transparent: true });
+  const overlayMaterials = {
+    demoPath: new THREE.LineDashedMaterial({ transparent: true, opacity: 0.5, dashSize: 0.008, gapSize: 0.005 }),
+    runPath: new THREE.LineBasicMaterial(),
+    node: new THREE.MeshBasicMaterial(), current: new THREE.MeshBasicMaterial(),
+    measured: new THREE.MeshBasicMaterial(), reference: new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+    deviation: new THREE.LineBasicMaterial({ transparent: true, opacity: 0.7 }),
+    frustum: new THREE.LineBasicMaterial({ transparent: true, opacity: 0.3, depthWrite: false }),
+  };
 
   // 小工具：造一个带描边的零件并挂到 group 上。
   function part(group, geometry, material, at = [0, 0, 0], rotate = null) {
@@ -134,19 +144,79 @@ export function createScene(container, config) {
   }
   setOpening(openingMm);
 
-  // 激光束：从工具原点沿工具 +X 打到地面
+  // 相机和激光头只在六轴入口显示。各自原点是光心/出光点，外壳沿 -X 延伸。
+  const sensors = new THREE.Group(); sensors.name = "sensors"; sensors.visible = false; world.add(sensors);
+  const cameraHead = new THREE.Group(), laserHead = new THREE.Group();
+  cameraHead.name = "cameraHead"; laserHead.name = "laserHead";
+  cameraHead.matrixAutoUpdate = laserHead.matrixAutoUpdate = false;
+  sensors.add(cameraHead, laserHead);
+  const [depth, width, height] = config.camera.size;
+  box(cameraHead, config.camera.size, "body", [-depth / 2, 0, 0]);
+  box(cameraHead, [0.001, width, height], "camera", [0, 0, 0]);
+  for (const y of [-width * 0.32, 0, width * 0.32]) cylinder(cameraHead, height * 0.24, 0.0015, "x", "body", [0.001, y, 0]);
+  cylinder(laserHead, 0.004, 0.016, "x", "camera", [-0.008, 0, 0]);
+  // 不随网格皮肤加载而隐藏。
+  sensors.traverse(o => { o.userData.simple = false; });
+  const frustum = new THREE.LineSegments(new THREE.BufferGeometry(), overlayMaterials.frustum);
+  frustum.name = "cameraFrustum"; frustum.visible = false; world.add(frustum);
+
+  // 所有叠加坐标直接使用 base_link（m）；各段保持独立，安装台不参与换算。
+  const demoPath = new THREE.Group(), runPath = new THREE.Group(), nodes = new THREE.Group(), spots = new THREE.Group();
+  demoPath.name = "demoPath"; runPath.name = "runPath"; nodes.name = "nodes"; spots.name = "spots";
+  world.add(demoPath); world.add(runPath); world.add(nodes); world.add(spots);
+  let overlay = {}, referenceSpot = null;
+  const vector = p => new THREE.Vector3(...p);
+  function clearGroup(group) {
+    group.traverse(o => o.geometry?.dispose());
+    group.clear();
+  }
+  function drawPath(group, segments, material) {
+    for (const segment of segments || []) {
+      if (segment.length < 2) continue;
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(segment.map(sample => vector(sample.p))), material);
+      line.computeLineDistances(); group.add(line);
+    }
+  }
+  function setOverlay(value) {
+    overlay = value || {}; referenceSpot = null;
+    for (const group of [demoPath, runPath, nodes, spots]) clearGroup(group);
+    drawPath(demoPath, overlay.demoPath, overlayMaterials.demoPath);
+    drawPath(runPath, overlay.runPath, overlayMaterials.runPath);
+    for (const node of overlay.nodes || []) {
+      const marker = new THREE.Mesh(new THREE.SphereGeometry(node.current ? 0.006 : 0.004, 16, 12),
+        node.current ? overlayMaterials.current : overlayMaterials.node);
+      marker.position.set(...node.p); nodes.add(marker);
+    }
+    const { measured, reference } = overlay.spots || {};
+    if (measured) {
+      const marker = new THREE.Mesh(new THREE.SphereGeometry(0.0025, 16, 12), overlayMaterials.measured);
+      marker.name = "measured"; marker.position.set(...measured); spots.add(marker);
+    }
+    if (reference) {
+      referenceSpot = new THREE.Mesh(new THREE.RingGeometry(0.0035, 0.0045, 32), overlayMaterials.reference);
+      referenceSpot.name = "reference"; referenceSpot.position.set(...reference); spots.add(referenceSpot);
+    }
+    if (measured && reference) {
+      spots.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([vector(measured), vector(reference)]), overlayMaterials.deviation));
+    }
+  }
+
+  // 激光束：六轴使用出光点；旧三轴保留工具原点到地面的投影。
   const laserGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
   const laser = new THREE.Line(laserGeometry, laserMaterial); world.add(laser);
+  laser.name = "laserBeam";
   const spot = new THREE.Mesh(new THREE.CircleGeometry(0.012, 24), spotMaterial); world.add(spot);
 
   function applyTheme() {
     const p = palette(container);
     for (const name of Object.keys(materials)) materials[name].color.set(p[THEME[name] || name]);
     edgeMaterial.color.set(p.edge); gridMaterial.color.set(p.grid); laserMaterial.color.set(p.laser); spotMaterial.color.set(p.laser);
+    const colors = { node: "demoPath", current: "joint", measured: "laser", reference: "demoPath", deviation: "laser" };
+    for (const [name, material] of Object.entries(overlayMaterials)) material.color.set(p[colors[name] || name]);
   }
 
   // 视角：绕目标点的方位角/仰角/距离
-  const view = { azimuth: config.scene.cameraAzimuthDeg * Math.PI / 180, elevation: config.scene.cameraElevationDeg * Math.PI / 180, distance: config.scene.cameraDistance };
+  const view = { azimuth: config.scene.cameraAzimuthDeg * Math.PI / 180, elevation: config.scene.cameraElevationDeg * Math.PI / 180, distance: viewMode === "gripper" ? 0.45 : config.scene.cameraDistance };
   const home = { ...view }, target = new THREE.Vector3(...config.scene.cameraTarget);
   function placeCamera() {
     const c = Math.cos(view.elevation);
@@ -159,17 +229,38 @@ export function createScene(container, config) {
     setPoseMatrices(forward(config, urdfAngles), options);
   }
   // 六轴入口直接使用已算好的矩阵，禁止再调用带限位夹取的旧 forward。
-  function setPoseMatrices({ frames, end_link: toolMatrix }, { laserOn = false, dimmed = false, gripperMm = null } = {}) {
+  function setPoseMatrices({ frames, end_link: toolMatrix }, { laserOn = false, dimmed = false, gripperMm = null, axes = 3,
+    endPoses = null, laserRay = null, frustumCorners = null } = {}) {
     lastFrames = { ...frames, tool: toolMatrix };
     for (const [id, matrix] of Object.entries(lastFrames)) { links[id].matrix.set(...matrix); links[id].matrixWorldNeedsUpdate = true; }
     setOpening(gripperMm);
-    const origin = position(toolMatrix), dir = [toolMatrix[0], toolMatrix[4], toolMatrix[8]], floor = -lift;
-    const reach = dir[2] < -1e-3 ? (floor - origin[2]) / dir[2] : 0, hit = reach > 0 && reach < 3;
-    laser.visible = spot.visible = hit;
-    if (hit) {
-      const end = origin.map((v, i) => v + dir[i] * reach);
-      laserGeometry.setFromPoints([new THREE.Vector3(...origin), new THREE.Vector3(...end)]);
-      spot.position.set(end[0], end[1], floor + 0.001);
+    if (viewMode === "gripper") target.set(...position(endPoses?.tcp || multiply(toolMatrix, config.T_end_tcp)));
+    sensors.visible = frustum.visible = axes === 6 && !!endPoses;
+    if (sensors.visible) {
+      cameraHead.matrix.set(...endPoses.camera); laserHead.matrix.set(...endPoses.laser);
+      cameraHead.matrixWorldNeedsUpdate = laserHead.matrixWorldNeedsUpdate = true;
+      const center = position(endPoses.camera), points = [];
+      for (let i = 0; i < 4; i++) points.push(center, frustumCorners[i], frustumCorners[i], frustumCorners[(i + 1) % 4]);
+      frustum.geometry.setFromPoints(points.map(vector)); frustum.geometry.computeBoundingSphere();
+    }
+    if (axes === 6) {
+      laser.visible = laserOn && !dimmed && !!laserRay; spot.visible = false;
+      if (laser.visible) {
+        const { origin, direction } = laserRay;
+        const end = overlay.spots?.measured || origin.map((v, i) => v + direction[i] * 0.6);
+        laserGeometry.setFromPoints([vector(origin), vector(end)]);
+        laserGeometry.computeBoundingSphere();
+      }
+    } else {
+      // 旧三轴仍从工具原点打到地面，保留关灯时的淡色辅助线。
+      const origin = position(toolMatrix), dir = [toolMatrix[0], toolMatrix[4], toolMatrix[8]], floor = -lift;
+      const reach = dir[2] < -1e-3 ? (floor - origin[2]) / dir[2] : 0, hit = reach > 0 && reach < 3;
+      laser.visible = spot.visible = hit;
+      if (hit) {
+        const end = origin.map((v, i) => v + dir[i] * reach);
+        laserGeometry.setFromPoints([vector(origin), vector(end)]); laserGeometry.computeBoundingSphere();
+        spot.position.set(end[0], end[1], floor + 0.001);
+      }
     }
     laserMaterial.opacity = laserOn ? 1 : 0.28; spotMaterial.opacity = laserOn ? 1 : 0.35;
     for (const m of Object.values(materials)) { m.transparent = dimmed; m.opacity = dimmed ? 0.45 : 1; }
@@ -178,7 +269,11 @@ export function createScene(container, config) {
   // 把关节原点投影成容器内的像素坐标，供标签定位。
   function project(id) {
     if (!lastFrames || !lastFrames[id]) return null;
-    const v = new THREE.Vector3(...position(lastFrames[id])).project(camera);
+    return projectPoint(position(lastFrames[id]));
+  }
+  function projectPoint(point) {
+    const v = vector(point).project(camera);
+    if (v.z < -1 || v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) return null;
     return [(v.x + 1) / 2 * canvas.clientWidth, (1 - v.y) / 2 * canvas.clientHeight];
   }
 
@@ -262,21 +357,26 @@ export function createScene(container, config) {
   function resize() {
     const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
     renderer.setSize(w, h, false); camera.aspect = w / h;
-    // 竖窄容器里按宽度收视野，保证整条臂都在画面里
-    camera.fov = w / h < 1 ? 30 / Math.max(0.55, w / h) : 30; camera.updateProjectionMatrix();
+    // 近景留出相机视锥的空间；竖窄容器里继续按宽度扩大视野。
+    const fov = viewMode === "gripper" ? 50 : 30;
+    camera.fov = w / h < 1 ? fov / Math.max(0.55, w / h) : fov; camera.updateProjectionMatrix();
   }
-  function render() { placeCamera(); renderer.render(scene, camera); }
+  function render() {
+    placeCamera();
+    if (referenceSpot) referenceSpot.quaternion.copy(camera.quaternion);
+    renderer.render(scene, camera);
+  }
 
   applyTheme(); resize();
   return {
-    canvas, setPose, setPoseMatrices, project, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
+    canvas, setPose, setPoseMatrices, setOverlay, project, projectPoint, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
     orbit(dAzimuth, dElevation) { view.azimuth += dAzimuth; view.elevation = Math.min(1.35, Math.max(-0.1, view.elevation + dElevation)); },
-    zoom(factor) { view.distance = Math.min(3, Math.max(0.7, view.distance * factor)); },
+    zoom(factor) { view.distance = Math.min(3, Math.max(viewMode === "gripper" ? 0.15 : 0.7, view.distance * factor)); },
     resetView() { Object.assign(view, home); },
     dispose() {
       disposed = true;
       scene.traverse(o => { o.geometry?.dispose(); });
-      for (const m of [...Object.values(materials), edgeMaterial, gridMaterial, laserMaterial, spotMaterial]) m.dispose();
+      for (const m of [...Object.values(materials), ...Object.values(overlayMaterials), edgeMaterial, gridMaterial, laserMaterial, spotMaterial]) m.dispose();
       renderer.dispose(); canvas.remove();
     },
   };

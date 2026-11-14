@@ -4,7 +4,7 @@
 // 孪生只按收到的关节角画姿态，不关心数据来自仿真、面板还是真实下位机。
 import { ARM_CONFIG } from "./arm-config.js";
 import { panelToUrdf } from "./kinematics.js";
-import { checkJoints, forwardUrdf } from "../arm/fk.js";
+import { checkJoints, forwardUrdf, endPoses, laserRay, frustumCorners } from "../arm/fk.js";
 
 const MODE = {
   live: { text: "实时", icon: "●", cls: "ok" },
@@ -14,8 +14,36 @@ const MODE = {
 };
 const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1) + "°";
 
+// 拷贝输入，避免调用方后续改数组影响已显示的叠加；无效路径点断段。
+const copyPoint = p => Array.isArray(p) && p.length === 3 && Array.from(p).every(Number.isFinite) ? [...p] : null;
+function copyPath(segments = []) {
+  const out = [];
+  for (const samples of segments) {
+    let segment = null;
+    for (const sample of samples) {
+      const p = copyPoint(sample?.p);
+      if (!p) { segment = null; continue; }
+      if (!segment) { segment = []; out.push(segment); }
+      segment.push({ t: sample.t, p });
+    }
+  }
+  return out;
+}
+function copyOverlay(value = {}) {
+  const spots = value.spots || {};
+  return {
+    demoPath: copyPath(value.demoPath || []), runPath: copyPath(value.runPath || []),
+    nodes: (value.nodes || []).flatMap(node => {
+      const p = copyPoint(node.p); return p ? [{ id: node.id, p, current: node.current === true }] : [];
+    }),
+    laser: typeof value.laser?.on === "boolean" ? { on: value.laser.on } : null,
+    spots: { measured: copyPoint(spots.measured), reference: copyPoint(spots.reference),
+      deviation_mm: Number.isFinite(spots.deviation_mm) ? spots.deviation_mm : null },
+  };
+}
+
 // gripper: "custom"（默认，自制矩形指）| "official"（官方尖头指）。
-export async function createTwin(container, { config = ARM_CONFIG, forceFallback = false, skin = true, gripper = "custom" } = {}) {
+export async function createTwin(container, { config = ARM_CONFIG, forceFallback = false, skin = true, gripper = "custom", view = "arm" } = {}) {
   container.classList.add("twin");
   container.innerHTML = `<div class="twin-stage"></div><div class="twin-status" role="status"></div><div class="twin-labels" aria-hidden="true"></div><div class="twin-note"></div>`;
   const stage = container.querySelector(".twin-stage"), statusEl = container.querySelector(".twin-status"), labelsEl = container.querySelector(".twin-labels"), noteEl = container.querySelector(".twin-note");
@@ -23,7 +51,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   let scene, renderer = "webgl";
   try {
     if (forceFallback) throw new Error("fallback requested");
-    scene = (await import("./scene.js")).createScene(stage, config);
+    scene = (await import("./scene.js")).createScene(stage, config, { view });
   } catch (error) {
     stage.replaceChildren(); renderer = "2d";
     scene = (await import("./fallback2d.js")).createScene(stage, config);
@@ -33,7 +61,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   if (renderer === "webgl") scene.canvas.title = "拖动旋转，滚轮缩放，双击复位";
 
   const legacyDriven = config.panelMapping.map(m => config.joints.find(j => j.id === m.joint));
-  let driven = legacyDriven, labels = [], axes = 3;
+  let driven = legacyDriven, labels = [], axes = 3, overlay = copyOverlay(), overlayLabels = [];
   // J1、J2 离得近：J1 的标签放左侧，其余放右侧，既不互相压住，也不挡左上角的状态提示
   function makeLabels() {
     labelsEl.replaceChildren();
@@ -42,11 +70,29 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       el.dataset.side = i === 0 || (axes === 6 && i % 2 === 0) ? "left" : "right";
       labelsEl.appendChild(el); return el;
     });
+    makeOverlayLabels();
+  }
+  function makeOverlayLabels() {
+    for (const { el } of overlayLabels) el.remove();
+    overlayLabels = [];
+    // 2D 退路只存储叠加，不画标记或标签。
+    if (renderer === "2d") return;
+    const add = (className, text, p, current = false) => {
+      const el = document.createElement("div"); el.className = className; el.textContent = text;
+      el.dataset.current = String(current); labelsEl.appendChild(el); overlayLabels.push({ el, p });
+    };
+    for (const node of overlay.nodes) add("twin-node-label", String(node.id), node.p, node.current);
+    const { measured, reference, deviation_mm } = overlay.spots;
+    if (measured && reference && deviation_mm !== null) {
+      add("twin-dev-label", `偏差 ${deviation_mm.toFixed(1)} mm`, measured.map((v, i) => (v + reference[i]) / 2));
+    }
   }
   makeLabels();
 
   // 当前显示的读数向目标读数平滑靠拢；没有目标前停在配置的初始姿态。
-  let shown = null, goal = null, mode = "waiting", laser = false, raf = 0, disposed = false, dirty = true;
+  let shown = null, goal = null, mode = "waiting", laser = null, raf = 0, disposed = false, dirty = true;
+  // 明确的 JointFrame 激光状态优先；没提供时允许独立 overlay 激光事件。
+  const laserState = () => laser ?? overlay.laser?.on ?? false;
   let jointError = "", gripperMm = null;
   // 系统设置了“减少动态效果”时不做过渡，直接到位
   const calm = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -61,8 +107,9 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       shown = shown.map((v, i) => { const d = goal[i] - v; if (calm || Math.abs(d) < tolerance) return goal[i]; moving = true; return v + d * 0.18; });
     }
     const pose = shown || restView, offline = mode === "offline" || mode === "waiting";
-    const options = { laserOn: laser && !offline, dimmed: offline, gripperMm, axes };
-    if (axes === 6) scene.setPoseMatrices(forwardUrdf(config, pose), options);
+    const options = { laserOn: laserState() && !offline, dimmed: offline, gripperMm, axes };
+    if (axes === 6) scene.setPoseMatrices(forwardUrdf(config, pose), { ...options,
+      endPoses: endPoses(config, pose), laserRay: laserRay(config, pose), frustumCorners: frustumCorners(config, pose, 0.18) });
     else scene.setPose(panelToUrdf(config, pose), options);
     scene.render();
     const degrees = pose.map(v => axes === 6 ? v * 180 / Math.PI : v);
@@ -72,7 +119,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       el.style.left = Math.round(at[0]) + "px"; el.style.top = Math.round(at[1]) + "px";
       el.textContent = shown ? `${driven[i].label.split(" ")[0]} ${signed(degrees[i])}` : driven[i].label.split(" ")[0];
     });
-    if (axes === 6) placeLabels();
+    if (axes === 6 || overlayLabels.length) placeLabels();
     scene.canvas.setAttribute("aria-label", shown ? `机械臂三维姿态：${driven.map((j, i) => `${j.label} ${degrees[i].toFixed(1)} 度`).join("，")}。数据状态：${MODE[mode].text}` : `机械臂三维模型，${MODE[mode].text}`);
     dirty = false;
     if (moving) schedule();
@@ -82,8 +129,10 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   // 六轴标签按实际尺寸避让；优先贴近关节，在左右偏移的基础上找最近的空行。
   function placeLabels() {
     const placed = [], w = stage.clientWidth, h = stage.clientHeight, gap = 5;
-    for (let i = 0; i < labels.length; i++) {
-      const el = labels[i], at = scene.project(driven[i].id);
+    const entries = [...labels.map((el, i) => ({ el, at: scene.project(driven[i].id) })),
+      ...overlayLabels.map(({ el, p }) => ({ el, at: scene.projectPoint(p) }))];
+    for (const { el, at } of entries) {
+      el.hidden = !at;
       if (!at) continue;
       const width = el.offsetWidth, height = el.offsetHeight;
       const x = Math.max(gap, Math.min(w - width - gap, at[0] + (el.dataset.side === "left" ? -width - 14 : 14)));
@@ -165,14 +214,23 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
         if (frame.gripper_mm >= lo && frame.gripper_mm <= hi) gripperMm = frame.gripper_mm;
       }
       if (typeof frame.laser === "boolean") laser = frame.laser;
-      const next = frame.online === false ? "offline" : MODE[frame.mode] ? frame.mode : mode;
+      const next = frame.online === false ? "offline" : MODE[frame.mode] ? frame.mode
+        : frame.online === true && (mode === "offline" || mode === "waiting") ? "live" : mode;
       mode = next; renderStatus();
       schedule();
+    },
+    // 整体替换；所有字段可缺省，null 清空。坐标都是 base_link 下的 m。
+    setOverlay(value) {
+      if (disposed) return;
+      overlay = copyOverlay(value || {}); scene.setOverlay(overlay); makeOverlayLabels(); schedule();
     },
     // 供测试和调试读取当前显示状态
     state: () => ({ mode, shown: shown ? [...shown] : null, goal: goal ? [...goal] : null,
       q_rad: axes === 6 ? (shown ? [...shown] : null) : config.joints.map(j => panelToUrdf(config, shown || restView)[j.id]),
-      axes, laser, renderer, dirty, skin: skinState, gripper: gripperState }),
+      axes, laser: laserState(), renderer, dirty, skin: skinState, gripper: gripperState, view,
+      overlay: { demoPoints: overlay.demoPath.reduce((n, s) => n + s.length, 0),
+        runPoints: overlay.runPath.reduce((n, s) => n + s.length, 0), nodes: overlay.nodes.length,
+        hasSpots: !!(overlay.spots.measured || overlay.spots.reference) } }),
     refreshTheme() { scene.applyTheme(); schedule(); },
     dispose() { disposed = true; cancelAnimationFrame(raf); observer.disconnect(); scene.dispose(); container.replaceChildren(); container.classList.remove("twin"); },
   };
