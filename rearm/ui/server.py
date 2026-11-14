@@ -64,8 +64,9 @@ def create_server(controller: CommandController, bus: EventBus, initial: dict,
         return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
     @app.get("/")
-    def index():
-        return FileResponse(static / "index.html", headers={"Cache-Control": "no-cache"})
+    def index(request: Request):
+        filename = "index.html" if request.query_params.get("legacy") == "1" else "console.html"
+        return FileResponse(static / filename, headers={"Cache-Control": "no-cache"})
 
     camera_lock = RLock()
 

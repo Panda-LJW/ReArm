@@ -101,7 +101,7 @@ def test_design_tokens_are_served_before_panel_styles(config, tmp_path):
         'lg': '15', 'xl': '17', '2xl': '19', 'kpi': '22', 'kpi-wide': '20',
         'chart': '10', 'chart-label': '11', 'chart-empty': '12',
     }
-    html = request(app, '/')[1].decode()
+    html = request(app, '/?legacy=1')[1].decode()
     assert html.index('/static/tokens.css') < html.index('/static/app.css')
 
 

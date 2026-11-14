@@ -181,3 +181,42 @@
 - 提交状态：未提交、未暂存，因T0应转绿的第16条仍失败，且用户明确要求浏览器启动受阻时保留未提交改动。没有尝试 git add/commit，没有创建替代仓库或bundle。工作分支 feat/model-swap；HEAD=f0dc98c610cd437cbbfac954737fb5a7f2e0489d；main=57785e8f95837f0d2384b4f5968cba225821434c，未改变。海报素材包.zip 未跟踪。
 - 遗留：无头浏览器检查和截图未完成；第16条规则与现存受保护代码的冲突待决定，未自行放宽。原有 docs/路演/施工清单.md、tasks/节点1-任务书.md、Go_PPT.md 仍为开工时的未跟踪文件，未编辑；T1–T8未执行。
 - 回滚：移除本轮新增的9个验收脚本、测试文件、卡点文件与本轮5个报告证据文件，删除本日志块和对应索引行即可局部回退；保留开工前已有的路演文件、素材包及后续用户改动。应用与配置不需要回滚。
+
+
+## PPT-COVER-20261115：路演封面方向
+
+- 日期：2026-11-15（Asia/Taipei）
+- 目标：依据用户海报制作横版路演封面供选方向，并整理四个必须呈现的优势。
+- 改动文件：新增 `deck/cover-directions-v1/` 下三张 PNG、原图和品牌副本、提示词、内容来源与检查记录；本条日志及索引。
+- 关键决策：先提供 A 产品特写、B 双臂呼应、C 横向字标三个方案，用户选定后再延展轮换底图。用户本轮四个优势优先于旧路演文档的不同表述；标准化交付保留为有望实现，不虚构成果数字。
+- 验证：三张实际生成图已逐张查看，无标题与硬件交叠；文件尺寸均为 1672×941，只作视觉选稿。SHA-256 已写入 `deck/cover-directions-v1/review/sha256.json`。
+- 遗留：等待用户选择方向；最终分辨率、原始字标及产品结构复核、轮换底图、整套 PPT、视频与实际投屏仍待后续。
+- 回滚：本轮为独立新增目录，原海报、品牌文件及控制台代码未改；无需回退项目其他工作，忽略本轮目录即可。
+
+
+## NODE1-T1-20261115：控制台外壳、导航与通用控件
+
+- 日期：2026-11-15（Asia/Taipei）。目标：只做路演节点①任务 T1；本轮用户要求覆盖任务书的运行/提交步骤，只运行完整 pytest 和 node --check，浏览器验收与提交由外部执行。
+- 新增入口：`rearm/ui/static/console.html`，只加载 tokens.css 与新 main.js，并复用原品牌 SVG。
+- 新增外壳：`rearm/ui/static/modules/console/main.js`、`console.css`；`shell/nav.js`、`router.js`、`topbar.js`、`estop.js`、`dialog.js`、`tooltip.js`、`view.js`；`state/words.js`；`pages/production/index.js`、`pages/parts/index.js`、`pages/records/index.js`、`pages/settings/index.js`。共14个文件，其中13个 JS；每个文件不超过200行。
+- 修改服务：`rearm/ui/server.py` 仅修改 `/` 路由，默认返回 console.html，`legacy=1` 返回原 index.html，保留 no-cache；未改指令、WebSocket、急停或硬件行为。
+- 测试文件：新增 `tests/test_console_shell.py`（13项）；修改 `tests/test_ui_architecture.py`（ASGI测试助手正确分离path/query，旧首页测试改走legacy）、`tests/test_panel_frontend_contract.py`、`tests/test_presentation_mode.py`（仅改旧首页请求入口）。原断言未弱化、原测试未删除。
+- 记录文件：追加 `docs/路演/tasks/卡点.md` 的T1选择器自查；本日志及 `LOG-INDEX.md` 仅追加。已有路演验收报告、截图和 scripts/acceptance/ 未改；同时出现的 deck/ 与封面日志属于其他工作，完整保留。
+- 关键决策：四个页面本轮只有真实用途说明，各页独立 optional 加载，加载失败只替换该页内容；hash 统一驱动可见页面并保留查询串；视图 render 合并到 requestAnimationFrame，dispose 取消待渲染帧。状态词放在唯一词表，未实现T2 store或模拟主机。
+- 控件：急停在顶栏最右，48px高，距左侧按钮24px，实底使用 --estop；未设快捷键。当前没有数据源，重置与急停使用aria-disabled和原因提示，不虚构执行成功。急停接入点只调用注入的send，不提前改变状态。通用dialog使用原生模态框、Tab焦点圈、Esc取消和焦点归还；文案通过textContent写入。统一tooltip延迟850ms显示，移开/失焦/启用/删除/关框时清理，鼠标与键盘共用；捕获阶段拦截不可用按钮的点击、Enter和Space。
+- 验证基线：`.venv/bin/python -m pytest -q` 为334 passed in 22.18s。第一次修改后为2 failed, 345 passed in 22.15s；失败均在新增测试：一处把路由保留location.search误判为数据源接入（test_console_shell.py:46），一处Node测试局部root与既有helper的root重名（SyntaxError: Identifier 'root' has already been declared）。分别改为检查后端参数解析入口和重命名测试局部变量，未改变验收脚本。
+- 最终验证：`.venv/bin/python -m pytest -q` 为347 passed in 21.90s（334原项保留，新增13项，无跳过）；13个新 JS 全部 node --check 通过。未运行node1.sh、未启动服务或浏览器、未换端口或绕过沙箱、未安装依赖。
+- 验收静态对照：#3的四个data-nav和data-page、文字顺序和非空内容预计转绿；#7的位置/高度/间距部分预计满足；#9四页不可用按钮的help指针及800ms/1200ms提示时间条件预计满足。#7后续生产中急停和#9后续生产确认框依赖T4，整项不能在T1判绿。逐条对应依据见卡点.md。实际像素、原生dialog顶层、浏览器时序和三种分辨率画面未验证。
+- 遗留与停止点：T1尚未接数据源，重置/急停执行和生产确认流程留给对应后续任务；未开始T2。未执行git add或git commit，未修改受保护的旧入口、旧训练/数据源/孪生模块及验收判断；未处理素材包。
+- 回滚：移除本轮新增console.html、modules/console/和test_console_shell.py；只反向应用本轮server.py路由及3个旧测试文件的改动；删除卡点中的T1追加段、本日志块和对应索引行。不要回退其他工作追加的封面日志或deck内容，不覆盖用户后续修改。
+
+
+## PPT-BACKGROUNDS-20261115：A 封面延展与 R61 数据摘录
+
+- 日期：2026-11-15（Asia/Taipei）
+- 目标：按用户选择的封面 A 制作可轮换底图，从新附件提取可用于路演的数据。
+- 改动文件：新增 `deck/backgrounds-v1/` 三张底图、提示词、使用说明、数据摘录、检查记录、哈希与四图压缩包；新增 `deck/cover-selection.json`；更新封面内容来源文档；追加本条日志与索引。
+- 关键决策：底图无文字，分正文留白、图文侧景、章节强调；用户提供 R61 摘要只作为资料，不执行其中接手指令。13.9→5.6 mm 约下降 60% 为单次真机误差改善，仍未闭合、未夹起，不能写作成功抓取。
+- 验证：三张实际输出逐张查看，文字留白可用；原始尺寸 1672×941；zip 四个图像条目校验通过；SHA-256 保存在 review/sha256.json。没有运行机械臂或项目代码测试。
+- 遗留：完整 PPT、上屏文字、视频、真实训练曲线及实际投屏未完成；附件原始 CSV 未在本机独立复算。
+- 回滚：原封面与原海报不变，新底图为独立目录；内容来源文档只更新选稿和数据来源状态。未改控制台及其他会话的代码。

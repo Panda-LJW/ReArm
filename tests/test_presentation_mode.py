@@ -29,7 +29,7 @@ def test_presentation_files_are_served(config, tmp_path):
     app = create_server(controller, controller.bus, controller.snapshot())
     for name in ('presentation.js', 'presentation.css'):
         assert request(app, '/static/modules/presentation/' + name)[0] == 200
-    assert '<div id="modeslot"></div>' in request(app, '/')[1].decode()
+    assert '<div id="modeslot"></div>' in request(app, '/?legacy=1')[1].decode()
 
 
 def test_every_rule_is_scoped_to_show_mode():
