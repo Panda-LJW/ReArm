@@ -18,7 +18,7 @@ function palette(el) {
   };
 }
 
-export function createScene(container, config, { view: viewMode = "arm" } = {}) {
+export function createScene(container, config, { view: viewMode = "arm", propsFactory = null } = {}) {
   const canvas = document.createElement("canvas");
   canvas.className = "twin-canvas";
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -224,7 +224,14 @@ export function createScene(container, config, { view: viewMode = "arm" } = {}) 
     camera.lookAt(target);
   }
 
-  let lastFrames = null;
+  let lastFrames = null, propsLayer = null;
+  // 道具是可选渲染扩展；不调用 setProps 时不新增任何场景节点。
+  function setProps(value) {
+    if (!propsFactory) return;
+    if (!propsLayer) propsLayer = propsFactory(THREE, world, materials, edgeMaterial);
+    if (lastFrames) propsLayer.update(multiply(lastFrames.tool, config.T_end_tcp));
+    propsLayer.setProps(value);
+  }
   function setPose(urdfAngles, options = {}) {
     setPoseMatrices(forward(config, urdfAngles), options);
   }
@@ -234,6 +241,7 @@ export function createScene(container, config, { view: viewMode = "arm" } = {}) 
     lastFrames = { ...frames, tool: toolMatrix };
     for (const [id, matrix] of Object.entries(lastFrames)) { links[id].matrix.set(...matrix); links[id].matrixWorldNeedsUpdate = true; }
     setOpening(gripperMm);
+    propsLayer?.update(endPoses?.tcp || multiply(toolMatrix, config.T_end_tcp));
     if (viewMode === "gripper") target.set(...position(endPoses?.tcp || multiply(toolMatrix, config.T_end_tcp)));
     sensors.visible = frustum.visible = axes === 6 && !!endPoses;
     if (sensors.visible) {
@@ -369,7 +377,7 @@ export function createScene(container, config, { view: viewMode = "arm" } = {}) 
 
   applyTheme(); resize();
   return {
-    canvas, setPose, setPoseMatrices, setOverlay, project, projectPoint, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
+    canvas, setPose, setPoseMatrices, setOverlay, setProps, project, projectPoint, resize, render, applyTheme, loadSkin, isSkinned: () => skinned,
     orbit(dAzimuth, dElevation) { view.azimuth += dAzimuth; view.elevation = Math.min(1.35, Math.max(-0.1, view.elevation + dElevation)); },
     zoom(factor) { view.distance = Math.min(3, Math.max(viewMode === "gripper" ? 0.15 : 0.7, view.distance * factor)); },
     resetView() { Object.assign(view, home); },

@@ -5,6 +5,8 @@
 import { ARM_CONFIG } from "./arm-config.js";
 import { panelToUrdf } from "./kinematics.js";
 import { checkJoints, forwardUrdf, endPoses, laserRay, frustumCorners } from "../arm/fk.js";
+import { createHoverLabels } from "./hover-labels.js";
+import { copyProps, createPropsLayer } from "./props.js";
 
 const MODE = {
   live: { text: "实时", icon: "●", cls: "ok" },
@@ -43,15 +45,17 @@ function copyOverlay(value = {}) {
 }
 
 // gripper: "custom"（默认，自制矩形指）| "official"（官方尖头指）。
-export async function createTwin(container, { config = ARM_CONFIG, forceFallback = false, skin = true, gripper = "custom", view = "arm" } = {}) {
+export async function createTwin(container, { config = ARM_CONFIG, forceFallback = false, skin = true, gripper = "custom", view = "arm",
+  status = true, labels: labelMode = "always" } = {}) {
   container.classList.add("twin");
   container.innerHTML = `<div class="twin-stage"></div><div class="twin-status" role="status"></div><div class="twin-labels" aria-hidden="true"></div><div class="twin-note"></div>`;
   const stage = container.querySelector(".twin-stage"), statusEl = container.querySelector(".twin-status"), labelsEl = container.querySelector(".twin-labels"), noteEl = container.querySelector(".twin-note");
+  if (status === false) { statusEl.hidden = true; statusEl.style.display = "none"; }
 
   let scene, renderer = "webgl";
   try {
     if (forceFallback) throw new Error("fallback requested");
-    scene = (await import("./scene.js")).createScene(stage, config, { view });
+    scene = (await import("./scene.js")).createScene(stage, config, { view, propsFactory: createPropsLayer });
   } catch (error) {
     stage.replaceChildren(); renderer = "2d";
     scene = (await import("./fallback2d.js")).createScene(stage, config);
@@ -61,12 +65,14 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   if (renderer === "webgl") scene.canvas.title = "拖动旋转，滚轮缩放，双击复位";
 
   const legacyDriven = config.panelMapping.map(m => config.joints.find(j => j.id === m.joint));
-  let driven = legacyDriven, labels = [], axes = 3, overlay = copyOverlay(), overlayLabels = [];
+  let driven = legacyDriven, labels = [], axes = 3, overlay = copyOverlay(), overlayLabels = [], props = null;
+  const hoverLabels = labelMode === "hover" ? createHoverLabels(container, stage) : null;
   // J1、J2 离得近：J1 的标签放左侧，其余放右侧，既不互相压住，也不挡左上角的状态提示
   function makeLabels() {
     labelsEl.replaceChildren();
     labels = driven.map((j, i) => {
       const el = document.createElement("div"); el.className = "twin-label";
+      hoverLabels?.register(el, j.id);
       el.dataset.side = i === 0 || (axes === 6 && i % 2 === 0) ? "left" : "right";
       labelsEl.appendChild(el); return el;
     });
@@ -79,6 +85,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     if (renderer === "2d") return;
     const add = (className, text, p, current = false) => {
       const el = document.createElement("div"); el.className = className; el.textContent = text;
+      hoverLabels?.register(el, text);
       el.dataset.current = String(current); labelsEl.appendChild(el); overlayLabels.push({ el, p });
     };
     for (const node of overlay.nodes) add("twin-node-label", String(node.id), node.p, node.current);
@@ -121,6 +128,8 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     });
     placeLabels();
     scene.canvas.setAttribute("aria-label", shown ? `机械臂三维姿态：${driven.map((j, i) => `${j.label} ${degrees[i].toFixed(1)} 度`).join("，")}。数据状态：${MODE[mode].text}` : `机械臂三维模型，${MODE[mode].text}`);
+    if (status === false) scene.canvas.setAttribute("aria-label", shown
+      ? `机械臂三维姿态：${driven.map((j, i) => `${j.label} ${degrees[i].toFixed(1)} 度`).join("，")}` : "机械臂三维模型");
     dirty = false;
     if (moving) schedule();
   }
@@ -131,10 +140,11 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     const w = stage.clientWidth, h = stage.clientHeight, gap = 5;
     const bounds = stage.getBoundingClientRect(), chip = statusEl.getBoundingClientRect();
     const reserved = { x: 0, y: 0, width: chip.right - bounds.left + 8, height: chip.bottom - bounds.top + 8 };
-    const placed = [reserved];
+    const placed = status === false ? [] : [reserved];
     const entries = [...labels.map((el, i) => ({ el, at: scene.project(driven[i].id), priority: 1 })),
       ...overlayLabels.map(({ el, p }) => ({ el, at: scene.projectPoint(p), priority: el.classList.contains("twin-dev-label") ? 0 : 2 }))]
       .sort((a, b) => a.priority - b.priority);
+    if (hoverLabels) { hoverLabels.place(entries); return; }
     for (const { el, at } of entries) {
       el.hidden = !at;
       if (!at) continue;
@@ -158,8 +168,10 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
 
   function renderStatus() {
     const m = MODE[mode];
-    statusEl.className = "twin-status " + m.cls;
-    statusEl.innerHTML = `<i aria-hidden="true">${m.icon}</i><span>${m.text}</span>`;
+    if (status !== false) {
+      statusEl.className = "twin-status " + m.cls;
+      statusEl.innerHTML = `<i aria-hidden="true">${m.icon}</i><span>${m.text}</span>`;
+    }
     noteEl.textContent = jointError || (mode === "offline" ? "数据中断，显示最后一次姿态" : mode === "waiting" ? "还没有关节数据" : "");
     noteEl.style.textAlign = jointError ? "right" : "";
     container.dataset.mode = mode;
@@ -177,7 +189,8 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   const observer = new ResizeObserver(() => { scene.resize(); schedule(); });
   observer.observe(stage);
 
-  renderStatus(); schedule();
+  renderStatus();
+  if (hoverLabels) draw(); else schedule();
   // 真实外形是锦上添花：后台加载，成功就换上，失败（文件缺失、无 WebGL）保持简化外形。
   let skinState = "simple", gripperState = "simple";
   if (skin && scene.loadSkin) scene.loadSkin(new URL("./meshes/b601.json", import.meta.url), { gripper }).then(selected => {
@@ -238,14 +251,21 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       if (shown) placeLabels();
       schedule();
     },
+    // 整体替换道具；null 清空。2D 退路只保存快照，不绘制道具。
+    setProps(value) {
+      if (disposed) return;
+      const next = copyProps(value ?? []);
+      scene.setProps?.(next); props = next; schedule();
+    },
     // 供测试和调试读取当前显示状态
     state: () => ({ mode, shown: shown ? [...shown] : null, goal: goal ? [...goal] : null,
       q_rad: axes === 6 ? (shown ? [...shown] : null) : config.joints.map(j => panelToUrdf(config, shown || restView)[j.id]),
       axes, laser: laserState(), renderer, dirty, skin: skinState, gripper: gripperState, view,
+      ...(props === null ? {} : { props: copyProps(props) }),
       overlay: { demoPoints: overlay.demoPath.reduce((n, s) => n + s.length, 0),
         runPoints: overlay.runPath.reduce((n, s) => n + s.length, 0), nodes: overlay.nodes.length,
         hasSpots: !!(overlay.spots.measured || overlay.spots.reference) } }),
     refreshTheme() { scene.applyTheme(); schedule(); },
-    dispose() { disposed = true; cancelAnimationFrame(raf); observer.disconnect(); scene.dispose(); container.replaceChildren(); container.classList.remove("twin"); },
+    dispose() { disposed = true; cancelAnimationFrame(raf); observer.disconnect(); hoverLabels?.dispose(); scene.dispose(); container.replaceChildren(); container.classList.remove("twin"); },
   };
 }
