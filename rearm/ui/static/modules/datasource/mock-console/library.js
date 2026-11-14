@@ -5,8 +5,10 @@ export const clone = value => structuredClone(value);
 export function createLibrary() {
   const parts = clone(PARTS), recipes = clone(RECIPES);
   const list = target => target === "part" ? parts : recipes;
-  const summary = doc => Object.fromEntries(["id", "name", "code", "shape", "size_mm", "collected_at", "version"]
-    .filter(key => doc[key] !== undefined).map(key => [key, doc[key]]));
+  const summary = doc => ({ ...Object.fromEntries(["id", "name", "code", "shape", "size_mm", "collected_at", "version"]
+    .filter(key => doc[key] !== undefined).map(key => [key, doc[key]])),
+    training: { round: doc.training.rounds.at(-1).round, deviation_mm: doc.training.rounds.at(-1).deviation_mm,
+      elapsed_ms: doc.training.elapsed_ms } });
   return {
     parts, recipes,
     snapshot: () => ({ parts: parts.map(summary), recipes: recipes.map(summary) }),

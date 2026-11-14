@@ -2,7 +2,7 @@ import { initialWorkspace, movePart } from "./workspace.js";
 
 export function initialState() {
   return { link: { online: false }, hello: null, joint: null, phase: "idle", run: null,
-    selfcheck: {}, recognition: null, step: null, inspection: null, runs: [], training: null, trains: [],
+    selfcheck: {}, recognition: null, step: null, inspection: null, runs: [], training: null, trains: [], archivedTrains: null,
     library: { parts: [], recipes: [] }, partDocs: {}, recipeDocs: {}, candidate: null, stamps: {}, reset: null,
     workspace: initialWorkspace() };
 }
@@ -11,6 +11,11 @@ function newer(a, b) {
 }
 function replace(rows, key, row) {
   return [...rows.filter(r => r[key] !== row[key]), row].sort((a, b) => a.t - b.t || a.seq - b.seq);
+}
+function archiveTraining(library) {
+  return [["part", library.parts], ["recipe", library.recipes]].flatMap(([target, docs]) =>
+    docs.filter(doc => doc.training).map(doc => ({ ...doc.training, target, doc_id: doc.id,
+      train_id: `${target}:${doc.id}:${doc.version}`, t: doc.collected_at }))).sort((a, b) => a.t - b.t);
 }
 function slot(m) {
   if (m.type === "selfcheck_item") return `${m.type}:${m.run_id}:${m.item}`;
@@ -32,7 +37,8 @@ export function reduce(state, message) {
     case "hello": return { ...next, hello: m };
     case "joint_state": return { ...next, joint: m };
     case "demo_reset": return { ...initialState(), link: state.link, hello: state.hello, joint: state.joint,
-      library: state.library, partDocs: state.partDocs, recipeDocs: state.recipeDocs, reset: { t: m.t, seq: m.seq } };
+      library: state.library, partDocs: state.partDocs, recipeDocs: state.recipeDocs, archivedTrains: state.archivedTrains,
+      reset: { t: m.t, seq: m.seq } };
     case "run_state": {
       const changed = m.run_id !== state.run?.run_id;
       return { ...next, run: m, phase: m.phase, step: null,
@@ -57,7 +63,9 @@ export function reduce(state, message) {
       const { run_id, recipe_id, ok, deviation_mm, duration_ms, t, seq } = m;
       return { ...next, runs: replace(state.runs, "run_id", { run_id, recipe_id, ok, deviation_mm, duration_ms, t, seq }) };
     }
-    case "library": return { ...next, library: { parts: m.parts, recipes: m.recipes } };
+    // 首次快照保留收录时的训练摘要；现场重训和重置都不能覆盖这份历史。
+    case "library": return { ...next, library: { parts: m.parts, recipes: m.recipes },
+      archivedTrains: state.archivedTrains ?? archiveTraining(m) };
     case "part_doc": return { ...next, partDocs: { ...state.partDocs, [m.id]: m } };
     case "recipe_doc": return { ...next, recipeDocs: { ...state.recipeDocs, [m.id]: m } };
     case "part_candidate": return state.phase === "estop" ? state : { ...next, candidate: m };

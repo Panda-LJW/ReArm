@@ -62,6 +62,7 @@ assert.ok(RECIPES[0].training.success_rate>0.8);
 
 def test_key_poses_within_limits_workspace_uses_fk_and_camera_points_down():
     node(BASE + r'''
+assert.deepEqual(POSES.folded,[0,0,0,0,0,0]);
 for(const q of keyPoses()) assert.equal(checkJoints(ARM_PARAMS,q).ok,true,JSON.stringify(q));
 for(const p of PARTS) {
   assert.deepEqual(WORKSPACE.props.find(x=>x.id===p.id).pose,tcpPosition(POSES.parts[p.id].contact));
@@ -140,6 +141,12 @@ for(let i=0;i<frames.length;i++) {
   if(i) {assert.equal(f.t-frames[i-1].t,50);assert.ok(Math.max(...f.q.map((v,j)=>Math.abs(v-frames[i-1].q[j])))<0.4);}
 }
 const at=ms=>frames.find(f=>f.t===frames[0].t+ms);
+for(const [start,from,to] of [[3000,POSES.folded,POSES.observe],[34000,POSES.observe,POSES.folded]]) {
+  for(const elapsed of [0,1000,2000,3000,4000]) {
+    const u=elapsed/4000,k=u*u*(3-2*u);
+    assert.deepEqual(at(start+elapsed).q,from.map((q,i)=>q+(to[i]-q)*k));
+  }
+}
 assert.equal(at(13000).gripper_mm,OPEN_MM);assert.equal(at(14000).gripper_mm,36);
 assert.equal(at(18000).gripper_mm,36);assert.equal(at(19000).gripper_mm,OPEN_MM);
 ''')

@@ -3,8 +3,8 @@
 [data-page="settings"] h1 { margin: 0; font-size: var(--fs-2xl); }
 [data-page="settings"] h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
 [data-page="settings"] .settings-header p { color: var(--mute); font-size: var(--fs-base); }
-[data-page="settings"] .settings-content { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-rows: repeat(2, minmax(min-content, 1fr)); gap: var(--sp-6); }
-[data-page="settings"] .settings-section { min-width: 0; padding: var(--sp-5); border: var(--line-w) solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; justify-content: center; }
+[data-page="settings"] .settings-content { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; grid-auto-rows: max-content; gap: var(--sp-6); }
+[data-page="settings"] .settings-section { min-width: 0; padding: var(--sp-5); border: var(--line-w) solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; }
 [data-page="settings"] .settings-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-5); margin: var(--sp-5) 0 0; }
 [data-page="settings"] .settings-pair {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4);

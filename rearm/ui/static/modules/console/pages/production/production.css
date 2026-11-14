@@ -23,8 +23,10 @@
 [data-page="production"] .production-count { display: block; font: 500 calc(var(--fs-kpi) * 2)/1.15 var(--mono); color: var(--data); }
 [data-page="production"] .production-pass { margin-block: var(--sp-1) var(--sp-2); }
 [data-page="production"] .production-muted { color: var(--mute); font-size: var(--fs-sm); }
-[data-page="production"] .production-trend { height: var(--sp-6); display: grid; align-items: center; }
-[data-page="production"] .production-sparkline { width: 100%; height: 100%; overflow: visible; }
+[data-page="production"] .production-trend { height: var(--ctl-h-lg); min-height: var(--ctl-h-lg); display: flex; align-items: center; gap: var(--sp-2); }
+[data-page="production"] .production-sparkline { display: block; width: 100%; height: 100%; min-width: 0; overflow: hidden; }
+[data-page="production"] .production-trend[data-single="true"] .production-sparkline { width: var(--sp-5); flex: none; }
+[data-page="production"] .production-trend-value { font: var(--fs-sm)/1.5 var(--mono); color: var(--data); white-space: nowrap; }
 [data-page="production"] .production-sparkline polyline { fill: none; stroke: var(--data); stroke-width: 2; }
 [data-page="production"] .production-sparkline circle { fill: var(--data); }
 [data-page="production"] .production-stepper { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -52,7 +54,7 @@
 [data-page="production"] .production-section-1 h2 { grid-column: 2; grid-row: 1; justify-self: end; margin-bottom: 0; }
 [data-page="production"] .production-count { grid-column: 1; grid-row: 1 / 3; }
 [data-page="production"] .production-section-1 > .production-muted { grid-column: 1 / -1; }
-[data-page="production"] .production-trend { grid-column: 1 / -1; height: var(--sp-5); }
+[data-page="production"] .production-trend { grid-column: 1 / -1; }
 [data-page="production"] .production-pass { grid-column: 2; grid-row: 2; justify-self: end; margin-block: 0 var(--sp-1); }
 [data-page="production"] .production-result[data-outcome="empty"] { font-size: var(--fs-sm); color: var(--mute); }
 [data-page="production"] .twin-label { font-size: var(--fs-sm); }

@@ -135,3 +135,26 @@ for(const width of [320,378,400,520])for(const count of [4,6]){
   }
 }
 ''')
+
+
+def test_recent_deviation_single_point_has_value_and_all_points_stay_inside_chart():
+    jsdom_script(DOM + r'''
+const {mount}=await import('./console/widgets/sparkline.js');
+const trendRoot=doc.createElement('div');doc.body.append(trendRoot);const view=mount(trendRoot);
+for(const values of [[],[0.4],[0.4,0.3,1.9],[0.0],[],[1.0]]){
+  view.render(values);tick(16);
+  const chart=trendRoot.querySelector('svg'),value=trendRoot.querySelector('.production-trend-value'),dot=chart.querySelector('circle');
+  assert.equal(chart.style.display,values.length?'':'none');
+  assert.equal(value.hidden,values.length!==1);
+  assert.equal(value.textContent,values.length===1?`${values[0].toFixed(1)} mm`:'');
+  if(!values.length)continue;
+  const [, ,width,height]=chart.getAttribute('viewBox').split(' ').map(Number),radius=Number(dot.getAttribute('r'));
+  const x=Number(dot.getAttribute('cx')),y=Number(dot.getAttribute('cy'));
+  assert.ok(x-radius>0&&x+radius<width&&y-radius>0&&y+radius<height);
+  if(values.length===1){assert.equal(y,height/2);assert.equal(chart.querySelector('polyline').style.display,'none');}
+  else for(const point of chart.querySelector('polyline').getAttribute('points').split(' ')){
+    const [px,py]=point.split(',').map(Number);assert.ok(px>0&&px<width&&py>0&&py<height);
+  }
+}
+view.dispose();assert.equal(trendRoot.childElementCount,0);dom.window.close();
+''')

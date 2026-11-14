@@ -395,3 +395,22 @@
 - `tests/test_console_polish.py`
 - `tests/test_console_production.py`
 - `tests/test_console_records_settings.py`
+
+## 2026-11-15 现有前端 v1 接口规范与实际交互样例 [FRONTEND-API-SPEC-20261115]
+- 目标：交付按现有前端代码核对的接口规范，供后端直接阅读和对照，不混入设备层 v2 方案。
+- 改动文件：新增 docs/现有前端接口规范.md；新增 docs/接口样例/控制台-v1/ 下消息样例.json、完整交互.json、核对基线.json；新增 docs/接口样例/现有前端接口包.zip；本日志和索引只追加。
+- 基线：HEAD 8e13b36c382378c76bf32d1976fd2f2eb6b302e2，加当前未提交修改；61 个相关文件内容快照和 SHA-256 记录在核对基线.json。离线采样脚本与源码副本放 /private/tmp/rearm-frontend-api-20261115/，未执行真实网络或硬件操作。
+- 内容：9 个指令、15 种推送、6 类模拟错误，字段类型/单位/空值、文档与训练结构、生产时序、状态归并和模拟重置；区分已接入 mock 与未加载的现有 host-source 传输实现，明确相机/工作台、缺测、失败、去重及重连的现有限制。
+- 关键核对：当前训练每轮画面 1200ms，但每轮上报 300000ms，8轮播完9600ms，上报2400000ms与4800张；规范按代码记录，不沿用旧附录未说明的时间口径。未把模拟参数写成实机测量，未宣称填 backend 地址即可连接。
+- 验证：生成并完整回放生产、新增零件、新增配方、重训、错误/急停/重置五场景，最终状态逐项相同；HTTP 适配器地址及请求通过假传输检查；16 个本地引用目标存在、6 段文内 JSON 可解析、消息/指令/错误覆盖通过；4项压缩包逐字节及完整性检查通过。源码与采样基线无变化。初次采样快照缺少纯 FK 依赖，补入临时快照后通过。
+- 范围：仅交付规范和样例，没有修改前端代码、正式接口文档、设备配置、README 或 SPEC；没有运行完整应用测试或浏览器，也没有连接真实主机、机械臂和相机。
+- 遗留：真实传输入口、真实工位与图像、失败/缺测和恢复语义仍按节点④实施；本轮只说明现状。
+- 回滚：删除本轮新增规范、控制台-v1 样例目录和接口包，移除本日志与对应索引行；不覆盖或回退其他会话内容。
+
+## 2026-11-15 路演节点① T7 第二轮局部返工 [NODE1-T7-R2-20261115]
+- 目标：仅处理用户追加的五点，保留已验收 T7 主体；本轮最终保留第 1、2、4、5 点，第 3 点按 A.1 两轮失败停止规则回滚。
+- 改动文件：rearm/ui/static/modules/datasource/fixtures/poses.js、datasource/mock-console/library.js；modules/console/state/store.js、state/selectors.js、widgets/sparkline.js、pages/production/production.css、pages/settings/settings.css；tests/test_console_data.py、test_console_polish.py、test_console_records_settings.py；docs/路演/tasks/卡点.md；LOG.md、LOG-INDEX.md。
+- 决策：folded 使用 [0,0,0,0,0,0]，不改变轨迹时间或安全实现；库摘要从文档带出 training 的 round/deviation_mm/elapsed_ms，store 首次归并留存 archivedTrains，reset_demo 只清本次 trains/runs；设置按内容高度排列；折线改为独立 40px 高度，单值显示圆点与数值。
+- 验证：开工 422 passed in 39.33s；两轮观察布局分别 4 failed/419 passed、2 failed/421 passed，失败现象与尝试均写入卡点；回滚失败观察改法后 423 passed in 35.69s。最终 5 个改动 JS 的 node --check 退出码均为 0。关键姿态与完整运动限位、精确插值、5 条初始历史与重置/重连/现场排序、单点和多点图内坐标均有测试。
+- 遗留：第 3 点观察画面仍为上一版四角标签和长引线，未完成；实际像素、WebGL、三分辨率均未验证，原验收报告未刷新。原 17 项选择器和判断逐条静态自查见卡点，不宣称浏览器全绿。没有运行 node1.sh、服务、浏览器，没有修改 scripts/acceptance/、git add/commit 或开始下个任务。
+- 回滚：本轮开工 HEAD=2c83c8e55d77296f3858081ae4d04a545d7dd8ce；两个原 CSS 保存在 /private/tmp/rearm-t7-r2-backup/。失败观察实现另存该目录 observation-failed/，已从工作树撤回。若回滚保留的四项，仅逆向应用本轮上述源码/测试差异，并移除此日志、索引及卡点本节；保留并行会话的接口文档、样例和 FRONTEND-API-SPEC 日志。

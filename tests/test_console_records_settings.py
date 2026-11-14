@@ -18,17 +18,23 @@ const offViews=store.subscribe(state=>{records.render(state);settings.render(sta
 const body=kind=>recordsRoot.querySelector(`[data-records="${kind}"] tbody`);
 const rows=kind=>[...body(kind).rows].filter(row=>!row.querySelector('.records-empty')).map(row=>[...row.cells].map(cell=>cell.textContent));
 const setting=key=>settingsRoot.querySelector(`[data-setting="${key}"]`).textContent;
+const {PARTS}=await import('./datasource/fixtures/parts.js');
+const {RECIPES}=await import('./datasource/fixtures/recipes.js');
+const {time,millimeters,duration}=await import('./console/widgets/format.js');
+const archived=[...PARTS.map(d=>({...d,target:'零件'})),...RECIPES.map(d=>({...d,target:'配方'}))]
+  .sort((a,b)=>b.collected_at-a.collected_at).map(d=>[time(d.collected_at),`${d.target} · ${d.name}`,
+    `${d.training.rounds.at(-1).round} 轮`,millimeters(d.training.rounds.at(-1).deviation_mm),duration(d.training.elapsed_ms)]);
 const advance=ms=>{source.advance(ms);tick(16);};
 function cleanup(){offViews();off();source.stop();records.dispose();settings.dispose();dom.window.close();}
 '''
 
 
-def test_records_show_only_completed_runs_and_reset_clears_both_tables():
+def test_records_show_only_completed_runs_and_reset_keeps_archived_training():
     jsdom_script(SETUP + r'''
 assert.equal(recordsRoot.querySelectorAll('table').length,2);
 assert.deepEqual([...recordsRoot.querySelectorAll('[data-records="production"] th')].map(el=>el.textContent),['时间','配方','结果','偏差','用时']);
 assert.match(body('production').textContent,/还没有生产记录/);
-assert.match(body('training').textContent,/还没有训练记录/);
+assert.deepEqual(rows('training'),archived);assert.equal(archived.length,5);
 assert.equal(source.commands.length,0);
 await source.send('run_start',{recipe_id:'plate-tube'});advance(14000);
 assert.equal(rows('production').length,0);
@@ -38,12 +44,14 @@ await source.send('run_start',{recipe_id:'plate-tube'});advance(38000);
 assert.deepEqual(rows('production'),[['09:00:51','薄片 + 空心圆柱配套件','到位','0.4 mm','0:32']]);
 const first=body('production').rows[0];advance(50);assert.equal(body('production').rows[0],first);
 await source.send('train_start',{target:'part',draft:{id:'plate'}});advance(9600);
-assert.equal(rows('training').length,1);
+assert.equal(rows('training').length,6);
 const hello=store.getState().hello;
 await source.send('reset_demo');tick(16);
-assert.equal(rows('production').length,0);assert.equal(rows('training').length,0);
+assert.equal(rows('production').length,0);assert.deepEqual(rows('training'),archived);
+await source.send('library_get');tick(16);assert.deepEqual(rows('training'),archived);
 assert.match(body('production').textContent,/还没有生产记录/);
 assert.equal(store.getState().hello,hello);assert.equal(setting('threshold'),'1.0 mm');
+source.stop();source.start();tick(16);assert.deepEqual(rows('training'),archived);
 cleanup();
 ''')
 
@@ -52,16 +60,16 @@ def test_training_records_resolve_part_recipe_names_and_ignore_interrupted_train
     jsdom_script(SETUP + r'''
 assert.deepEqual([...recordsRoot.querySelectorAll('[data-records="training"] th')].map(el=>el.textContent),['时间','对象','轮数','最终偏差','用时']);
 await source.send('train_start',{target:'part',draft:{id:'plate'}});advance(8400);
-assert.equal(rows('training').length,0);
+assert.deepEqual(rows('training'),archived);
 advance(1200);
-assert.deepEqual(rows('training'),[['09:00:09','零件 · 薄片','8 轮','0.6 mm','40:00']]);
+assert.deepEqual(rows('training'),[['09:00:09','零件 · 薄片','8 轮','0.6 mm','40:00'],...archived]);
 await source.send('train_start',{target:'recipe',draft:{id:'plate-tube'}});advance(9600);
 assert.deepEqual(rows('training')[0],['09:00:19','配方 · 薄片 + 空心圆柱配套件','8 轮','0.6 mm','40:00']);
-assert.equal(rows('training').length,2);
+assert.equal(rows('training').length,7);assert.deepEqual(rows('training').slice(2),archived);
 assert.deepEqual(store.getState().trains.map(row=>row.target),['part','recipe']);
 const first=body('training').rows[0];advance(500);assert.equal(body('training').rows[0],first);
 await source.send('train_start',{target:'part',draft:{id:'tube'}});advance(2400);
-await source.send('estop');advance(10000);assert.equal(rows('training').length,2);
+await source.send('estop');advance(10000);assert.equal(rows('training').length,7);
 cleanup();
 ''')
 

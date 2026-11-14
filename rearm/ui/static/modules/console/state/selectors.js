@@ -3,7 +3,7 @@ import { WORDS } from "./words.js";
 export const online = state => state.link.online === true && state.hello?.proto === 1;
 export const statusWord = state => WORDS[state.phase === "estop" ? "estop" : state.training ? "training" : state.phase] || WORDS.idle;
 export const productionRecords = state => state.runs;
-export const trainingRecords = state => state.trains;
+export const trainingRecords = state => [...(state.archivedTrains || []), ...state.trains];
 export function productionSummary(state) {
   const sets = state.runs.length, passed = state.runs.filter(r => r.ok).length;
   return { sets, passed, passRate: sets ? passed / sets : null,

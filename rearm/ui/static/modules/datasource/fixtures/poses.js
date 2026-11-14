@@ -6,7 +6,7 @@ import { endPoses } from "../../arm/fk.js";
 const down = (yaw, shoulder, elbow) => [yaw, shoulder, elbow, Math.PI / 2 + shoulder - elbow, 0, 0];
 const grasp = yaw => ({ above: down(yaw, -1.75, -0.43), contact: down(yaw, -2.25, -0.45) });
 export const POSES = {
-  folded: [0, -2.85, -2.75, 1.2, 0, 0],
+  folded: [0, 0, 0, 0, 0, 0],
   observe: down(0, -1.3, -1.2),
   parts: { plate: grasp(-0.45), tube: grasp(0.45), sleeve: grasp(-0.8), block: grasp(0.8) },
   post: grasp(0),
