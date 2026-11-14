@@ -3,11 +3,15 @@ import { online, element } from "./format.js";
 export function buttonStates(state) {
   const unavailable = state.ui?.active === false || !online(state) || state.mode === "estop" || state.mode === "fault" || !!state.joint?.fault || state.ui?.panelEstop === true;
   const demo = state.mode === "demo", practice = state.mode === "practice", pending = !!state.ui?.pending;
+  const laserOn = state.laser?.on === true, laserAuto = !unavailable && practice;
+  const laserManual = !unavailable && !practice && laserOn;
   return {
     demo: { disabled: unavailable || practice || pending, pressed: demo, text: demo ? "示范中 · 结束" : "示范" },
     practice: { disabled: unavailable || demo || pending, pressed: practice, text: practice ? "练习中 · 停止" : "练习" },
-    laser: { disabled: unavailable || practice || pending, pressed: state.laser?.on === true,
-      text: practice ? "激光 自动" : state.laser?.on ? "激光 开" : "激光" },
+    laser: { disabled: unavailable || practice || pending, pressed: laserOn,
+      text: laserAuto ? "激光 自动" : laserManual ? "激光 开" : "激光",
+      className: "trainer-laser" + (laserAuto ? " trainer-laser-auto" : laserManual ? " trainer-laser-on" : ""),
+      dotClassName: laserAuto && laserOn ? "trainer-laser-dot" : "" },
   };
 }
 export function mount(root) {
@@ -35,7 +39,13 @@ export function mount(root) {
         const value = states[name]; button.disabled = value.disabled; button.textContent = value.text;
         button.setAttribute("aria-pressed", String(value.pressed));
         button.classList.toggle("primary", name !== "laser" && value.pressed);
-        button.classList.toggle("trainer-laser-on", name === "laser" && value.pressed);
+        if (name === "laser") {
+          button.className = value.className;
+          button.setAttribute("aria-label", value.dotClassName ? `${value.text}，正在出光` : value.text);
+          if (value.dotClassName) {
+            const dot = element("span", value.dotClassName, "● "); dot.setAttribute("aria-hidden", "true"); button.prepend(dot);
+          }
+        }
       }
       const source = state.hello?.sim ? "模拟" : state.ui?.hostname || "";
       badge.textContent = online(state) ? source : source ? `${source} · 离线` : "离线";

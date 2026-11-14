@@ -119,6 +119,111 @@ assert.equal(buttonStates({...base,laser:{on:true}}).laser.text,'激光 开');
 ''')
 
 
+@pytest.mark.parametrize('state,expected', [
+    ({}, {'disabled': False, 'pressed': False, 'text': '激光',
+          'className': 'trainer-laser', 'dotClassName': ''}),
+    ({'mode': 'practice', 'laser': {'on': True}},
+     {'disabled': True, 'pressed': True, 'text': '激光 自动',
+      'className': 'trainer-laser trainer-laser-auto', 'dotClassName': 'trainer-laser-dot'}),
+    ({'mode': 'practice'}, {'disabled': True, 'pressed': False, 'text': '激光 自动',
+                           'className': 'trainer-laser trainer-laser-auto', 'dotClassName': ''}),
+    ({'laser': {'on': True}, 'ui': {'laserManual': True}},
+     {'disabled': False, 'pressed': True, 'text': '激光 开',
+      'className': 'trainer-laser trainer-laser-on', 'dotClassName': ''}),
+    ({'mode': 'practice', 'laser': {'on': True}, 'link': {'online': False}},
+     {'disabled': True, 'pressed': True, 'text': '激光',
+      'className': 'trainer-laser', 'dotClassName': ''}),
+], ids=['off', 'auto-emitting', 'auto-dark', 'manual-on', 'offline-stale-on'])
+def test_laser_button_style_states(state, expected):
+    node(f'''
+import assert from 'node:assert/strict';
+import {{ buttonStates }} from './trainer/views/controls.js';
+import {{ initialState }} from './trainer/store.js';
+const base = {{...initialState(), link:{{online:true}}, hello:{{sim:true}}}};
+assert.deepEqual(buttonStates({{...base, ...{json.dumps(state)}}}).laser, {json.dumps(expected)});
+''')
+
+
+def test_laser_button_unavailable_never_uses_active_styles():
+    node('''
+import assert from 'node:assert/strict';
+import { buttonStates } from './trainer/views/controls.js';
+import { initialState } from './trainer/store.js';
+const base = {...initialState(), link:{online:true}, hello:{sim:true}, laser:{on:true}};
+for (const mode of ['idle', 'practice']) {
+  for (const unavailable of [{mode:'estop'}, {mode:'fault'}, {link:{online:false}},
+    {hello:null}, {ui:{panelEstop:true}}, {ui:{active:false}}, {joint:{fault:'driver'}}]) {
+    const value = buttonStates({...base, mode, ...unavailable}).laser;
+    assert.equal(value.disabled, true);
+    assert.equal(value.className, 'trainer-laser');
+    assert.equal(value.dotClassName, '');
+    assert.equal(value.text, '激光');
+  }
+}
+''')
+
+
+def test_laser_control_css_reserves_amber_for_manual_on_and_emitting_dot():
+    css = (TRAINER / 'trainer.css').read_text()
+    rules = {}
+    for selector, body in re.findall(r'([^{}]+)\{([^{}]*)\}', re.sub(r'/\*.*?\*/', '', css, flags=re.S)):
+        selector = selector.strip()
+        rules[selector] = rules.get(selector, '') + body
+    prefix = 'html[data-trainer="on"] .trainer-controls '
+    # 顶栏按钮的警示色只用于手动开与自动出光圆点；原有提示条与测量提示不属于按钮。
+    amber = {selector for selector, body in rules.items()
+             if '.trainer-controls' in selector and re.search(r'var\(--warn(?:-bg)?\)', body)}
+    assert amber == {prefix + '.trainer-laser-on', prefix + '.trainer-laser-dot'}
+    base = rules[prefix + '.trainer-laser']
+    assert 'border-color:var(--line2)' in base and 'color:var(--text)' in base
+    assert 'margin-left:calc(var(--gap) * .7)' in base and 'font-size:var(--fs-sm)' in base
+    assert 'gap:calc(var(--gap) * .5)' in rules['html[data-trainer="on"] .trainer-controls']
+    automatic = rules[prefix + '.trainer-laser-auto']
+    assert 'color:var(--sub)' in automatic and 'opacity:1' in automatic
+    assert 'background:var(--warn)' in rules[prefix + '.trainer-laser-on']
+    assert rules[prefix + '.trainer-laser-dot'] == 'color:var(--warn)'
+
+
+def test_laser_control_render_transitions_clear_dot_and_preserve_manual_banner():
+    jsdom_script(r'''
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const dom = new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+globalThis.document = dom.window.document;
+const { mount } = await import('./trainer/views/controls.js');
+const { initialState } = await import('./trainer/store.js');
+const view = mount(document), laser = document.querySelector('[data-trainer-action="laser"]');
+const banner = document.querySelector('.trainer-laser-banner');
+const base = {...initialState(), link:{online:true}, hello:{sim:true}};
+for (const state of [base,
+  {...base, mode:'practice', laser:{on:true}},
+  {...base, mode:'practice', laser:{on:true}},
+  {...base, mode:'practice', laser:{on:false}},
+  {...base, laser:{on:true}, ui:{laserManual:true}},
+  {...base, mode:'practice', laser:{on:true}},
+  {...base, mode:'practice', laser:{on:true}, link:{online:false}},
+  {...base, mode:'estop', laser:{on:true}}, base]) {
+  view.render(state);
+  const available = state.link.online && state.mode !== 'estop';
+  const auto = available && state.mode === 'practice', emitting = auto && !!state.laser?.on;
+  const manual = available && !auto && !!state.laser?.on;
+  assert.equal(laser.disabled, !available || auto);
+  assert.equal(laser.classList.contains('trainer-laser-on'), manual);
+  assert.equal(laser.classList.contains('trainer-laser-auto'), auto);
+  assert.equal(laser.querySelectorAll('.trainer-laser-dot').length, emitting ? 1 : 0);
+  assert.equal(laser.textContent, (emitting ? '● ' : '') + (auto ? '激光 自动' : manual ? '激光 开' : '激光'));
+  assert.equal(laser.getAttribute('aria-pressed'), String(!!state.laser?.on));
+  assert.equal(laser.getAttribute('aria-label').includes('正在出光'), emitting);
+  if (emitting) assert.equal(laser.querySelector('span').getAttribute('aria-hidden'), 'true');
+  assert.equal(banner.hidden, !state.ui?.laserManual);
+}
+view.dispose();
+assert.equal(document.querySelector('.trainer-controls'), null);
+assert.equal(document.querySelector('.trainer-laser-banner'), null);
+dom.window.close();
+''')
+
+
 def test_untrusted_llm_text_is_never_html_and_chart_uses_computed_probe():
     text = (TRAINER / 'views/corrections.js').read_text()
     assert 'explanation.textContent = last.llm_text' in text

@@ -1,8 +1,10 @@
 /* 只调整认领区域的内容密度；卡片位置、首页栅格与旧页面样式保持原状。 */
 html[data-trainer="on"] .trainer-controls{display:flex;align-items:center;gap:calc(var(--gap) * .5);flex:none;font-size:var(--fs-base)}
 html[data-trainer="on"] .trainer-controls button{white-space:nowrap;font-size:var(--fs-base)}
-html[data-trainer="on"] .trainer-controls .trainer-laser{margin-left:calc(var(--gap) * .7);font-size:var(--fs-sm);background:transparent;border-color:var(--warn);color:var(--warn)}
+html[data-trainer="on"] .trainer-controls .trainer-laser{margin-left:calc(var(--gap) * .7);font-size:var(--fs-sm);border-color:var(--line2);color:var(--text)}
+html[data-trainer="on"] .trainer-controls .trainer-laser-auto{color:var(--sub);opacity:1}
 html[data-trainer="on"] .trainer-controls .trainer-laser-on{background:var(--warn);border-color:var(--warn);color:var(--bg);font-weight:600}
+html[data-trainer="on"] .trainer-controls .trainer-laser-dot{color:var(--warn)}
 html[data-trainer="on"] .trainer-legacy-badge{display:none}
 html[data-trainer="on"] .trainer-source{font-size:var(--fs-xs);white-space:nowrap}
 html[data-trainer="on"] .trainer-laser-banner{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-size:var(--fs-sm)}
