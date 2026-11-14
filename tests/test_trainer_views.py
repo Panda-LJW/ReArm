@@ -411,6 +411,120 @@ view.dispose(); dom.window.close();
 ''')
 
 
+FEED_FIXTURE = r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const dom = new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+globalThis.document = dom.window.document;
+const {mount} = await import('./trainer/views/feed.js');
+const {initialState, reduce} = await import('./trainer/store.js');
+const feed = document.querySelector('#feed'), view = mount(feed);
+let state = {...initialState(), link:{online:true}, hello:{sim:true}};
+const result = {type:'pass_result', pass:4, t:4000, mean_mm:4.3, max_mm:6, valid_nodes:4, total_nodes:4};
+const correction = {type:'correction', pass:4, t:4100, applied:true,
+ items:[-.15, -.20, .19, -.12].map(delta => ({target:'J1', delta, unit:'deg'}))};
+const finished = {type:'event', name:'pass_finished', t:4200, text:'第 4 遍结束，4/4 个节点测量有效。', level:'info'};
+const render = () => view.render(state);
+const receive = message => { state = reduce(state, message); render(); };
+const rows = () => [...feed.querySelectorAll('.ev')];
+const texts = () => rows().map(row => row.querySelector('span').textContent);
+'''
+
+
+@pytest.mark.parametrize('order', ['rcf', 'rfc', 'crf', 'cfr', 'frc', 'fcr'])
+def test_feed_merges_pass_result_correction_and_host_finished_in_any_order(order):
+    jsdom_script(FEED_FIXTURE + f'''
+const messages = {{r:result, c:correction, f:finished}};
+for (const key of '{order}') receive(messages[key]);
+assert.deepEqual(texts(), ['第 4 遍：平均 4.3 mm · 修正 J1 4 处，最大 −0.20°']);
+assert.equal(rows()[0].querySelector('i').className, 'busy');
+receive({{...finished, pass:4, t:4300, text:'主机确认完成'}});
+assert.equal(rows().length, 1);
+const {{mount:mountKpis}} = await import('./trainer/views/kpis.js');
+const {{summarize}} = await import('./trainer/metrics.js');
+const kpis = mountKpis(document.querySelector('.kpis'));
+kpis.render(state, summarize(state));
+assert.equal(document.querySelectorAll('.kpi .d')[3].textContent,
+ '第 4 遍：' + texts()[0].split(' · 修正 ')[1]);
+kpis.dispose(); view.dispose(); dom.window.close();
+''')
+
+
+def test_feed_late_correction_updates_existing_row_without_changing_time_or_order():
+    jsdom_script(FEED_FIXTURE + r'''
+receive(result);
+const original = rows()[0], time = original.querySelector('time').textContent;
+assert.deepEqual(texts(), ['第 4 遍：平均 4.3 mm']);
+receive({type:'event', t:4500, text:'已急停', level:'bad'});
+receive({...correction, t:6000});
+assert.equal(rows().length, 2); assert.equal(rows()[1], original);
+assert.equal(original.querySelector('time').textContent, time);
+assert.deepEqual(texts(), ['已急停', '第 4 遍：平均 4.3 mm · 修正 J1 4 处，最大 −0.20°']);
+assert.equal(rows()[0].querySelector('i').className, 'bad');
+render(); assert.equal(rows()[1], original);
+view.dispose(); dom.window.close();
+''')
+
+
+def test_feed_two_passes_keep_independent_results_corrections_and_icons():
+    jsdom_script(FEED_FIXTURE + r'''
+receive(result); receive(finished);
+receive({...result, pass:5, t:5000, mean_mm:2, max_mm:3});
+receive({...correction, pass:5, t:5100, applied:false, items:[]});
+receive({...finished, pass:5, t:5200, text:'第 5 遍结束'});
+const latest = rows()[0];
+receive({...correction, t:6000});
+assert.deepEqual(texts(), ['第 5 遍：平均 2.0 mm · 无需修正', '第 4 遍：平均 4.3 mm · 修正 J1 4 处，最大 −0.20°']);
+assert.deepEqual(rows().map(row => row.querySelector('i').className), ['ok', 'busy']);
+assert.equal(rows()[0], latest);
+view.dispose(); dom.window.close();
+''')
+
+
+def test_feed_preserves_other_events_and_unmatched_host_finished():
+    jsdom_script(FEED_FIXTURE + r'''
+receive(result); receive(correction); receive(finished);
+const events = [
+ {text:'示范开始', level:'busy'}, {text:'示范结束', level:'ok'},
+ {text:'练习开始', level:'busy'}, {text:'练习停止', level:'ok'},
+ {text:'已急停', level:'bad'}, {text:'连接断开', level:'bad'},
+ {text:'连接恢复', level:'ok'}, {text:'激光状态不一致', level:'warning'},
+ {name:'custom', pass:4, text:'第 4 遍主机其它事件', level:'info'},
+ {name:'pass_finished', pass:3, text:'第 3 遍结束', level:'info'},
+ {name:'pass_finished', text:'主机未标明遍号', level:'info'},
+ {type:'error', name:'pass_finished', pass:4, msg:'主机出错'},
+ {name:'custom', text:'<img src=x onerror=alert(1)>', level:'error'},
+];
+events.forEach((event, i) => receive({type:'event', t:5000+i, ...event}));
+assert.equal(rows().length, events.length + 1);
+assert.deepEqual(texts().slice(0, -1), events.map(event => event.text || event.msg).reverse());
+assert.deepEqual(rows().slice(0, -1).map(row => row.querySelector('i').className),
+ events.map(event => event.type === 'error' || ['error','warning'].includes(event.level) ? 'bad' : event.level).reverse());
+assert.equal(feed.querySelector('img'), null);
+receive({...finished, t:7000, text:'第 3 遍结束，4/4 个节点测量有效。'});
+assert.ok(texts().includes('第 3 遍结束，4/4 个节点测量有效。'));
+view.dispose(); dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('fields,hello,expected', [
+    ({'max_mm': 5}, {}, 'ok'),
+    ({'max_mm': 5.1}, {}, 'busy'),
+    ({'max_mm': 4, 'valid_nodes': 3}, {}, 'busy'),
+    ({'mean_mm': None, 'max_mm': None, 'valid_nodes': 0}, {}, 'busy'),
+    ({'max_mm': 4, 'below_threshold': False}, {}, 'busy'),
+    ({'max_mm': 8, 'below_threshold': True}, {}, 'ok'),
+    ({'max_mm': 6}, {'threshold_mm': 7}, 'ok'),
+])
+def test_feed_status_reuses_pass_threshold_rules(fields, hello, expected):
+    jsdom_script(FEED_FIXTURE + f'''
+state.hello = {{...state.hello, ...{json.dumps(hello)}}};
+receive({{...result, ...{json.dumps(fields)}}});
+assert.equal(rows()[0].querySelector('i').className, '{expected}');
+view.dispose(); dom.window.close();
+''')
+
+
 @pytest.mark.parametrize('size', [(640, 480), (320, 240), (900, 360)])
 def test_camera_html_label_avoids_all_corner_chips_and_uses_letterboxing(size):
     jsdom_script(r'''
@@ -490,7 +604,7 @@ click('practice');await Promise.resolve();await Promise.resolve();flush();assert
 advance(40000);await Promise.resolve();await Promise.resolve();flush();
 const completed=trainer.state().passes.filter(p=>p.result);assert.ok(completed.length>=5);assert.ok(completed.at(-1).result.mean_mm<completed[0].result.mean_mm);
 assert.equal(calls.at(-1).q_rad.length,6);assert.equal(calls.at(-1).mode,'sim');assert.ok(overlays.at(-1).demoPath.length);assert.ok(overlays.at(-1).nodes.length===4);assert.ok(overlays.at(-1).runPath.length);
-assert.ok(document.querySelector('#feed').textContent.includes('遍结束：平均'));
+assert.ok(document.querySelector('#feed').textContent.includes('遍：平均'));
 assert.ok(document.querySelector('#diag').textContent.includes('目标角'));
 assert.deepEqual([...document.querySelectorAll('.trainer-correction-items li span:first-child')].map(el=>el.textContent),[1,2,3,4].map(n=>`J1 · 节点 ${n}`));
 assert.ok(!document.querySelector('#diag').textContent.includes('deg'));

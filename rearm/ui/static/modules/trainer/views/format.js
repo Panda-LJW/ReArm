@@ -12,6 +12,18 @@ export function latestNode(state) {
 export const lastCorrection = state => state.passes.filter(pass => pass.correction).at(-1)?.correction ?? null;
 export const correctionValue = item => number(item.delta, 2, true) +
   (["deg", "°"].includes(item.unit) ? "°" : item.unit ? ` ${item.unit}` : "");
+export function correctionSummary(correction) {
+  if (!correction) return "";
+  const groups = new Map();
+  for (const item of correction.items || []) {
+    const group = groups.get(item.target) ?? { count: 0, maximum: item };
+    group.count++;
+    if (Math.abs(item.delta) > Math.abs(group.maximum.delta)) group.maximum = item;
+    groups.set(item.target, group);
+  }
+  return [...groups].map(([target, group]) =>
+    `${target} ${group.count} 处，最大 ${correctionValue(group.maximum)}`).join("；") || "无需修正";
+}
 export const correctionTarget = item => {
   const note = item.note?.trim(), node = note?.match(/节点\s*\d+/)?.[0];
   return note ? `${item.target} · ${node || note}` : item.target;

@@ -1,18 +1,4 @@
-import { number, online, modeText, correctionValue, lastCorrection, preserve, element } from "./format.js";
-
-function correctionSummary(correction) {
-  if (!correction) return "";
-  const groups = new Map();
-  for (const item of correction.items || []) {
-    const group = groups.get(item.target) ?? { count: 0, maximum: item };
-    group.count++;
-    if (Math.abs(item.delta) > Math.abs(group.maximum.delta)) group.maximum = item;
-    groups.set(item.target, group);
-  }
-  const detail = [...groups].map(([target, group]) =>
-    `${target} ${group.count} 处，最大 ${correctionValue(group.maximum)}`).join("；");
-  return `第 ${correction.pass} 遍：${detail || "无需修正"}`;
-}
+import { number, online, modeText, correctionSummary, lastCorrection, preserve, element } from "./format.js";
 
 export function mount(root) {
   const dispose = preserve([root]);
@@ -44,7 +30,8 @@ export function mount(root) {
     const worse = !baseline && pct < 0;
     set(2, baseline || pct == null ? "—" : number(Math.abs(pct), 0), "%", baseline ? "第 1 遍是基准" : pct == null ? "" :
       `${worse ? "▲ 变差 ·" : pct > 0 ? "↓" : "持平 ·"} ${number(summary.firstMeanMm)} → ${number(summary.lastMeanMm)} mm`, worse ? "bad" : "none");
+    const correction = lastCorrection(state);
     set(3, summary.corrections == null ? "—" : String(summary.corrections), "次",
-      summary.corrections == null ? "" : correctionSummary(lastCorrection(state)));
+      summary.corrections == null || !correction ? "" : `第 ${correction.pass} 遍：${correctionSummary(correction)}`);
   } };
 }
