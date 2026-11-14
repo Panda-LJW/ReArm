@@ -12,7 +12,7 @@ NODE = shutil.which('node')
 PRELUDE = '''
 import { ARM_PARAMS as P } from './arm/arm-params.js';
 import { ARM_CONFIG as C } from './twin/arm-config.js';
-import { checkJoints, forwardUrdf, endPoses, laserRay } from './arm/fk.js';
+import { checkJoints, forwardUrdf, endPoses } from './arm/fk.js';
 import { identity, multiply, fromOrigin, fromAxisAngle, forward, position } from './twin/kinematics.js';
 const middle = [0, -1.57, -1.57, 0, 0, 0];
 const legacy = q => Object.fromEntries(P.joints.map((j, i) => [j.id, q[i]]));
@@ -95,35 +95,61 @@ console.log(JSON.stringify({actual, manual, clamped,
     assert out['bounds'] == [True, True]
 
 
-def test_end_poses_are_right_multiplied_and_camera_height_is_local_positive_z():
+def test_end_poses_are_right_multiplied_with_nominal_tcp_and_handeye_camera():
     out = node('''
 const rows = [middle, [0.3,-1.1,-0.7,0.4,-1.2,1.5]].map(q => {
- const p = endPoses(P,q), ray = laserRay(P,q);
- return { p, expected: Object.fromEntries(['tcp','camera','laser'].map(k => [k, multiply(p.end_link,P['T_end_'+k])])), ray };
+ const p = endPoses(P,q);
+ return { p, expected: Object.fromEntries(['tcp','camera'].map(k => [k, multiply(p.end_link,P['T_end_'+k])])) };
 });
-const m = rows[0].p.end_link;
-const center = multiply(m, fromOrigin([P.T_end_camera[3],0,0],[0,0,0]));
-console.log(JSON.stringify({rows, center, tcp: P.T_end_tcp, camera: P.T_end_camera, laser: P.T_end_laser,
- up: [m[2],m[6],m[10]], cameraSpec: P.camera, gripper: P.gripper}));
+console.log(JSON.stringify({rows, tcp:P.T_end_tcp, camera:P.T_end_camera,
+ cameraSpec:P.camera, gripper:P.gripper}));
 ''')
     for row in out['rows']:
-        for name in ['tcp', 'camera', 'laser']:
+        for name in ['tcp', 'camera']:
             assert row['p'][name] == pytest.approx(row['expected'][name], abs=1e-14)
-        m = row['p']['end_link']
-        assert [row['p']['camera'][i] for i in [0, 4, 8]] == pytest.approx([m[i] for i in [0, 4, 8]])
-        assert row['ray']['origin'] == [row['p']['laser'][i] for i in [3, 7, 11]]
-        assert row['ray']['direction'] == pytest.approx([m[i] for i in [0, 4, 8]])
-    p = out['rows'][0]['p']
-    assert (p['camera'][11] - out['center'][11]) * 1000 == pytest.approx(40, abs=1e-6)
-    assert (p['camera'][11] - p['laser'][11]) * 1000 == pytest.approx(20, abs=1e-6)
-    assert out['up'] == pytest.approx([-0.000007346410191, 0.000099999999832, 0.999999994973], abs=1e-12)
-    assert out['tcp'] == [1, 0, 0, 0.0005, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
-    assert [out['camera'][i] for i in [3, 7, 11]] == [-0.0695, 0, 0.04]
-    assert [out['laser'][i] for i in [3, 7, 11]] == [-0.0695, 0, 0.02]
-    assert out['gripper']['fingerTravel'] == [0, 0.0285] and out['gripper']['openingMm'] == [0, 57]
-    assert out['gripper']['fingerLength'] == 0.0655
+        assert row['p']['tcp'] == row['p']['end_link']
+        assert set(row['p']) == {'end_link', 'tcp', 'camera'}
+    assert out['tcp'] == [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    assert [out['camera'][i] for i in [3, 7, 11]] == [-0.068814228, 0.036191124, 0.055202707]
+    assert out['gripper']['fingerTravel'] == [0, 0.055] and out['gripper']['openingMm'] == [0, 110]
+    assert out['gripper']['fingerLength'] == 0.0655  # STEP 实体长度
     assert [f['axis'] for f in out['gripper']['fingers']] == [[0, 1, 0], [0, -1, 0]]
-    assert out['cameraSpec'] == {'size': [0.025, 0.090, 0.025], 'horizontalFovDeg': 87, 'verticalFovDeg': 58}
+    assert out['cameraSpec']['size'] == [0.025, 0.090, 0.025]
+
+
+def test_fk_tcp_and_camera_match_recorded_backend_full_poses_including_work_pose():
+    import numpy as np
+    from scripts.check_twin_vs_backend import CV_FROM_RENDER, WORK_Q, error, matrix_mm
+
+    report = json.loads((MODULES.parents[3] / 'docs/路演/接口核对/孪生对照.json').read_text())
+    qs = [p['q_rad'] for p in report['poses']]
+    assert len(qs) == 4 and qs[-1] == WORK_Q
+    out = node('''
+import { frustumCorners } from './arm/fk.js';
+console.log(JSON.stringify(QS.map(q => ({...endPoses(P,q), corners:frustumCorners(P,q)}))));
+'''.replace('QS', json.dumps(qs)))
+    for front, back in zip(out, report['poses']):
+        tip = np.array(back['backend_tip_mm'])
+        for name in ('end_link', 'tcp'):
+            metrics = error(matrix_mm(front[name]), tip)
+            assert metrics['position_mm'] < 0.5  # 包含真机工作位，不依赖报告内的 passed。
+            assert metrics['orientation_deg'] < 0.5
+            np.testing.assert_allclose(matrix_mm(front[name]), tip, atol=1e-9, rtol=0)
+        cam = matrix_mm(front['camera']) @ CV_FROM_RENDER.T
+        expected = tip @ np.array(report['T_tip_cam_mm'])
+        metrics = error(cam, expected)
+        assert metrics['position_mm'] < 0.5 and metrics['orientation_deg'] < 0.5
+        np.testing.assert_allclose(cam, expected, atol=1e-9, rtol=0)
+        # 视锥中心射线是后端 OpenCV +Z；水平边沿 -X，竖直边沿 -Y。
+        corners = np.array(front['corners']) * 1000
+        for actual, axis in ((corners.mean(axis=0) - cam[:3,3], expected[:3,2]),
+                             (corners[1] - corners[0], -expected[:3,0]),
+                             (corners[2] - corners[1], -expected[:3,1])):
+            np.testing.assert_allclose(actual / np.linalg.norm(actual), axis / np.linalg.norm(axis), atol=1e-12)
+    # 负对照：只保留光轴、把图像平面旋转 90°，完整朝向核对仍必须失败。
+    rolled = expected.copy()
+    rolled[:3,:3] = expected[:3,:3] @ np.array([[0,-1,0],[1,0,0],[0,0,1]])
+    assert error(rolled, expected)['orientation_deg'] == pytest.approx(90)
 
 
 def test_path_keeps_raw_samples_and_breaks_at_invalid_frames_and_time_gaps():
@@ -169,7 +195,7 @@ console.log(JSON.stringify({same,shared, limit:C.joints[0].limit[0], travel:C.to
  toolOrigin:C.tool.xyz===P.end_link.xyz, labels:P.joints.map(j=>j.label)}));
 ''')
     assert out['same'] and out['shared'] and out['toolOrigin']
-    assert out['limit'] == -2.7 and out['travel'] == 0.0285
+    assert out['limit'] == -2.7 and out['travel'] == 0.055
     assert out['labels'] == ['J1 底座', 'J2 大臂', 'J3 小臂', 'J4 腕俯仰', 'J5 腕偏摆', 'J6 腕旋转']
 
 
@@ -177,7 +203,7 @@ def test_make_frame_new_fields_are_independent_and_legacy_values_unchanged():
     out = node('''
 import { makeFrame } from './datasource/frame.js';
 const q = middle.slice(), valid = [true,true,false,true,true,true];
-const frame = makeFrame({q_rad:q,valid,gripper_mm:57,timestamp:123.25,mode:'live',angles_deg:[1,'2',-3]});
+const frame = makeFrame({q_rad:q,valid,gripper_mm:110,timestamp:123.25,mode:'live',angles_deg:[1,'2',-3]});
 q[0]=999; valid[2]=true;
 const bad = makeFrame({q_rad:[0,-1,NaN,0,0,0]});
 console.log(JSON.stringify({frame, empty:makeFrame({timestamp:1}),
@@ -189,8 +215,8 @@ console.log(JSON.stringify({frame, empty:makeFrame({timestamp:1}),
     f = out['frame']
     assert f['q_rad'] == [0, -1.57, -1.57, 0, 0, 0]
     assert f['valid'] == [True, True, False, True, True, True]
-    assert f['gripper_mm'] == 57 and f['timestamp'] == 123.25
-    assert f['angles_deg'] == [1, 2, -3] and f['mode'] == 'live' and f['online'] is True and f['laser'] is None
+    assert f['gripper_mm'] == 110 and f['timestamp'] == 123.25
+    assert f['angles_deg'] == [1, 2, -3] and f['mode'] == 'live' and f['online'] is True and 'laser' not in f
     assert out['empty']['q_rad'] is None and out['empty']['valid'] == [True] * 6 and out['empty']['gripper_mm'] is None
     assert out['short'] is None and out['long'] is None and out['badRejected']
     assert out['malformedValid'] == [False] * 6 and out['badGripper'] is None
@@ -299,7 +325,7 @@ globalThis.fetch=async url=>({
  arrayBuffer:async()=>{const b=await readFile(url);return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);},
 });
 const scene=createScene(new Element(),C), q=[0,-1,0.5,0,0,0], pose=forwardUrdf(P,q);
-scene.setPoseMatrices(pose,{gripperMm:57});scene.render();
+scene.setPoseMatrices(pose,{gripperMm:110});scene.render();
 const world=drawnScene.children.find(o=>o.type==='Group');
 const links=world.children.filter(o=>o.type==='Group' && !o.matrixAutoUpdate);
 const rowMajor=m=>[0,1,2,3].flatMap(r=>[0,1,2,3].map(c=>m.elements[c*4+r]));
@@ -320,7 +346,7 @@ console.log(JSON.stringify({actual,expected:[...Object.values(pose.frames),pose.
     assert out['skinned']
     for actual, expected in zip(out['actual'], out['expected']):
         assert actual == pytest.approx(expected, abs=1e-14)
-    for opening, parts in zip([57, 0, 20, 20], out['openings']):
+    for opening, parts in zip([110, 0, 20, 20], out['openings']):
         assert {'left', 'right'} == {p['side'] for p in parts}
         for p in parts:
             sign = 1 if p['side'] == 'left' else -1
@@ -335,7 +361,7 @@ const url=pathToFileURL(process.cwd()+'/twin/demo.html');
 const html=await readFile(url,'utf8');
 let code=html.split('<script type="module">')[1].split('</script>')[0];
 code=code.replace(/from "([^"]+)"/g,(_,relative)=>'from '+JSON.stringify(new URL(relative,url).href));
-const nodes=Object.fromEntries(['stage','sliders','src','manual-actions','laser','overlay-demo'].map(id=>[id,new Element()]));
+const nodes=Object.fromEntries(['stage','sliders','src','manual-actions','overlay-demo'].map(id=>[id,new Element()]));
 document.getElementById=id=>nodes[id];
 globalThis.window={};globalThis.location={search:'?source=manual&render=2d&skin=simple'};
 await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));settle();
@@ -352,11 +378,11 @@ for(const bound of ['min','max']) {
  for(let i=0;i<6;i++) sliders[i].value=sliders[i][bound];
  nodes.sliders.oninput();settle();edges.push(checkJoints(P,window.demo.twin.state().q_rad).ok && nodes.stage.slots['.twin-note'].textContent==='');
 }
-sliders[6].value=57;nodes.sliders.oninput();settle();
+sliders[6].value=110;nodes.sliders.oninput();settle();
 const output=nodes.sliders.children[6].children[1].textContent;
 window.demo.twin.dispose();
 console.log(JSON.stringify({count:sliders.length,limits,expected:[...P.joints.map(j=>j.limit),P.gripper.openingMm],initial,separate,edges,output}));
 ''')
     assert out['count'] == 7 and out['limits'] == out['expected']
     assert len(out['initial']) == 6 and out['separate'] == [True] * 6
-    assert out['edges'] == [True, True] and out['output'] == '57.0 mm'
+    assert out['edges'] == [True, True] and out['output'] == '110.0 mm'

@@ -25,7 +25,7 @@ const THREE={...ActualThree,WebGLRenderer:class {
 }};`);
 const sceneUrl=moduleUrl(absoluteImports(code));
 const {createScene}=await import(sceneUrl);
-const opts=q=>({axes:6,endPoses:endPoses(P,q),laserRay:laserRay(P,q),frustumCorners:frustumCorners(P,q,0.18)});
+const opts=q=>({axes:6,endPoses:endPoses(P,q),frustumCorners:frustumCorners(P,q,0.18)});
 const rowMajor=m=>[0,1,2,3].flatMap(r=>[0,1,2,3].map(c=>m.elements[c*4+r]));
 const positions=o=>Array.from(o.geometry.attributes.position.array);
 const named=name=>drawnScene.getObjectByName(name);
@@ -57,15 +57,15 @@ const q={json.dumps(q)}, before=JSON.stringify(params), pose=endPoses(params,q);
 const corners=frustumCorners(params,q,{length}), origin=position(pose.camera), axis=[0,4,8].map(i=>pose.camera[i]);
 const directions=corners.map(p=>p.map((v,i)=>v-origin[i]));
 console.log(JSON.stringify({{directions,axis,endAxis:[0,4,8].map(i=>pose.end_link[i]),
-  angles:directions.map(d=>Math.acos(d.reduce((sum,v,i)=>sum+v*axis[i],0)/Math.hypot(...d))),
+  angles:directions.map(d=>Math.acos(d.reduce((sum,v,i)=>sum+v*axis[i],0)/(Math.hypot(...d)*Math.hypot(...axis)))),
   unchanged:JSON.stringify(params)===before}}));
 ''')
     half_h, half_v = [math.tan(math.radians(v / 2)) for v in fov]
     expected = math.atan(math.hypot(half_h, half_v))
-    assert out['unchanged'] and out['angles'] == pytest.approx([expected] * 4, abs=1e-12)
+    assert out['unchanged'] and out['angles'] == pytest.approx([expected] * 4, abs=2e-6)  # 手眼旋转仅保留六位小数，非严格正交。
     average = [sum(d[i] for d in out['directions']) / 4 / length for i in range(3)]
     assert average == pytest.approx(out['axis'], abs=1e-12)
-    assert average == pytest.approx(out['endAxis'], abs=1e-12)
+    assert math.dist(average, out['endAxis']) > 0.3  # 标定安装倾角约 20°，不可丢掉旋转。
     assert [math.dist([0, 0, 0], d) for d in out['directions']] == pytest.approx(
         [length * math.sqrt(1 + half_h ** 2 + half_v ** 2)] * 4)
 
@@ -77,7 +77,7 @@ def test_overlay_contract_and_css_defaults_are_wired_to_base_world():
     fk = (MODULES / 'arm/fk.js').read_text()
     for group in ('demoPath', 'runPath', 'nodes', 'spots'):
         assert f'world.add({group})' in scene
-    overlay_code = scene.split('function drawPath(')[1].split('// 激光束：')[0]
+    overlay_code = scene.split('function drawPath(')[1].split('function applyTheme()')[0]
     assert not re.search(r'pedestalHeight|\blift\b', overlay_code)
     assert 'world.position.z = 0' in scene
     assert 'frustumCorners(config, pose, 0.18)' in twin
@@ -89,46 +89,36 @@ def test_overlay_contract_and_css_defaults_are_wired_to_base_world():
         assert label in css and label in twin
 
 
-def test_sensors_and_laser_follow_six_axes_and_preserve_legacy_floor():
-    out = node(SCENE_HOST + '''
+def test_camera_follows_six_axes_without_laser_geometry():
+    out = node(SCENE_HOST + """
 const s=createScene(new Element(),C);
-frame(s,middle,{laserOn:true});
-const initial={camera:rowMajor(named('cameraHead').matrix),laser:rowMajor(named('laserHead').matrix),
-  beam:positions(named('laserBeam')),frustum:positions(named('cameraFrustum')),
-  body:named('cameraHead').children[0].geometry.parameters};
-const measured=[0.63,0.01,0.48];s.setOverlay({spots:{measured}});frame(s,middle,{laserOn:true});
-const measuredBeam=positions(named('laserBeam'));
-const visible=[];
-for(const extra of [{laserOn:false},{laserOn:true,dimmed:true},{laserOn:true}]) {frame(s,middle,extra);visible.push(named('laserBeam').visible);}
-const q=[0.3,-1.1,-0.7,0.4,-1.2,1.5];frame(s,q);
+const absent=()=>{let circle=false;drawnScene.traverse(o=>{if(o.geometry?.type==='CircleGeometry')circle=true;});
+ return !named('laserHead')&&!named('laserBeam')&&!circle;};
+frame(s,middle);
+const initial={camera:rowMajor(named('cameraHead').matrix),frustum:positions(named('cameraFrustum')),
+ body:named('cameraHead').children[0].geometry.parameters};
+const removed=[absent()];
+s.setOverlay({spots:{measured:[0.63,0.01,0.48]}});frame(s,middle);removed.push(absent());
+const q=[0.3,-1.1,-0.7,0.4,-1.2,1.5];frame(s,q,{dimmed:true});removed.push(absent());
 const moved={camera:rowMajor(named('cameraHead').matrix),frustum:positions(named('cameraFrustum'))};
 globalThis.fetch=fetchFiles;await s.loadSkin(new URL('./twin/meshes/b601.json',base));
-const afterSkin=named('cameraHead').children.every(o=>o.visible);
-s.setPose(Object.fromEntries(C.joints.map((j,i)=>[j.id,[0,-2.4434609528,-1.1772453242,-0.2278,0,0][i]])),{laserOn:false});s.render();
-const belowFloorVisible=named('laserBeam').visible;
-// 旧测试姿态已在 Z=0 下方；另取地面上方向下的姿态验证三轴投影落点。
-s.setPose(Object.fromEntries(C.joints.map((j,i)=>[j.id,[0,-2,-1.57,-0.2278,0,0][i]])),{laserOn:false});s.render();
-const old={sensors:named('sensors').visible,frustum:named('cameraFrustum').visible,
- visible:named('laserBeam').visible,beam:positions(named('laserBeam')),opacity:named('laserBeam').material.opacity};
+const afterSkin=named('cameraHead').children.every(o=>o.visible);removed.push(absent());
+s.setPose(Object.fromEntries(C.joints.map((j,i)=>[j.id,[0,-2,-1.57,-0.2278,0,0][i]])));s.render();
+removed.push(absent());
+const old={sensors:named('sensors').visible,frustum:named('cameraFrustum').visible};
 s.dispose();
-console.log(JSON.stringify({initial,expected:endPoses(P,middle),ray:laserRay(P,middle),corners:frustumCorners(P,middle,0.18),
- measured,measuredBeam,visible,moved,movedExpected:endPoses(P,q),movedCorners:frustumCorners(P,q,0.18),afterSkin,old,belowFloorVisible}));
-''')
+console.log(JSON.stringify({initial,expected:endPoses(P,middle),corners:frustumCorners(P,middle,0.18),
+ moved,movedExpected:endPoses(P,q),movedCorners:frustumCorners(P,q,0.18),afterSkin,old,removed}));
+""")
     initial = out['initial']
     assert initial['camera'] == pytest.approx(out['expected']['camera'])
-    assert initial['laser'] == pytest.approx(out['expected']['laser'])
     assert [initial['body'][k] for k in ('width', 'height', 'depth')] == [0.025, 0.090, 0.025]
-    assert initial['beam'][:3] == pytest.approx(out['ray']['origin'], abs=1e-7)
-    assert initial['beam'][3:] == pytest.approx([o + 0.6 * d for o, d in zip(out['ray']['origin'], out['ray']['direction'])], abs=1e-7)
-    assert out['measuredBeam'][3:] == pytest.approx(out['measured'], abs=1e-7)
-    assert out['visible'] == [False, False, True] and out['afterSkin']
+    assert all(out['removed']) and out['afterSkin']
     for i in range(4):
         assert initial['frustum'][i * 12 + 3:i * 12 + 6] == pytest.approx(out['corners'][i], abs=1e-7)
         assert out['moved']['frustum'][i * 12 + 3:i * 12 + 6] == pytest.approx(out['movedCorners'][i], abs=1e-7)
     assert out['moved']['camera'] == pytest.approx(out['movedExpected']['camera'])
-    assert not out['old']['sensors'] and not out['old']['frustum'] and out['old']['visible']
-    assert not out['belowFloorVisible']
-    assert out['old']['opacity'] == 0.28 and out['old']['beam'][-1] == pytest.approx(0)
+    assert not out['old']['sensors'] and not out['old']['frustum']
 
 
 def test_overlay_segments_markers_coordinates_theme_and_disposal():
@@ -193,7 +183,7 @@ s.dispose();console.log(JSON.stringify({{rows,reset,manualFrustum}}));
 
 
 @pytest.mark.parametrize('fallback', [True, False])
-def test_twin_overlay_replace_clear_counts_labels_and_online_laser(fallback):
+def test_twin_overlay_replace_clear_counts_labels_and_ignore_removed_laser(fallback):
     out = node(SCENE_HOST + f'''
 // DOM 宿主补齐 remove 的父子关系，用来验证标签清理。
 Element.prototype.appendChild=function(e){{e.parent=this;this.children.push(e);return e;}};
@@ -210,7 +200,7 @@ twin.setOverlay(input);settle();const full=twin.state();
 const labelTexts=()=>container.slots['.twin-labels'].children.filter(e=>['twin-node-label','twin-dev-label'].includes(e.className)).map(e=>e.textContent);
 const labels=labelTexts();input.nodes.push({{id:2,p}});input.demoPath[0].push({{t:3,p}});
 const copied=twin.state().overlay;
-const beam=()=>{str(fallback).lower()}?null:named('laserBeam').visible;
+const beam=()=>{str(fallback).lower()}?null:!!named('laserBeam');
 const visible=[beam()];twin.update({{laser:false}});settle();visible.push(beam());
 twin.update({{laser:true,online:false}});settle();visible.push(beam());
 twin.update({{online:true}});settle();visible.push(beam());
@@ -224,30 +214,29 @@ twin.dispose();twin.setOverlay(input);console.log(JSON.stringify({{first,full,la
     full = {'demoPoints': 3, 'runPoints': 0, 'nodes': 1, 'hasSpots': True}
     assert out['first']['overlay'] == out['cleared'] == out['empty'] == empty
     assert out['first']['view'] == 'gripper' and out['full']['mode'] == 'live'
-    assert out['full']['overlay'] == out['copied'] == full and out['full']['laser']
+    assert out['full']['overlay'] == out['copied'] == full and 'laser' not in out['full']
     assert out['labels'] == ([] if fallback else ['<b>1</b>', '偏差 3.2 mm'])
-    assert out['visible'] == ([None] * 4 if fallback else [True, False, False, True])
+    assert out['visible'] == ([None] * 4 if fallback else [False] * 4)
     assert out['replaced'] == {**empty, 'hasSpots': True}
     assert out['noNumber'] == out['clearedLabels'] == []
 
 
-def test_manual_demo_laser_overlay_button_and_view_option():
+def test_manual_demo_overlay_button_and_view_option():
     out = node(DOM_HOST + r'''
 import {readFile} from 'node:fs/promises';import {pathToFileURL} from 'node:url';
 const url=pathToFileURL(process.cwd()+'/twin/demo.html');
 let code=(await readFile(url,'utf8')).split('<script type="module">')[1].split('</script>')[0];
 code=code.replace(/from "([^"]+)"/g,(_,p)=>'from '+JSON.stringify(new URL(p,url).href));
-const els=Object.fromEntries(['stage','sliders','src','manual-actions','laser','overlay-demo'].map(id=>[id,new Element()]));
-els.laser.checked=false;document.getElementById=id=>els[id];
+const els=Object.fromEntries(['stage','sliders','src','manual-actions','overlay-demo'].map(id=>[id,new Element()]));
+document.getElementById=id=>els[id];
 globalThis.window={};globalThis.location={search:'?source=manual&view=gripper&render=2d&skin=simple'};
 await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));settle();
-const initial=window.demo.twin.state();els.laser.checked=true;els.laser.onchange();settle();
+const initial=window.demo.twin.state();
 let overlay;const setOverlay=window.demo.twin.setOverlay;window.demo.twin.setOverlay=value=>{overlay=value;setOverlay(value);};
 els['overlay-demo'].onclick();settle();const state=window.demo.twin.state();
 window.demo.twin.dispose();console.log(JSON.stringify({initial,state,overlay}));
 ''')
-    assert out['initial']['view'] == 'gripper' and out['initial']['laser'] is False
-    assert out['state']['laser'] is True
+    assert out['initial']['view'] == 'gripper' and 'laser' not in out['initial']
     assert out['state']['overlay'] == {'demoPoints': 41, 'runPoints': 41, 'nodes': 3, 'hasSpots': True}
     overlay = out['overlay']
     assert overlay['demoPath'] != overlay['runPath'] and len(overlay['demoPath']) == len(overlay['runPath']) == 1

@@ -62,7 +62,11 @@ import { initialState, reduce } from "./trainer/store.js";
 import { summarize } from "./trainer/metrics.js";
 import { CONFIG } from "./trainer/config.js";
 import { ARM_PARAMS } from "./arm/arm-params.js";
-import { checkJoints, laserRay } from "./arm/fk.js";
+import { checkJoints, forwardUrdf } from "./arm/fk.js";
+function legacySpot(q) {
+  const m=forwardUrdf(ARM_PARAMS,q).end_link;
+  return [0,1,2].map(i=>(m[i*4+3]+m[i*4]*(0.25-0.0695)+m[i*4+2]*0.020)*1000);
+}
 '''
 
 GUARD_FIXTURE = CLOCK + IMPORTS + '''
@@ -95,9 +99,12 @@ assert.equal(demo.nodes.length, 4);
 assert.ok(demo.samples.every(s => s.q.length === 6 && checkJoints(ARM_PARAMS, s.q).ok));
 for (let i = 0; i < 6; i++) assert.ok(Math.max(...frames.map(f => f.q[i])) - Math.min(...frames.map(f => f.q[i])) > 0.01);
 assert.ok(Math.min(...frames.map(f => f.gripper_mm)) < 15);
+assert.equal(Math.max(...frames.map(f => f.gripper_mm)), 110);
+assert.equal(Math.min(...frames.map(f => f.gripper_mm)), 12);
+assert.deepEqual(new Set(demo.nodes.map(n => n.gripper_state)), new Set(['open', 'closed']));
 for (const node of demo.nodes) {
-  const ray = laserRay(ARM_PARAMS, node.q);
-  assert.deepEqual(node.ref_spot_base_mm, ray.origin.map((v, i) => (v + 0.25 * ray.direction[i]) * 1000));
+  const expected = legacySpot(node.q);
+  node.ref_spot_base_mm.forEach((v,i)=>assert.ok(Math.abs(v-expected[i])<1e-9));
 }
 await host.send("practice_start"); assert.equal((await host.send("demo_start")).code, "busy");
 await host.send("practice_stop"); host.stop();
@@ -149,8 +156,8 @@ for (const n of nodes) {
   assert.equal(n.dev_norm_mm, Math.hypot(...n.dev_mm));
   const settled = a.messages.find(m => m.type === "joint_state" && m.pass === n.pass && m.node === n.node && m.settled);
   assert.equal(n.t - settled.t, 400);
-  const ray = laserRay(ARM_PARAMS, settled.q);
-  assert.deepEqual(n.spot_base_mm, ray.origin.map((v, i) => (v + ray.direction[i] * 0.25) * 1000));
+  const expected = legacySpot(settled.q);
+  n.spot_base_mm.forEach((v,i)=>assert.ok(Math.abs(v-expected[i])<1e-9));
 }
 assert.equal(a.messages.filter(m => m.type === "correction").length, 8);
 for (const correction of a.messages.filter(m => m.type === "correction" && m.pass < 8)) {
@@ -470,25 +477,34 @@ def test_logic_has_no_dom_and_frontend_has_no_literal_host_address():
             assert not re.search(r'wss?://[0-9A-Za-z]', token), path
 
 
-def test_mock_pinhole_projection_center_offset_small_deviation_and_degree_text():
+def test_mock_pinhole_projection_with_calibrated_camera_and_degree_text():
     node(RUN_PASSES + '''
 import {endPoses} from './arm/fk.js';
 const runData=await run(8), messages=runData.messages;
 const camera=messages.find(m=>m.type==='hello').camera;
 assert.equal(camera.width,640);assert.equal(camera.height,480);
 const demo=messages.find(m=>m.type==='demo_trajectory');
-const fy=480/(2*Math.tan(58*Math.PI/360)), fx=640/(2*Math.tan(87*Math.PI/360));
+const fy=480/(2*Math.tan(ARM_PARAMS.camera.verticalFovDeg*Math.PI/360));
+const fx=640/(2*Math.tan(ARM_PARAMS.camera.horizontalFovDeg*Math.PI/360));
+// 用完整矩阵逆独立投影；标定旋转六位小数，生产端刚体逆的像素舍入误差允许 0.002 px。
+const {Matrix4,Vector3}=await import('../vendor/three.module.min.js');
+const project=(point,q)=>{
+ const inv=new Matrix4().set(...endPoses(ARM_PARAMS,q).camera).invert();
+ const p=new Vector3(...point.map(v=>v/1000)).applyMatrix4(inv);
+ return [320-fx*p.y/p.x,240-fy*p.z/p.x];
+};
 for(const n of demo.nodes){
- assert.ok(Math.abs(n.ref_spot_px[0]-320)<1e-9);
- assert.ok(Math.abs(n.ref_spot_px[1]-(240+fy*20/250))<1e-9);
+ const expected=project(n.ref_spot_base_mm,n.q);
+ assert.ok(expected.every((v,i)=>Math.abs(v-n.ref_spot_px[i])<0.002));
+ assert.ok(Math.abs(n.ref_spot_px[0]-320)>1); // 标定相机有侧偏，激光参考点不再固定在中心。
 }
 for(const result of messages.filter(m=>m.type==='node_result')){
- const n=demo.nodes.find(n=>n.id===result.node), m=endPoses(ARM_PARAMS,n.q).camera;
- const relative=result.spot_base_mm.map((v,i)=>v/1000-m[4*i+3]);
- const local=[0,1,2].map(j=>relative.reduce((sum,v,i)=>sum+v*m[4*i+j],0));
- const expected=[320-fx*local[1]/local[0],240-fy*local[2]/local[0]];
- assert.ok(expected.every((v,i)=>Math.abs(v-result.spot_px[i])<1e-9));
- assert.ok(Math.hypot(...result.spot_px.map((v,i)=>v-n.ref_spot_px[i]))<40);
+ const n=demo.nodes.find(n=>n.id===result.node);
+ const expected=project(result.spot_base_mm,n.q);
+ assert.ok(expected.every((v,i)=>Math.abs(v-result.spot_px[i])<0.002));
+ // 像素位移取决于安装姿态与 FOV；验证仍落在画面内，不沿用旧 87° 的 40 px 上限。
+ assert.ok(result.spot_px[0]>=0 && result.spot_px[0]<camera.width);
+ assert.ok(result.spot_px[1]>=0 && result.spot_px[1]<camera.height);
 }
 for(const correction of messages.filter(m=>m.type==='correction')){
  assert.ok(correction.llm_text.includes('°'));assert.ok(!correction.llm_text.includes('deg'));

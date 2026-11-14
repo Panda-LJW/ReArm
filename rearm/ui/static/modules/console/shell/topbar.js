@@ -3,7 +3,8 @@ import { mount as mountEstop } from "./estop.js";
 import { setUnavailable } from "./tooltip.js";
 import { frameView } from "./view.js";
 import { WORDS } from "../state/words.js";
-import { online, statusWord } from "../state/selectors.js";
+import { online, statusWord, sourceName } from "../state/selectors.js";
+import { resetReason } from "./reset.js";
 
 export function mount(root, ctx = {}) {
   const doc = root.ownerDocument;
@@ -31,10 +32,12 @@ export function mount(root, ctx = {}) {
   reset.type = "button"; reset.className = "console-button";
   reset.dataset.action = "reset"; reset.textContent = "一键重置";
   setUnavailable(reset, "连接就绪后可操作");
-  const click = () => { if (reset.getAttribute("aria-disabled") !== "true") ctx.reset(); };
+  const click = () => { if (reset.getAttribute("aria-disabled") !== "true") ctx.reset(reset); };
   reset.addEventListener("click", click);
   root.append(brand, connection, navigation, status, spacer, reset);
   const nav = mountNav(navigation, ctx), estop = mountEstop(root, ctx);
+  // 提示占用导航与操作按钮之间的空白区，随顶栏布局，不覆盖页面。
+  spacer.append(root.querySelector(".console-estop-banner"));
   const view = frameView(state => {
     const text = state ? statusWord(state) : WORDS.idle;
     if (status.textContent !== text) status.textContent = text;
@@ -43,7 +46,7 @@ export function mount(root, ctx = {}) {
     const connected = hasLink && online(state);
     const label = !hasLink ? "" : !state.link.online ? "未连接" : !state.hello ? "等待握手" :
       connected ? "实时连接" : "协议不兼容";
-    const sourceText = state?.hello?.sim === true ? "本地演示" : state?.hello?.sim === false ? "主机" : "";
+    const sourceText = sourceName(state);
     connection.hidden = !hasLink && !sourceText;
     dot.hidden = connectionLabel.hidden = !hasLink;
     connection.dataset.online = String(connected);
@@ -51,9 +54,7 @@ export function mount(root, ctx = {}) {
     if (connectionLabel.textContent !== label) connectionLabel.textContent = label;
     source.hidden = !sourceText;
     if (source.textContent !== sourceText) source.textContent = sourceText;
-    const resetReason = !state?.link?.online || typeof ctx.reset !== "function" ? "连接就绪后可操作" :
-      state.hello?.sim !== true && state.phase !== "estop" ? "当前无需解除急停" : "";
-    setUnavailable(reset, resetReason);
+    setUnavailable(reset, resetReason(state, ctx));
     estop.render(state);
   }, () => {
     nav.dispose(); estop.dispose(); reset.removeEventListener("click", click); root.replaceChildren();

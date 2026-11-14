@@ -96,14 +96,20 @@ def serve_ui():
     import argparse
     import uvicorn
     from dataclasses import replace
-    from rearm.ui.server import create_server
+    from rearm.ui.server import create_server, validate_backend_url
     parser = argparse.ArgumentParser(description="Local ReArm control panel")
     parser.add_argument("--sim", action="store_true", required=True)
     parser.add_argument("--data-dir", default="runtime")
     parser.add_argument("--nongeometric", action="store_true", help="enable backlash, sag and thermal drift")
+    parser.add_argument("--backend", metavar="URL", help="只读后端地址，例如 http://127.0.0.1:8080（仅开放急停指令）")
     parser.add_argument("--pace", type=float, default=None, metavar="SECONDS",
                         help="pause before each shot so an audience can follow (overrides task.settle_seconds, 0-5)")
     args = parser.parse_args()
+    if args.backend is not None:
+        try:
+            args.backend = validate_backend_url(args.backend)
+        except ValueError as error:
+            parser.error(str(error))
     config = load_config(Path(__file__).resolve().parents[1] / "config")
     if args.pace is not None:
         if not 0 <= args.pace <= 5:
@@ -125,5 +131,5 @@ def serve_ui():
         "board_mm": config.board_mm.tolist(), "joint_limits": config.joint_limits.tolist(), "alarm_mm": config.thresholds["detector"]["alarm_mm"],
         "preview_valid_s": ui["preview_valid_s"], "undo_s": ui["undo_s"],
         "pace_s": config.thresholds["task"]["settle_seconds"]}
-    server = create_server(controller, controller.bus, state, camera, ui["camera_jpeg_quality"])
+    server = create_server(controller, controller.bus, state, camera, ui["camera_jpeg_quality"], backend=args.backend)
     uvicorn.run(server, host=controller.config.thresholds["ui"]["host"], port=controller.config.thresholds["ui"]["port"])

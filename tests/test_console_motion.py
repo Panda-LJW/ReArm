@@ -88,17 +88,25 @@ def test_estop_banner_waits_for_confirmed_state_and_disposes_with_shell():
     jsdom_script(DOM + r'''
 const {mount}=await import('./console/shell/estop.js');
 const header=doc.querySelector('[data-topbar]'),sent=[],view=mount(header,{send:cmd=>sent.push(cmd)});
-const button=header.querySelector('[data-action="estop"]'),banner=header.nextElementSibling;
+const button=header.querySelector('[data-action="estop"]'),banner=header.querySelector('.console-estop-banner');
 assert.equal(banner.className,'console-estop-banner');assert.equal(banner.getAttribute('role'),'alert');
 assert.equal(banner.hidden,true);assert.equal(header.lastElementChild,button);
+assert.equal(header.nextElementSibling,doc.querySelector('[data-pages]'));
+assert.equal(header.hasAttribute('data-estop'),false);
 view.render({phase:'pick',link:{online:true}});tick(16);button.click();
-assert.deepEqual(sent,['estop']);assert.equal(banner.hidden,true);
+assert.deepEqual(sent,['estop']);assert.equal(banner.hidden,true);assert.equal(header.hasAttribute('data-estop'),false);
 view.render({phase:'estop',link:{online:true}});tick(16);
 assert.equal(banner.hidden,false);assert.equal(banner.textContent,'已急停');
+assert.equal(header.hasAttribute('data-estop'),true);
 view.render({phase:'estop',link:{online:false}});tick(16);assert.equal(banner.hidden,false);
+assert.equal(header.hasAttribute('data-estop'),true);
 button.click();assert.deepEqual(sent,['estop']);
 view.render({phase:'idle',link:{online:true}});tick(16);assert.equal(banner.hidden,true);
+assert.equal(header.hasAttribute('data-estop'),false);
+view.render({phase:'estop',link:{online:true}});tick(16);
 view.dispose();assert.equal(banner.isConnected,false);assert.equal(button.isConnected,false);
+assert.equal(header.hasAttribute('data-estop'),false);
+view.render({phase:'estop',link:{online:true}});tick(16);assert.equal(header.hasAttribute('data-estop'),false);
 dom.window.close();
 ''')
 

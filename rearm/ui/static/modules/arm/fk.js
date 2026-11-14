@@ -1,6 +1,6 @@
 // 六轴 URDF 正运动学。行主序 4×4，m / rad，base_link 坐标系；不含安装台高度。
 // 复用既有的纯矩阵运算，保留 URDF 固定旋转的原始精度。
-import { identity, multiply, fromOrigin, fromAxisAngle, position } from "../twin/kinematics.js";
+import { identity, multiply, fromOrigin, fromAxisAngle } from "../twin/kinematics.js";
 
 export function checkJoints(params, q) {
   const issues = [];
@@ -35,14 +35,7 @@ export function endPoses(params, q) {
     end_link,
     tcp: multiply(end_link, params.T_end_tcp),
     camera: multiply(end_link, params.T_end_camera),
-    laser: multiply(end_link, params.T_end_laser),
   };
-}
-
-export function laserRay(params, q) {
-  const { laser } = endPoses(params, q);
-  // 激光固定变换的 +X 是光束方向。
-  return { origin: position(laser), direction: [laser[0], laser[4], laser[8]] };
 }
 
 // 视锥远平面的四角，按周向排列；length 是沿光轴 +X 的距离（m）。

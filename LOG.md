@@ -498,3 +498,213 @@
 - 遗留：实际渲染未验证。CUA 返回 browser access host unavailable；Playwright wrapper 离线缓存缺失 ENOTCACHED；复用仓库已有 playwright-core 与已安装 Chromium 启动时被 macOS bootstrap_check_in Permission denied (1100) 拒绝。未提权、未修改权限；错误保存在 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-framing-before-mooacvdu/browser-check-error.txt。用户刷新生产页后核对折叠/观察姿态，以及未接入/连接失败两种状态下标签与角标的位置。
 - 回滚：开工文件副本及 after 快照位于 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-framing-before-mooacvdu/，本轮八个源文件/测试的独立差异为 framing.patch；核对后可反向应用，仅删除本日志节和对应索引，保留原有未提交修改。未改 README 或需求文件。
 - 唯一 HASH：9b39b61f6ce40ccd。
+
+# 生产页日志
+
+## 2026-11-15 生产页交互与共享动效 [PRODUCTION-INTERACTION-20261115]
+
+- 日期：2026-11-15（Asia/Taipei）。目标：完成《控制台交互动效优化清单》第 3 节第 1–6 条。
+- 并发边界：只修改生产目录、state/selectors.js 和本任务新增测试。日志写在生产目录内，避免改动根目录共享日志；未 git commit。
+- 改动文件：
+  - `rearm/ui/static/modules/console/pages/production/index.js`
+  - `rearm/ui/static/modules/console/pages/production/production.css`
+  - `rearm/ui/static/modules/console/pages/production/production-motion.css`
+  - `rearm/ui/static/modules/console/pages/production/views/steps.js`
+  - `rearm/ui/static/modules/console/pages/production/views/stage-chips.js`
+  - `rearm/ui/static/modules/console/pages/production/views/recipe-pick.js`
+  - `rearm/ui/static/modules/console/pages/production/views/key-number.js`
+  - `rearm/ui/static/modules/console/pages/production/views/observe-view.js`
+  - `rearm/ui/static/modules/console/state/selectors.js`
+  - `tests/test_console_production_interaction.py`
+  - `rearm/ui/static/modules/console/pages/production/LOG.md`
+  - `rearm/ui/static/modules/console/pages/production/LOG-INDEX.md`
+
+| 清单项 | 实现方式 |
+|---|---|
+| 3.1 配方解析缺陷 | productionRecipe 优先运行 recipe_id，否则取当前选择；recipeDocs 缺失时回退 library.recipes，步骤和右上 chip 共用。 |
+| 3.2 当前步骤滚动 | 当前步骤变化才 scrollIntoView nearest；正常 smooth，减少动态效果时 auto；隐藏页、自检列表隐藏时不滚动。 |
+| 3.3 步骤进度 | 标题右侧 x / N，标题下 c-progress > span 更新宽度；共享 CSS 提供 2px 高度及平滑过渡，补 progressbar 无障碍数值。 |
+| 3.4 开始确认 | 勾选框 autofocus，沿用对话框初始焦点；勾选后 Enter 点击原确认按钮，发送前重新核对状态，过滤长按和输入法合成。 |
+| 3.5 完成反馈 | 四个 KPI 用 flash，首值和未变值不闪；新增完成记录时右下显示“完成 ✓”约 1.8 秒，再显示当前步骤；急停、重置、新套、断线或训练取消提示。 |
+| 3.6 共享动效 | 两个画面的 data-busy 共用 productionBusy；进场用 stagger，步骤状态点用 c-pulse，chip 用 swap，角标和扫描线复用 c-viewport；删除页面全部重复 keyframes。 |
+
+- 关键决策：进度分母包含原有自检、到观察位、识别、每个零件的抓取/放置、检查、完成、收回；当前步显示其序号，待命无记录为 0，已结束的一套为 N。未改状态机、消息归并、命令协议、摄像头接口或原有 data-* / aria-* / role；data-flash 属性保留，动画改由共享工具触发。
+- 缺陷优先复现：新增 5 个回归用例，修复前全部失败，分别观察到步骤只有 6 行（应为 10）和配方 chip 为“—”；仅修改统一选择器和两处读取后 5 项全部通过。原始失败输出见证据目录。
+- 测试：新增 `tests/test_console_production_interaction.py`，19 个用例，覆盖配方优先级/回退、滚动去重、隐藏页、减少动态效果、进度、键盘确认重检、KPI、高频快照下完成提示、取消与销毁、忙碌状态及共享动效接线。
+- 验证：`.venv/bin/pytest -q tests/ -k console` 最终 131 passed, 348 deselected in 26.28s；前一轮为 114 passed, 348 deselected in 23.26s，后续并发新增测试后重跑。没有他人并发失败需要列出。9 个 JS 的 node --check、生产 CSS token/重复 keyframes 检查、限定范围 git diff --check 均通过。
+- 未完成：真实浏览器画面与逐帧截图未验证。Playwright wrapper 离线元数据 ENOTCACHED；直接调用本地已有 CLI 时写系统缓存目录被 EPERM 拒绝，未提权、修改权限或继续绕过。未把 JSDOM 交互测试称为画面验收。
+- 手动验证：刷新生产页，开始一套后观察步骤滚动、x / N 和进度条；结束时检查 KPI 与短暂“完成 ✓”；打开减少动态效果后重复操作，确认无动画且确认框可用键盘操作。
+- 回滚：本轮开工文件位于 `/private/tmp/rearm-production-interaction-8guvvg0i/before/`；本轮独立差异为同目录 `production-interaction.patch`，只在核对没有后续修改时反向应用。不要回退外壳、其他页面或根日志。
+- 证据目录：`/private/tmp/rearm-production-interaction-8guvvg0i/`，含失败测试、最终回归、静态检查、浏览器错误、before/after 与变更清单。
+
+- 唯一 HASH：501ec029363b57a9。
+
+# 零件库改动日志
+
+## PARTS-INTERACTION-20261115
+
+日期：2026-11-15
+
+目标：完成《控制台交互动效优化清单》第 4 节 1–5 条，保持协议、业务状态、既有文案与测试选择器。
+
+### 改动文件
+
+| 文件 | 改动 |
+|---|---|
+| index.js | 详情共享 swap、过期切换失效、列表可见性、取消返回与共享进场 |
+| parts.css | 滑动底线、固定操作栏、步骤连线、曲线绘制与减少动态效果 |
+| views/library-list.js | 整行点击、单一 Tab 入口、方向键及首尾键、Enter、选中滚动 |
+| views/transition.js | 调用共享 swap；样式缺失时立即渲染，拦截过期及重复回调 |
+| views/training-record.js | 共享 flash、保留 KPI 节点、曲线首次从左向右绘出 |
+| views/identify-step.js | 第一步说明、等待拍照预览、识别忙碌状态及底部操作入口 |
+| views/capture-preview.js | 复用 workspaceBox 工作台投影，缺少数据时显示等待拍照 |
+| views/new-flow.js | 固定上一步/下一步/取消、草稿保留、步骤 swap、进度连线 |
+| ../../../../../../../tests/test_console_parts_interaction.py | 新增 7 项 Node/JSDOM 交互回归 |
+| LOG.md、LOG-INDEX.md | 本范围日志及索引 |
+
+### 清单逐项实现
+
+1. 列表行使用 c-focus-row；↑/↓ 移动选择及焦点，Home/End 跳首尾，Enter 打开，scrollIntoView 保持选中可见；减少动态效果使用 auto。列表更新保留焦点和选择，文档侧零件链接同步选中。
+2. 详情切换调用共享 swap，快速连续选择只呈现最后一次。偏差曲线第一次出现至少两个点时，pathLength=1 配合 stroke-dashoffset 从 1 到 0，以 --t-slow 绘出；随后数据更新不重播。减少动态效果不绘制动画。
+3. 保留一个独立底线，零件/配方之间以 transform 滑动，时长与曲线统一采用 --t-base/--ease-out；键盘左右键、Home/End 保留。
+4. 第一步补准备说明和 c-viewport 工作台示意，未识别显示“等待拍照”；拍照期间 data-busy=true。底部操作栏固定，步骤内容 swap；连接线随完成进度填充。上一步保留名称、编号、零件选择和编排顺序，训练期间禁止重复启动或取消，取消不发送新增命令。完成页保留进入时的记录快照，避免淡出期间重置导致读取空记录。
+5. 删除 6 个重复关键帧：进场、详情淡入、步骤线、两套数值高亮、取景角标。进场与 KPI 改用 stagger/flash，切换走 swap，取景框和扫描线由 c-viewport 提供。页面只保留第 2 条要求的曲线绘制关键帧。
+
+### 关键决策
+
+- 仅改零件库目录及明确要求的新测试文件；共享 motion.js、console.css、数据源、状态选择器和其他页面均未改。
+- 未新增生产依赖，沿用既有控件、工作台投影、共享曲线和动效工具。
+- 显示层兼容 CSS 未加载，避免等待不存在的动画；流程仍使用 part_capture、train_start、part_get、recipe_get。
+- 按文件所有权约束，将本轮 LOG.md/LOG-INDEX.md 放在零件库范围，不并发修改根目录共享日志。
+
+### 验证
+
+- .venv/bin/pytest -q tests/test_console_parts.py tests/test_console_parts_interaction.py：19 passed（原有 12 项、新增 7 项），5.72 秒。
+- .venv/bin/pytest -q tests/ -k console：130 passed、1 failed、348 deselected，24.06 秒。
+- 唯一失败：tests/test_console_shell_interaction.py::test_real_reset_keeps_confirmation_and_failed_reset_uses_dialog_without_toast，第 160 行嵌入的 ctx 对象缺少闭合大括号，Node 报 SyntaxError: Unexpected token ';'。该外壳任务文件未改。
+- git diff --check（仅本范围及新测试）：通过。
+- 本地预览服务执行 .venv/bin/python -m http.server 8037 --bind 127.0.0.1 --directory rearm/ui，socket.bind 被沙箱拒绝，PermissionError: [Errno 1] Operation not permitted。未提权或申请授权。
+
+### 未完成项与人工验收
+
+画面未验证：尚未完成 1440×900、1280×720、390×844 三个视口截图与逐帧动效核对；JSDOM 不代替实际布局验收。
+
+本地打开零件库后，核对方向键选中与详情切换、走完新增三步，再开启系统“减少动态效果”重复一次；确认底栏可见、文字没有截断、无动画残留。
+
+### 回滚提示
+
+改前备份：/tmp/rearm-parts-interaction-before/parts/。
+仅恢复本轮修改的 6 个既有文件，删除本轮新增的 views/transition.js、views/capture-preview.js 和 tests/test_console_parts_interaction.py；保留并发任务文件。临时备份可能随系统清理，未执行 git commit。
+
+# 记录与设置页改动日志
+
+本轮按文件所有权把日志和索引放在 records 目录，未改共享的根目录日志。
+
+## RECORDS-SETTINGS-INTERACTION-20261115
+
+- 日期：2026-11-15。
+- 目标：完成《控制台交互与动效优化清单》第 5 节 1–5 条；保留数据流、状态机、命令协议和已有选择器。
+- 前置检查：完整阅读两份控制台规范及共享 motion.js；检查 README、相关日志索引和记录/设置测试。仓库无 .codegraph 目录。
+- 修改文件：records/index.js、records/records.css、settings/index.js、settings/settings.css。
+- 新增文件：records/table.js、tests/test_console_records_settings_interaction.py、本 LOG.md 和 LOG-INDEX.md。
+
+### 清单实现
+
+| 条目 | 实现 |
+|---|---|
+| 5.1 排序 | 表头内使用原生按钮，保持原表头文字，th 标注 aria-sort；按原始时间、偏差、用时、轮数排序，切换通过共享 swap 交叉淡入 tbody。 |
+| 5.2 表头与 hover | 保留 sticky 表头和表格内部滚动；表格行使用 --hover 与 --t-fast 过渡。 |
+| 5.3 KPI 与空状态 | 保留数值节点，使用 flash，仅变化时高亮；生产空状态增加“完成一次生产后这里会出现记录”。 |
+| 5.4 设置 | 所有值显式 user-select:text；连接文字变化调用 flash，原 data-online 驱动圆点颜色过渡。 |
+| 5.5 共享动画 | 删除 records-enter、records-value、settings-enter；卡片使用共享 stagger，两个页面 CSS 不再包含 @keyframes。 |
+
+### 关键决策
+
+- 排序状态仅留在各表视图中，不向 store 写入、不发命令、不改共享 selectors 或 motion.js。
+- 默认时间倒序；同值维持原先较新插入项在前。无时间记录仍按既有测试要求在默认倒序时靠前；偏差、轮数、用时缺测始终在最后，不能当作 0。
+- 排序期间收到新记录或名称更新，在替换时绘制最新内容；表头不重建，焦点保留；高频无关状态不重建表格行。
+- 归档训练数组单独变化时也刷新显示，排序选择继续保留。
+- 每次排序只提交一次行替换，防止共享 swap 的定时回退后 animationend 再次触发时重建行；销毁后不绘制。
+- 设置仍为只读文本，文本选择不随无关状态刷新丢失。
+- CSS 颜色、间距、尺寸沿用 tokens；时长和曲线用共享变量；减少动态效果时两页动画/过渡关闭，swap 同步完成排序。
+
+### 验证
+
+- 修改前 `.venv/bin/pytest -q tests/ -k console`：86 passed，348 deselected，18.61 秒。
+- 原有记录/设置测试：4 passed，1.92 秒。
+- 新增 9 项 Node/JSDOM 驱动测试：数值双向排序、时间跨日、归档与新数据、缺测与同值顺序、焦点与属性、连续排序、减少动态效果、销毁、KPI、连接状态与选择文本、CSS 约束；已包含在最终测试组通过结果中。
+- 最终 `.venv/bin/pytest -q tests/ -k console`：114 passed，348 deselected，23.15 秒。并发其他任务测试也在此结果中，无失败项。
+- 三份页面 JS `node --check` 和限定范围 `git diff --check` 通过。
+- 测试输出：`/private/tmp/rearm-records-settings-interaction-console-pytest.txt`。
+- 浏览器启动证据：`/private/tmp/rearm-records-settings-browser-check.log`。已有 Chromium 启动被沙箱拒绝，报 MachPortRendezvousServer Permission denied (1100)；未提权、未绕过。
+
+### 遗留与回滚
+
+- 未完成：实际画面、浏览器原生键盘激活及系统剪贴板粘贴验收；JSDOM 测试不替代浏览器截图。
+- 手动验收：在 1440×900、1280×720、390×844 打开记录/设置，检查表头吸顶、排序、焦点、文字选中复制与溢出；开启系统减少动态效果后复测排序和状态变化。
+- 原始四文件备份：`/var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-records-settings-interaction-before-dbdqex7_/`。回滚仅恢复其中 records/、settings/ 对应文件，移除本轮新增 table.js、测试和局部日志，勿覆盖其他并发页面。
+- 未执行 git commit；未修改文件所有权之外的页面或共享文件。
+
+## 2026-11-15 前端后端只读数据源 [CONSOLE-BACKEND-20261115]
+
+- 目标：按《docs/后端只读接入说明.md》和 R61 样本接入同源后端状态；仅 JS/CSS 与新增测试，保留现有未提交改动，未 git commit。
+- 改动文件：新增 datasource/backend-source.js、console/pages/production/views/last-pick.js、tests/test_console_backend.py；修改 console/main.js、state/store.js、state/selectors.js、shell/topbar.js、pages/production/index.js、production.css、views/observe-view.js、views/recipe-pick.js、pages/parts/index.js、pages/records/index.js、pages/settings/index.js。本节及索引仅追加；server.py、app.py 的并发变化由另一会话负责，本轮未编辑。
+- 数据源：?arm=backend 选择新源，否则仍用 mock。subscribe/start/stop/send/commands 与 mock 同形；fetch、now、setTimer、clearTimer 可注入；200 ms 检查轮询，同一时刻仅一个 state 请求，连续三次失败或三秒无成功状态判离线；超时/停止取消请求，旧响应不能污染重启后的状态。
+- 映射：q/dq/temp/current 取六轴，temp 来自 t_rotor_c（°C），current 来自 tau_nm（N·m）；stale、缺遥测/缺轴均 valid=false，缺值留 null。J7 不进 q，gripper_mm=null、gripper_valid=false。hello 带来源、只读原因及地址；device_state 承载连接、使能、忙状态/动作、pose_error_deg 与相机；last_pick 单独归并，不生成 run_done 或完成套数。
+- 识别：id=part_id，0 显示“未知物体”，confidence=null 且标签无百分比；由毫米长短边除 mm_per_px 后旋转求轴对齐外接框，图像尺寸取 color_intrinsics。缺少几何时不补造框；标签按列表序号对应，支持数字和重复 part_id。真机 hello 清除演示工位物体。
+- 相机：enabled 且 fresh 时由数据源提供同源 MJPEG URL，断线或过期移除源并显示“未接入摄像头”；URL 未变不重新加载。?camera=（含空值）及调用方 setCameraSource 优先，旧媒体事件与 dispose 保持原行为。
+- 命令：唯一外发写请求为 POST /backend/api/cmd，固定 {action:estop}；HTTP/业务失败、断网、三秒未确认、停止取消均给中文失败反馈，确认成功后才显示急停。reset_estop 仅清前端状态，提示“请在后端面板重新使能”，不发送 enable。其余写命令统一拒绝；开始/新增/采集/训练沿用 aria-disabled 与 tooltip。
+- 演示库：内部组合 createMockConsole，仅转发 library/part_doc/recipe_doc；通过库快照保留归档训练记录，不复制 fixtures、不转发模拟姿态。生产配方、零件库/配方/文档与记录均标“演示数据”。
+- 页面：顶栏显示后端来源、机械臂连接/使能和忙动作；设置连接卡增加地址、机械臂连接/使能、忙状态、位姿误差、相机。最近抓取卡显示夹到/未夹到、原因、指尖误差序列与二次下探被拒，仅后端快照出现后挂载，默认演示页原有布局与动效不变。
+- 地址边界：现有转发响应未携带配置的实际上游 URL，因此 hello 和设置页如实显示可访问的同源接入地址 /backend，没有猜填 8080 或暴露未经验证的实际后端地址。
+- 验证：新增 18 项样本/假 fetch/虚拟定时器/Node/JSDOM 测试，覆盖映射、空/过期遥测、未知识别、离线/恢复、悬挂请求、取消/重启、急停 POST/失败/超时/反馈、只读拒绝无请求、演示文档、最近抓取、页面不可用按钮、自动/手动相机优先与标签。局部 37 passed in 5.53s；最终 `.venv/bin/pytest -q tests/ -k 'console or twin'`：190 passed, 376 deselected in 27.93s；13 份 JS 的 node --check 及 git diff --check 通过。
+- 首轮修正：抓取卡最初总是创建，导致默认演示入场卡片数量断言失败，改为按设备快照延迟挂载；新增测试的初版零件数/tooltip 属性假设与既有 fixtures/组件不符，改为读取 PARTS.length 与 dataset.reason，未改旧测试或放宽断言。
+- 遗留：实际浏览器画面、同源服务转发联调、真实相机与硬件未验证；CUA 返回 browser access host unavailable，未申请权限或绕过。后续在 ?arm=backend 检查画面/标签/设置/抓取卡，并在假机械臂环境确认急停与前端解除提示；手动 ?camera= 另验优先级。
+- 回滚：本轮前快照、after 快照、仅本轮源码和测试差异 backend-frontend.patch、测试摘要 validation.txt 均位于 /var/folders/wb/6hqw8dgs6m5bd73_t19nl8100000gn/T/rearm-backend-before-1vnuuq7s/。核对后只反向应用本轮 patch，并移除本节与对应索引，不覆盖整份共享日志或其他会话改动。
+- 唯一 HASH：ba06cca4e393367f。
+
+## 2026-11-15 孪生真机限位与夹爪对齐 [TWIN-HARDWARE-ALIGN-20261115]
+
+- 目标：按 lizuyi-6/ReArm 245491f 同步显示限位和 110 mm 夹爪；只读后端使用当次力矩标定换算，不下发运动，不提交 Git。先读后端只读接入说明与前后端对接方案 4.1；核对 /tmp/rearm-interface-review-20261115 中的后端源码及 gripper.json。
+- 改动文件：docs/research/B601-DM末端轨迹换算调研.md; docs/下位机接口文档.md; docs/后端只读接入说明.md; docs/接口文档.md; docs/现有前端接口规范.md; docs/路演/tasks/节点4-设备层与后端接入任务书.md; docs/路演/前后端对接方案.md; rearm/ui/static/modules/arm/arm-params.js; rearm/ui/static/modules/console/pages/settings/index.js; rearm/ui/static/modules/datasource/backend-source.js; rearm/ui/static/modules/datasource/mock-host.js; rearm/ui/static/modules/twin/meshes/b601.json; rearm/ui/static/modules/twin/scene.js; scripts/build_twin_meshes.py; tests/test_arm_kinematics.py; tests/test_console_backend.py; tests/test_console_data.py; tests/test_gripper_mesh.py; tests/test_trainer_logic.py；本节和 LOG-INDEX.md 仅追加。保留开工时已修改的 J2 [-3.14,0.3]、J3 [-3.14,0.05]、J4 [-1.87,1.95]。
+- 文档：修正 test_host_protocol_doc.py 的 DOC 指向的 docs/接口文档.md 4.3 表格，注明“与真机后端 PANEL_LIMITS 一致（2026-11-15）”；同步相关接口、调研和路演文档中的旧范围，J5、RPY、旧三轴度数约定和历史截图不改。全仓 Markdown 检索未再发现 J2/J3/J4 的旧显示限位。
+- 夹爪参数：openingMm=[0,110]、fingerTravel=[0,0.055]；poses.js 的 OPEN_MM 已直接引用上限，无需重复修改。旧训练 mock-host 的闭合开口原为总行程 20%，上限扩大后会变成 22 mm 并失去 closed 节点；改为固定 12 mm 抓持、全开取统一上限，补回归验证。
+- 导轨：原 184 mm 外包围盒虽可容纳滑块，但三角网格端挡在约 ±85.2 mm，全开时滑块/限位块达到 89.5 mm，存在实质穿透。显示长度改为 237 mm，两侧各加 (110-57)/2=26.5 mm；b601 清单记录原 railLength=0.184，scene 仅沿 Y 缩放金属导轨，生成器同步输出原网格名义长度。夹指、滑块、关节链和 FK 不缩放；尺寸为显示近似，待实物测量。
+- 几何验证：新增真实网格边与三角面穿透测试，原导轨作为负对照可复现端挡碰撞，调整后双向检查通过；夹指左右间距 110 mm、根部贴滑块且处在导轨前方，官方/自制/损坏回退均按 110 mm 测试。原齿条与黄色中央机构的既有啮合网格交叠未改动。
+- 后端换算：仅使用当前 state.gripper_refs 的有限 touch/open/mm_per_rad，比例为正且两端不重合；q7 在两端各放宽 0.3 rad 内、遥测未过期时输出 clamp(abs(q7-touch)*mm_per_rad,0,110)，否则 null/false。不缓存旧标定，不使用配置中的绝对 q7。增加内部 gripper_source 供参数卡显示“来源：当次力矩标定 / 未标定”；无效、过期或离线时隐藏数值。
+- 样本核算：touch=9.3326、open=2.7266、mm_per_rad=16.6515 时，闭合 0 mm，全开 109.999809 mm（显示 110.0 mm），q7=6 得 55.4927889 mm（显示 55.5 mm），不是任务文字中的约 54.5 mm；按指定公式实现，没有人为调整比例。
+- 测试：相关 8 个文件共 168 passed in 15.18s，涵盖换算、端点、反向标定、±0.3 边界、空/坏参考、过期/离线、标定失效、UI 来源和网格碰撞。JS node --check、生成器语法解析、git diff --check 通过。
+- 全量：运行 .venv/bin/pytest -q tests/，最终 2 failed, 551 passed, 35 errors in 49.94s，不能称全绿。35 项 tests/test_backend_proxy.py 启动错误均因本机 HTTPServer socket.bind 被沙箱拒绝（PermissionError: Operation not permitted）。2 项为施工期间另一路新增的 tests/test_console_select_dialog.py：test_start_dialog_shows_recipe_safety_reason_and_sends_only_after_check、test_production_select_rechecks_running_state_before_render_and_shows_reason；涉及并行编辑的弹窗/下拉框，未修改它们。本轮引入的旧 mock 抓持比例失败已修复；首轮 CSS 断言的并发差异在复跑时已通过。完整输出存于 /tmp/rearm-twin-alignment-axbsu9vb/pytest-final.txt，相关测试为 pytest-focused.txt。
+- 画面与真机：CUA 报 browser access host unavailable；Playwright Chromium 因 MachPortRendezvousServer Permission denied (1100) 无法启动，未提权。真实浏览器画面和硬件均未验证，Node/Three 几何与 JSDOM 不替代视觉验收。
+- 手动验收：在允许监听端口的本机终端重跑全量测试；打开 /static/modules/twin/demo.html?source=manual&view=gripper，把夹爪滑块设为 110 mm，核对全开及闭合；在 console.html?arm=backend 的设置页核对当次标定、未标定及失效读数。
+- 回滚：/tmp/rearm-twin-alignment-axbsu9vb/before 保存本轮前文件，after 保存本轮结果，alignment.patch 仅包含本轮 19 个源码/文档/测试文件的差异。回滚前逐段核对并反向应用该补丁，保留其他人后续改动；删除本节和对应索引即可。共享日志不整文件覆盖，临时目录可能被系统清理。
+- 唯一 HASH：2a8e09f7246d9f2c。
+
+## 2026-11-15 孪生名义夹头、手眼相机与 V 槽手指 [TWIN-TIP-CAMERA-GRIPPER-20261115]
+
+- 目标：只读核对指定后端 pick.frames 的完整位姿，同步 TCP、相机安装和两条手指几何路径；不改限位与行程，不 commit。
+- 改动文件：rearm/ui/static/modules/arm/arm-params.js; rearm/ui/static/modules/twin/scene.js; rearm/ui/static/modules/twin/fallback2d.js; rearm/ui/static/modules/twin/meshes/gripper.json; rearm/ui/static/modules/twin/meshes/gripper.bin; scripts/build_gripper_mesh.py; scripts/check_twin_vs_backend.py; tests/test_arm_kinematics.py; tests/test_gripper_mesh.py; tests/test_twin_overlay.py; tests/test_console_data.py; tests/test_trainer_logic.py; docs/路演/前后端对接方案.md; docs/路演/接口核对/孪生对照.json; docs/路演/接口核对/孪生验收.md; LOG.md; LOG-INDEX.md
+- TCP：4 组 q 的前端 end_link 与 pick.frames tip 完整 4×4 一致；T_end_tcp 从 X +0.5 mm 改单位矩阵。TABLE_TIP_Z_MM=3.6 是基座高度，不是局部偏移；kin6 tool_x=-105 不作夹头。
+- 相机：平移 [-69.5,0,40]→[-68.814228,36.191124,55.202707] mm；渲染 X前/Y左/Z上，对应 OpenCV +Z/-X/-Y，保持右手系和 +X 视锥。四组最大相机误差 3.90734e-13 mm / 5.09411e-14°，TCP 最大 3.68983e-13 mm / 5.61672e-14°；工作位 TCP 3.68268e-13 mm。完整矩阵、来源哈希与改前误差写入孪生对照.json。
+- 夹指：统一参数 FINGER，长 65、闭合方向外宽 25、厚 40 mm；长度待尺量。90° V 边长 15 mm，由边角计算深 10.60660、口宽 21.21320 mm（后端两位小数 10.61/21.21），下平条 0，右指绕 X 翻转形成菱形。scene 简化路径与生成器共用 createFingerGeometry；新 custom 网格只表示外轮廓，省略 STEP 孔位细节，原 STEP 未改。全开两指内缘间距 110 mm、外缘 ±80 mm，根面贴滑块，沿用既有 237 mm 导轨显示尺寸。
+- 构建：build_gripper_mesh.py 用已有 Node/vendored Three 和 NumPy 生成 40 面闭合网格，无新增依赖；生成清单指纹仅覆盖手指参数。2D 降级图同步使用闭合方向 width，不再混用厚度。
+- 回归更新：删除旧的相机与夹头平行、光点固定居中和旧 FOV 的固定像素上限假设；按完整相机矩阵逆验证投影（手眼六位小数容差 0.002 px），补相机画面 90° 旋转的负对照，完整矩阵与后端快照严格比对。
+- 并行修改：施工期间 arm-params.js 的相机 FOV 被另一会话更新为 55.75°/43.3°，本轮保留；不将它计作本轮改动，不恢复旧 87°/58°。用户指定的 console.css、dialog.js、recipe-pick.js、recipe-fields.js、select.js 均未写入。
+- 验证：相关 128 passed in 11.88s；全量 .venv/bin/pytest -q tests/ 为 556 passed, 35 errors in 51.48s，35 项均在 test_backend_proxy.py 的 HTTPServer socket.bind 被沙箱拒绝，无断言失败。git diff --check 通过；关节与行程逐值等于开工快照；后端工作区干净。完整日志 /private/tmp/rearm-twin-align-20261115/pytest-final.txt，相关日志 pytest-related-final.txt。
+- 画面：HTTP 监听被拒、CUA browser access host unavailable、离线 Chromium MachPortRendezvousServer Permission denied (1100)，证据 render.txt；未提权或绕过。Three 几何断言不替代实际 WebGL 画面，浏览器与硬件未验收。
+- 遗留：手指长度和装配待尺量，Y 外宽沿用 STEP；相机外壳、既有导轨和激光安装值未实测。手眼来源 RMS 6.9 mm、仅工作位附近有效，本次模型一致不证明实机精度。手动验收步骤见 docs/路演/接口核对/孪生验收.md。
+- 回滚：本轮前快照在 /private/tmp/rearm-twin-align-20261115；只按本轮差异逐段逆向恢复，保留他人已有改动和新 FOV，不整文件覆盖共享参数或日志；删本轮新增核对脚本、报告和本节/索引即可。临时快照可能被系统清理。
+- 唯一 HASH：1d3d202bb3fa814c。
+
+## 2026-11-15 删除数字孪生激光附件 [TWIN-REMOVE-LASER-20261115]
+
+- 目标：真机夹爪没有激光，只移除孪生及新控制台链路的激光表示，不 commit。
+- 改动文件：docs/goal_轨迹训练前端.md; docs/model-swap/设计.md; docs/下位机接口文档.md; docs/接口文档.md; docs/路演/接口核对/孪生验收.md; rearm/ui/static/modules/arm/arm-params.js; rearm/ui/static/modules/arm/fk.js; rearm/ui/static/modules/arm/trajectory.js; rearm/ui/static/modules/datasource/device-source.js; rearm/ui/static/modules/datasource/frame.js; rearm/ui/static/modules/datasource/mock-host.js; rearm/ui/static/modules/datasource/panel-source.js; rearm/ui/static/modules/datasource/sim-source.js; rearm/ui/static/modules/trainer/trainer.js; rearm/ui/static/modules/twin/demo.html; rearm/ui/static/modules/twin/scene.js; rearm/ui/static/modules/twin/twin.js; tests/test_arm_kinematics.py; tests/test_trainer_logic.py; tests/test_twin_modules.py; tests/test_twin_overlay.py; LOG.md; LOG-INDEX.md。
+- 删除：T_end_laser 及相关注释、endPoses.laser 与 laserRay、轨迹 laser 参考点、laserHead 网格组、laserBeam、地面激光落点及计算/材质；移除 JointFrame、孪生 update/setOverlay/state、独立 demo 与数据源适配中的激光状态。旧 trainer 只删除向孪生传递的两处字段。
+- 保留：overlay 实测点、参考点、偏差线和原有 laser 颜色 token；fallback2d.js 与新 console 当前没有激光引用，未改。剩余 ARM_PARAMS 与开工快照逐值一致，涵盖相机、TCP、手指、限位、夹爪行程、视场角和视角。用户禁改的 9 个文件均与开工快照一致。
+- 旧面板兼容：mock-host 的旧训练模拟点使用其本地历史偏移计算，不再依赖已删除的公共激光参数/API；旧激光指令、守护器和 Python 逻辑保留。接口说明明确 T_end_laser 已删除，历史目标页标明孪生激光要求已废止。
+- 验证：指定 .venv/bin/pytest -q tests/ -k 'twin or arm or console or doc'：262 passed, 329 deselected in 32.80s；旧训练回归：45 passed in 1.34s。JS 与 demo 内联脚本语法检查、git diff --check、受保护文件及参数对比通过。Three 场景回归覆盖六轴/三轴/皮肤加载后均无激光头、光束和圆形落点，相机矩阵、视锥与实测点颜色保留。
+- 首轮证据：261 passed / 1 failed，test_modules_talk_only_through_declared_interfaces 发现 mock-host 直接导入 twin 矩阵工具违反既有依赖边界；已改为在旧模拟点函数内变换坐标，保留模块边界，复跑通过。
+- 画面与遗留：CUA 返回 browser access host unavailable，实际浏览器画面未验证；请刷新 /static/modules/twin/demo.html?source=manual&view=gripper 核对附件和开关已消失，演示叠加仍可用。未申请权限。
+- 回滚：开工快照、仅本轮差异 removal.patch、verification.json 与测试输出位于 /private/tmp/rearm-remove-laser-20261115；按补丁逐段逆向恢复，保留其他会话改动，不整体覆盖共享文件；日志仅删除本节及对应索引行。临时目录可能被系统清理。
+- 唯一 HASH：47cf23b6e4a10247。

@@ -73,7 +73,8 @@ assert.deepEqual(post.pose.slice(0,2),tcpPosition(POSES.post.contact).slice(0,2)
 assert.ok(Math.abs(post.pose[2]-post.size_m[2]/2-disc.pose[2]-disc.size_m[2]/2)<1e-12);
 assert.ok(Math.abs(tcpPosition(POSES.post.contact)[2]-PARTS[0].size_mm[2]/2000-disc.pose[2]-disc.size_m[2]/2)<1e-12);
 const camera=endPoses(ARM_PARAMS,POSES.observe).camera;
-assert.ok(Math.abs(camera[0])<0.0002 && Math.abs(camera[4])<0.0002 && camera[8]<-0.99999,
+// 手眼标定有约 20° 安装倾角；观察位仍向下，但不再与夹头 X 轴平行。
+assert.ok(camera[8]<-0.9,
   JSON.stringify([camera[0],camera[4],camera[8]]));
 assert.ok(camera[11]>WORKSPACE.table_z_m);
 for(let axis=0;axis<2;axis++) {
@@ -133,6 +134,7 @@ assert.equal((await host.send('run_start',{recipe_id:'plate-tube'})).ok,true);
 
 def test_telemetry_20hz_smooth_motion_and_gripper_timing():
     node(BASE + r'''
+assert.equal(OPEN_MM,110);
 await host.send('run_start',{recipe_id:'plate-tube'});host.advance(38000);
 const frames=messages.filter(m=>m.type==='joint_state');assert.equal(frames.length,761);
 for(let i=0;i<frames.length;i++) {

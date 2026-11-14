@@ -1,5 +1,6 @@
 import { frameView } from "../../../shell/view.js";
 import { workspaceBox } from "../../../state/workspace.js";
+import { productionBusy } from "../../../state/selectors.js";
 import { element, svgElement } from "../../../widgets/dom.js";
 import { observationLayout, imageTransform } from "./observation-layout.js";
 
@@ -19,6 +20,8 @@ export function mount(root) {
   camera.append(feed, image, targets, cameraStatus); body.append(camera, result); root.append(title, body);
   let workspace, recognition, step, inspection, phase, latest, relayout = true;
   let media = null, disposed = false;
+  const params = new URL(doc.defaultView.location.href).searchParams;
+  let manualCamera = params.has("camera"), autoSource;
   function cameraState(message) {
     feed.hidden = !!message; objects.style.display = message ? "" : "none";
     cameraStatus.textContent = message; cameraStatus.hidden = !message;
@@ -78,19 +81,26 @@ export function mount(root) {
       width: `${workspace.image.width * transform.scale}px`, height: `${workspace.image.height * transform.scale}px` });
     image.setAttribute("viewBox", `0 0 ${width} ${height}`);
     scene.setAttribute("transform", `translate(${transform.x} ${transform.y}) scale(${transform.scale})`);
-    leaders.replaceChildren(...rows.map((label, i) => {
-      const at = labels[i], target = recognition.targets.find(item => item.id === label.dataset.target);
+    leaders.replaceChildren(...rows.flatMap((label, i) => {
+      const at = labels[i], target = recognition.targets[Number(label.dataset.targetIndex)];
       const prop = workspace.props.find(item => item.id === target.id);
-      const [x, y, w, h] = prop ? workspaceBox(workspace, prop) : target.box_px;
       label.style.left = `${at.left}px`; label.style.top = `${at.top}px`;
-      return svgElement(doc, "line", { x1: transform.x + (x + w / 2) * transform.scale,
+      const box = prop ? workspaceBox(workspace, prop) : target.box_px;
+      if (!box) return [];
+      const [x, y, w, h] = box;
+      return [svgElement(doc, "line", { x1: transform.x + (x + w / 2) * transform.scale,
         y1: transform.y + (y + h / 2) * transform.scale, x2: at.left + at.width / 2,
-        y2: at.top < plot.top ? at.top + at.height : at.top, "data-target-leader": target.id });
+        y2: at.top < plot.top ? at.top + at.height : at.top, "data-target-leader": target.id })];
     }));
     relayout = false;
   }
   const view = frameView(state => {
     latest = state;
+    if (!manualCamera && state.device) {
+      const source = state.link.online ? state.device.camera?.url || null : null;
+      if (source !== autoSource) { autoSource = source; setCameraSource(source); }
+    }
+    camera.dataset.busy = String(productionBusy(state));
     if (workspace !== state.workspace) {
       workspace = state.workspace; relayout = true;
       objects.replaceChildren(...workspace.props.filter(prop => !prop.held).map(prop => {
@@ -103,15 +113,15 @@ export function mount(root) {
     }
     if (recognition !== state.recognition || step !== state.step || phase !== state.phase) {
       recognition = state.recognition; step = state.step; phase = state.phase; relayout = true;
-      camera.dataset.busy = String(phase === "recognize" || phase === "inspect");
       // 框属于观察位拍下的那一帧；离开识别阶段后不把旧框冒充实时检测。
-      boxes.replaceChildren(...(phase === "recognize" ? recognition?.targets || [] : []).map(target => {
+      boxes.replaceChildren(...(phase === "recognize" || recognition?.live ? recognition?.targets || [] : []).filter(target => target.box_px).map(target => {
         const [x, y, width, height] = target.box_px;
         const rect = svgElement(doc, "rect", { x, y, width, height }); rect.dataset.targetBox = target.id; return rect;
       }));
-      targets.replaceChildren(...(recognition?.targets || []).map(target => {
-        const row = element(doc, "li"); row.dataset.target = target.id;
-        row.append(element(doc, "span", "", target.name), element(doc, "span", "", `${Math.round(target.confidence * 100)}%`));
+      targets.replaceChildren(...(recognition?.targets || []).map((target, index) => {
+        const row = element(doc, "li"); row.dataset.target = target.id; row.dataset.targetIndex = index;
+        row.append(element(doc, "span", "", target.name));
+        if (Number.isFinite(target.confidence)) row.append(element(doc, "span", "", `${Math.round(target.confidence * 100)}%`));
         if (phase === "pick" && step?.action === "pick" && step.status === "started" &&
             step.part_id === target.id && Number.isFinite(step.angle_deg)) {
           const angle = element(doc, "span", "", `${step.angle_deg.toFixed(1)}°`); angle.dataset.angle = ""; row.append(angle);
@@ -131,7 +141,7 @@ export function mount(root) {
     relayout = true; if (latest) view.render(latest);
   }) : null;
   observer?.observe(camera);
-  view.setCameraSource = setCameraSource;
-  setCameraSource(new URL(doc.defaultView.location.href).searchParams.get("camera"));
+  view.setCameraSource = source => { manualCamera = true; setCameraSource(source); };
+  setCameraSource(params.get("camera"));
   return view;
 }

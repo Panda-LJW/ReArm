@@ -29,7 +29,7 @@
 <header>
   <b>数字孪生单独演示</b><span id="src"></span>
   <span id="sliders" hidden></span>
-  <span id="manual-actions" hidden><label><input id="laser" type="checkbox">激光</label><button id="overlay-demo" type="button">演示叠加</button></span>
+  <span id="manual-actions" hidden><button id="overlay-demo" type="button">演示叠加</button></span>
 </header>
 <div id="stage"></div>
 <script type="module">
@@ -38,7 +38,6 @@ import { createSource } from "../datasource/index.js";
 import { makeFrame } from "../datasource/frame.js";
 import { ARM_PARAMS } from "../arm/arm-params.js";
 import { buildPath } from "../arm/trajectory.js";
-import { laserRay } from "../arm/fk.js";
 const params = new URLSearchParams(location.search), kind = params.get("source") || "sim";
 const twin = await createTwin(document.getElementById("stage"), { forceFallback: params.get("render") === "2d", skin: params.get("skin") !== "simple", gripper: params.get("gripper") === "official" ? "official" : "custom", view: params.get("view") === "gripper" ? "gripper" : "arm" });
 window.demo = { twin };
@@ -46,7 +45,6 @@ document.getElementById("src").textContent = "数据源：" + ({ sim: "内置模
 if (kind === "manual") {
   const sliders = document.getElementById("sliders"); sliders.hidden = false;
   document.getElementById("manual-actions").hidden = false;
-  const laser = document.getElementById("laser");
   // 显示度，发送 URDF rad；不经过旧面板映射。初始取各轴限位中点。
   const controls = ARM_PARAMS.joints.map((joint, i) => ({ id: "q" + i, label: joint.label,
     range: joint.limit, value: (joint.limit[0] + joint.limit[1]) / 2, scale: 180 / Math.PI, unit: "°" }));
@@ -64,9 +62,9 @@ if (kind === "manual") {
       c.input.setAttribute("aria-valuetext", c.output.textContent);
     }
     twin.update(makeFrame({ q_rad: controls.slice(0, 6).map(c => Number(c.input.value)),
-      gripper_mm: Number(controls[6].input.value), mode: "sim", online: true, laser: laser.checked }));
+      gripper_mm: Number(controls[6].input.value), mode: "sim", online: true }));
   };
-  sliders.oninput = send; laser.onchange = send; send();
+  sliders.oninput = send; send();
   document.getElementById("overlay-demo").onclick = () => {
     const q = controls.slice(0, 6).map(c => Number(c.input.value)), t = Date.now();
     const bounded = (value, i) => Math.max(ARM_PARAMS.joints[i].limit[0], Math.min(ARM_PARAMS.joints[i].limit[1], value));
@@ -74,8 +72,7 @@ if (kind === "manual") {
       q: q.map((v, axis) => bounded(v + (axis === 0 ? (i - 20) * 0.004 : axis === 1 ? Math.sin((i - 20) * Math.PI / 40) * 0.05 : 0), axis)) }));
     const demoPath = buildPath(ARM_PARAMS, samples).segments;
     const runPath = buildPath(ARM_PARAMS, samples.map(s => ({ ...s, q: s.q.map((v, i) => bounded(v + (i === 1 ? 0.012 : 0), i)) }))).segments;
-    const points = demoPath.flat(), ray = laserRay(ARM_PARAMS, q);
-    const measured = ray.origin.map((v, i) => v + ray.direction[i] * 0.13);
+    const points = demoPath.flat(), measured = runPath.flat()[20].p;
     twin.setOverlay({ demoPath, runPath,
       nodes: [0, 20, 40].map((index, i) => ({ id: i + 1, p: points[index].p, current: i === 1 })),
       spots: { measured, reference: measured.map((v, i) => v + (i === 2 ? 0.0032 : 0)), deviation_mm: 3.2 } });

@@ -1,0 +1,339 @@
+{
+ "connected": true,
+ "enabled": false,
+ "gripper_active": false,
+ "busy": false,
+ "busy_action": null,
+ "port": "FAKE",
+ "stale": false,
+ "telemetry": {
+  "q_rad": [
+   -0.1523660163777735,
+   -0.4057700524966479,
+   0.1683804414274662,
+   0.0,
+   0.03223824813344271,
+   0.0,
+   -0.5
+  ],
+  "dq_rad_s": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "tau_nm": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "motor_state": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "t_mos_c": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "t_rotor_c": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "q_ref_rad": null,
+ "joint_limits_rad": [
+  [
+   -2.8,
+   2.8
+  ],
+  [
+   -3.14,
+   0.3
+  ],
+  [
+   -3.14,
+   0.05
+  ],
+  [
+   -1.87,
+   1.95
+  ],
+  [
+   -1.57,
+   1.57
+  ],
+  [
+   -3.14,
+   3.14
+  ]
+ ],
+ "initial_pose_deg": null,
+ "initial_recorded_at": "初始状态未记录（None）：回位功能关闭",
+ "work_start_deg": null,
+ "work_start_recorded_at": "工作起始点未记录（None）",
+ "gripper_refs": null,
+ "last_grip": null,
+ "last_pick": {
+  "part_id": 3,
+  "held": false,
+  "reason": "指尖误差 5.6 mm > 5.0 mm，未闭合",
+  "tip_error_mm": 5.6,
+  "tip_errors_mm": [
+   17.9,
+   6.5
+  ],
+  "feedforward_deg": [
+   0.04,
+   1.03,
+   -0.15,
+   -3.02,
+   -0.23,
+   0.07
+  ],
+  "retry_refused": true,
+  "open_mm": 60
+ },
+ "handeye": "手眼标定未加载",
+ "arm_feedback_retries": 0,
+ "vision": {
+  "ready": false,
+  "note": "识别到 1 个零件：#1 薄片；1 个未知",
+  "last": {
+   "t": "2026-11-15 06:11:03",
+   "detections": [
+    {
+     "center_px": [
+      220.0,
+      260.0
+     ],
+     "angle_deg": 12.0,
+     "long_mm": 48.0,
+     "short_mm": 48.0,
+     "area_mm2": 1800.0,
+     "solidity": 0.97,
+     "height_mm": 3.1,
+     "depth_fraction": 0.98,
+     "value": 180.0,
+     "table_z_mm": 412.0,
+     "touches_border": false,
+     "mm_per_px": 0.687,
+     "part_id": 1,
+     "name": "薄片",
+     "distance": 0.21,
+     "margin": 1.8,
+     "reason": ""
+    },
+    {
+     "center_px": [
+      435.0,
+      245.0
+     ],
+     "angle_deg": 90.0,
+     "long_mm": 62.0,
+     "short_mm": 48.0,
+     "area_mm2": 2900.0,
+     "solidity": 0.95,
+     "height_mm": 40.2,
+     "depth_fraction": 0.97,
+     "value": 170.0,
+     "table_z_mm": 412.0,
+     "touches_border": false,
+     "mm_per_px": 0.687,
+     "part_id": 0,
+     "distance": 3.4,
+     "margin": 0.2,
+     "reason": "unknown: far from every prototype or ambiguous"
+    }
+   ],
+   "q_rad": null
+  },
+  "has_overlay": false
+ },
+ "pose_error_deg": null,
+ "trajectories": [],
+ "recording": null,
+ "playback": {
+  "state": "idle"
+ },
+ "action_phase": "",
+ "gripper_marks": {
+  "open": null,
+  "closed": null
+ },
+ "estopped_motors": [],
+ "gripper_span_rad": null,
+ "grip_tau_nm": null,
+ "jog_max_delta_rad": 0.15,
+ "motor_params": [
+  {
+   "motor_id": 1,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 1,
+   "timeout_raw": 0,
+   "master_id": 17,
+   "kp": 100.0,
+   "kd": 5.0,
+   "q_limits_rad": [
+    -2.8,
+    2.8
+   ],
+   "max_velocity_rad_s": 0.15,
+   "max_tracking_error_rad": 0.2
+  },
+  {
+   "motor_id": 2,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 1,
+   "timeout_raw": 0,
+   "master_id": 18,
+   "kp": 100.0,
+   "kd": 5.0,
+   "q_limits_rad": [
+    -3.14,
+    0.3
+   ],
+   "max_velocity_rad_s": 0.15,
+   "max_tracking_error_rad": 0.2
+  },
+  {
+   "motor_id": 3,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 1,
+   "timeout_raw": 0,
+   "master_id": 19,
+   "kp": 100.0,
+   "kd": 5.0,
+   "q_limits_rad": [
+    -3.14,
+    0.05
+   ],
+   "max_velocity_rad_s": 0.15,
+   "max_tracking_error_rad": 0.2
+  },
+  {
+   "motor_id": 4,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 1,
+   "timeout_raw": 0,
+   "master_id": 20,
+   "kp": 24.0,
+   "kd": 2.0,
+   "q_limits_rad": [
+    -1.87,
+    1.95
+   ],
+   "max_velocity_rad_s": 0.15,
+   "max_tracking_error_rad": 0.2
+  },
+  {
+   "motor_id": 5,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 1,
+   "timeout_raw": 0,
+   "master_id": 21,
+   "kp": 24.0,
+   "kd": 2.0,
+   "q_limits_rad": [
+    -1.57,
+    1.57
+   ],
+   "max_velocity_rad_s": 0.15,
+   "max_tracking_error_rad": 0.2
+  },
+  {
+   "motor_id": 6,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 1,
+   "timeout_raw": 0,
+   "master_id": 22,
+   "kp": 24.0,
+   "kd": 2.0,
+   "q_limits_rad": [
+    -3.14,
+    3.14
+   ],
+   "max_velocity_rad_s": 0.15,
+   "max_tracking_error_rad": 0.2
+  },
+  {
+   "motor_id": 7,
+   "pmax_rad": 12.5,
+   "vmax_rad_s": 30.0,
+   "tmax_nm": 10.0,
+   "ctrl_mode": 2,
+   "timeout_raw": 0,
+   "master_id": 23,
+   "kp": null,
+   "kd": null,
+   "q_limits_rad": null
+  }
+ ],
+ "speed_cap_rad_s": 2.0,
+ "joint_names": [
+  "J1 底座",
+  "J2 肩",
+  "J3 肘",
+  "J4 腕1",
+  "J5 腕2",
+  "J6 腕3",
+  "J7 夹爪"
+ ],
+ "camera": {
+  "running": true,
+  "frames": 1,
+  "fresh": true,
+  "error": null,
+  "mm_per_unit": 1.0,
+  "color_intrinsics": {
+   "width": 640,
+   "height": 480,
+   "fx": 600.0,
+   "fy": 600.0,
+   "ppx": 320.0,
+   "ppy": 240.0
+  },
+  "backgrounds": {},
+  "enabled": true,
+  "measurement": {
+   "label": "假相机",
+   "distance_mm": 412.0,
+   "height_mm": 0.0
+  }
+ },
+ "last_error": null,
+ "events": []
+}

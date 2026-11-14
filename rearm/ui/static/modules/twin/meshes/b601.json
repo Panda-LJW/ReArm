@@ -65,6 +65,7 @@
    "frame": "tool",
    "source": "gripper_base_metal",
    "material": "metal",
+   "railLength": 0.184,
    "side": null,
    "positions": {
     "offset": 179736,

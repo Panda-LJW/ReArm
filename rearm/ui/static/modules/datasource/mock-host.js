@@ -1,12 +1,12 @@
 // 浏览器内模拟主机：只有本地计时和运动学，不访问网络。advance 与实时计时共用同一个事件循环。
 import { ARM_PARAMS } from "../arm/arm-params.js";
-import { endPoses, laserRay } from "../arm/fk.js";
+import { endPoses } from "../arm/fk.js";
 import { CONFIG } from "../trainer/config.js";
 import { number } from "../trainer/format.js";
 import { createEmitter } from "./frame.js";
 
 const DEMO_MS = 6000, HOLD_MS = 800, MEASURE_MS = 400;
-// 开口取总行程的比例；关节是各自限位内的比例，避免另存一份硬件限位。
+// 关节取各自限位内的比例，避免另存一份硬件限位。
 const POSES = [
   [0.50, 0.48, 0.53, 0.48, 0.50, 0.50],
   [0.55, 0.55, 0.43, 0.55, 0.45, 0.55],
@@ -14,7 +14,9 @@ const POSES = [
   [0.46, 0.47, 0.55, 0.43, 0.56, 0.46],
   [0.50, 0.48, 0.53, 0.48, 0.50, 0.50],
 ];
-const OPENINGS = [0.9, 0.9, 0.2, 0.2, 0.9];
+// 全开取统一硬件参数；演示抓持 12 mm 物体，不能随最大行程放大抓持间距。
+const OPEN_MM = ARM_PARAMS.gripper.openingMm[1];
+const OPENINGS = [OPEN_MM, OPEN_MM, 12, 12, OPEN_MM];
 const ease = x => x * x * (3 - 2 * x);
 const mix = (a, b, k) => a + (b - a) * k;
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -23,11 +25,14 @@ function poseAt(elapsed) {
   const i = Math.min(3, Math.floor(phase)), k = ease(phase - i);
   return {
     q: ARM_PARAMS.joints.map((joint, axis) => mix(...joint.limit, mix(POSES[i][axis], POSES[i + 1][axis], k))),
-    gripper_mm: mix(...ARM_PARAMS.gripper.openingMm, mix(OPENINGS[i], OPENINGS[i + 1], k)),
+    gripper_mm: mix(OPENINGS[i], OPENINGS[i + 1], k),
   };
 }
 function spot(q) {
-  const { origin, direction } = laserRay(ARM_PARAMS, q);
+  // 仅供旧训练面板的模拟光点；不代表真机附件，也不进入孪生参数或 API。
+  const m = endPoses(ARM_PARAMS, q).end_link;
+  const origin = [0, 1, 2].map(r => m[r * 4 + 3] - m[r * 4] * 0.0695 + m[r * 4 + 2] * 0.020);
+  const direction = [m[0], m[4], m[8]];
   return origin.map((v, i) => (v + direction[i] * 0.25) * 1000);
 }
 function end(q) {

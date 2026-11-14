@@ -94,7 +94,7 @@ console.log(JSON.stringify(rows));
         q1, q2, q3 = row['q']
         assert row['upper'] == pytest.approx(q2, abs=0.2)        # 大臂仰角 = J2
         assert row['fore'] == pytest.approx(q2 + q3, abs=0.2)    # 小臂仰角 = J2 + J3
-        assert row['toolEl'] == pytest.approx(q2 + q3, abs=1.0)  # 激光方向沿小臂
+        assert row['toolEl'] == pytest.approx(q2 + q3, abs=1.0)  # 工具方向沿小臂
         if abs(q2 + q3) < 85:
             assert row['yaw'] == pytest.approx(-q1, abs=0.5)     # 偏航 = −J1（URDF 逆时针为正）
         assert row['upperLen'] == pytest.approx(0.264, abs=1e-4)  # 连杆长度来自 URDF
@@ -141,12 +141,12 @@ console.log(JSON.stringify({ kinds: Object.keys(SOURCES), inside, seen, tele,
   dirty: makeFrame({ angles_deg: [1, "a"], mode: "weird", online: true }), version: PROTOCOL_VERSION, timeout: HEARTBEAT_TIMEOUT_MS }));
 ''')
     assert out['kinds'] == ['panel', 'sim', 'device', 'host', 'mock'] and out['inside']
-    keys = {'timestamp', 'q_rad', 'valid', 'gripper_mm', 'angles_deg', 'mode', 'online', 'laser'}
+    keys = {'timestamp', 'q_rad', 'valid', 'gripper_mm', 'angles_deg', 'mode', 'online'}
     assert all(set(frame) == keys for frame in out['seen'] + [out['tele'], out['dirty']])
     sim, live, offline, empty = out['seen']
-    assert (sim['mode'], sim['angles_deg'], sim['laser'], sim['online']) == ('sim', [1, 2, -3], True, True)
-    assert (live['mode'], live['angles_deg'], live['laser']) == ('live', [4, 5, -6], False)
-    assert (offline['mode'], offline['online'], offline['laser']) == ('offline', False, None)
+    assert (sim['mode'], sim['angles_deg'], sim['online']) == ('sim', [1, 2, -3], True)
+    assert (live['mode'], live['angles_deg']) == ('live', [4, 5, -6])
+    assert (offline['mode'], offline['online']) == ('offline', False)
     assert empty['angles_deg'] is None and empty['mode'] == 'sim'
     assert out['tele']['angles_deg'] == [3, 40, -100] and out['tele']['mode'] == 'live' and out['tele']['timestamp'] == 12.345
     assert out['rejected'] == [None] * 7

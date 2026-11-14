@@ -41,3 +41,10 @@
 | 2026-11-15 | 零件库旧版样式、页面动效与86项console回归；画面权限未验证 | LOG.md CONSOLE-VISUAL-PARTS-20261115 | 7483a0843397ac51 |
 | 2026-11-15 | 生产页旧版仪表布局、CSS动效、86项console回归及画面验证阻塞 | LOG.md CONSOLE-VISUAL-PRODUCTION-20261115 | e6e92123fb793807 |
 | 2026-11-15 | 观察标签24px内缩、底部状态chip、孪生固定构图及148项回归 | LOG.md PRODUCTION-FRAMING-20261115 | 9b39b61f6ce40ccd |
+| 2026-11-15 | 清单 3.1–3.6、19 项新测试、131 项 console 回归；画面待验证 | LOG.md PRODUCTION-INTERACTION-20261115 | 501ec029363b57a9 |
+| 2026-11-15 | 第 4 节 1–5 条交互、共享动效、新增流程及 19 项范围回归 | LOG.md PARTS-INTERACTION-20261115 | fafe5d52c017a049 |
+| 2026-11-15 | 记录排序、共享动效、设置复制与连接反馈；114 项 console 测试通过，画面未验证 | LOG.md RECORDS-SETTINGS-INTERACTION-20261115 | 9fc4a097f936ce88 |
+| 2026-11-15 | 前端后端只读源、急停、相机与最近抓取；新增18项测试、190项回归通过 | LOG.md CONSOLE-BACKEND-20261115 | ba06cca4e393367f |
+| 2026-11-15 | 真机限位与110mm夹爪、当次标定换算；168项相关回归通过，全量受权限/并行改动阻塞 | LOG.md TWIN-HARDWARE-ALIGN-20261115 | 2a8e09f7246d9f2c |
+| 2026-11-15 | 孪生夹头完整位姿、手眼相机与统一V槽；128项相关通过，全量556通过/35端口权限错误 | LOG.md TWIN-TIP-CAMERA-GRIPPER-20261115 | 1d3d202bb3fa814c |
+| 2026-11-15 | 删除孪生激光附件与API；262项指定回归、45项旧训练通过，画面未验证 | LOG.md TWIN-REMOVE-LASER-20261115 | 47cf23b6e4a10247 |

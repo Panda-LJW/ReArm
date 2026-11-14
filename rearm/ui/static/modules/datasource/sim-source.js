@@ -14,7 +14,7 @@ export function createSimSource({ periodMs = 50, holdMs = 1800, moveMs = 1400, n
     const k = within < holdMs ? 0 : ease((within - holdMs) / moveMs);
     return from.map((v, i) => v + (to[i] - v) * k);
   }
-  const tick = () => emitter.emit(makeFrame({ angles_deg: anglesAt(now() - started), mode: "sim", laser: (now() - started) % (holdMs + moveMs) < holdMs }));
+  const tick = () => emitter.emit(makeFrame({ angles_deg: anglesAt(now() - started), mode: "sim" }));
   return {
     kind: "sim", anglesAt,
     start() { if (timer) return; started = now(); tick(); timer = setInterval(tick, periodMs); },

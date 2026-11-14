@@ -5,6 +5,7 @@ import { element } from "../../../widgets/dom.js";
 import { button, field, number } from "./format.js";
 import { shape } from "./shape.js";
 import { recipeFields } from "./recipe-fields.js";
+import { capturePreview } from "./capture-preview.js";
 
 export function mount(root, ctx) {
   const doc = root.ownerDocument, form = element(doc, "div", "library-identify");
@@ -12,6 +13,13 @@ export function mount(root, ctx) {
   message.setAttribute("role", "status");
   let state = ctx.store.getState(), pending = false, candidate = null, baseline, disposed = false;
   let resetAtCapture = state.reset;
+  const introduction = element(doc, "div", "library-step-intro");
+  introduction.append(element(doc, "h2", "", ctx.target === "part" ? "拍照识别零件" : "编排装配配方"),
+    element(doc, "p", "library-muted", ctx.target === "part" ?
+      "将一个零件放在观察区，保持轮廓完整、无遮挡。拍照后核对外形、名称和编号，再进入训练。" :
+      "准备已收录的零件和对应工装，填写名称、选择零件并调整装配顺序，再进入训练。"));
+  if (ctx.target === "part") preview.append(capturePreview(doc, state.workspace));
+  else preview.hidden = true;
   const name = field(doc, "名称"), code = field(doc, "编号");
   const capture = button(doc, "拍照识别", takePhoto, true);
   const confirm = button(doc, ctx.target === "part" ? "确认零件" : "确认配方", () => {
@@ -26,7 +34,7 @@ export function mount(root, ctx) {
     code.input.value = `R${String(n).padStart(3, "0")}`;
     recipe = recipeFields(form, state, sync);
   }
-  form.append(confirm); root.append(capture, preview, form, message);
+  form.append(confirm); root.append(introduction, capture, preview, form, message);
   name.input.addEventListener("input", sync); code.input.addEventListener("input", sync);
   function reason() {
     return trainReason(state) || (pending ? "请等待识别结果" : "") ||
@@ -40,6 +48,8 @@ export function mount(root, ctx) {
     form.hidden = ctx.target === "part" && !candidate;
     setUnavailable(capture, trainReason(state) || (pending ? "请等待识别结果" : ""));
     setUnavailable(confirm, reason());
+    preview.dataset.busy = String(pending);
+    ctx.changed?.();
   }
   async function takePhoto() {
     sync(); if (trainReason(state) || pending) return;
@@ -52,7 +62,7 @@ export function mount(root, ctx) {
     }
   }
   sync();
-  return frameView(next => {
+  const view = frameView(next => {
     state = next;
     if (pending && (next.phase === "estop" || !next.link.online || next.reset !== resetAtCapture)) {
       pending = false; message.textContent = "识别已中断，请重新拍照。";
@@ -65,4 +75,8 @@ export function mount(root, ctx) {
     }
     sync();
   }, () => { disposed = true; root.replaceChildren(); }, doc.defaultView);
+  view.next = () => confirm.click();
+  view.reason = reason;
+  view.pending = () => pending;
+  return view;
 }

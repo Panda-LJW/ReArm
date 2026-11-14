@@ -24,7 +24,7 @@ export function parseTelemetry(message) {
     angles.push(value);
   }
   if (angles.length < 3) return null;
-  return makeFrame({ angles_deg: angles, mode: data.sim ? "sim" : "live", laser: typeof data.laser === "boolean" ? data.laser : null, timestamp: Number(data.t_ms) / 1000 });
+  return makeFrame({ angles_deg: angles, mode: data.sim ? "sim" : "live", timestamp: Number(data.t_ms) / 1000 });
 }
 
 export function createDeviceSource({ url, WebSocketImpl = globalThis.WebSocket, timeoutMs = HEARTBEAT_TIMEOUT_MS, retryMs = 1000 } = {}) {

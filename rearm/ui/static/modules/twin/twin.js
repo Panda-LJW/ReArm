@@ -4,7 +4,7 @@
 // 孪生只按收到的关节角画姿态，不关心数据来自仿真、面板还是真实下位机。
 import { ARM_CONFIG } from "./arm-config.js";
 import { panelToUrdf } from "./kinematics.js";
-import { checkJoints, forwardUrdf, endPoses, laserRay, frustumCorners } from "../arm/fk.js";
+import { checkJoints, forwardUrdf, endPoses, frustumCorners } from "../arm/fk.js";
 import { createHoverLabels } from "./hover-labels.js";
 import { copyProps, createPropsLayer } from "./props.js";
 
@@ -38,7 +38,6 @@ function copyOverlay(value = {}) {
     nodes: (value.nodes || []).flatMap(node => {
       const p = copyPoint(node.p); return p ? [{ id: node.id, p, current: node.current === true }] : [];
     }),
-    laser: typeof value.laser?.on === "boolean" ? { on: value.laser.on } : null,
     spots: { measured: copyPoint(spots.measured), reference: copyPoint(spots.reference),
       deviation_mm: Number.isFinite(spots.deviation_mm) ? spots.deviation_mm : null },
   };
@@ -97,9 +96,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
   makeLabels();
 
   // 当前显示的读数向目标读数平滑靠拢；没有目标前停在配置的初始姿态。
-  let shown = null, goal = null, mode = "waiting", laser = null, raf = 0, disposed = false, dirty = true;
-  // 明确的 JointFrame 激光状态优先；没提供时允许独立 overlay 激光事件。
-  const laserState = () => laser ?? overlay.laser?.on ?? false;
+  let shown = null, goal = null, mode = "waiting", raf = 0, disposed = false, dirty = true;
   let jointError = "", gripperMm = null;
   // 系统设置了“减少动态效果”时不做过渡，直接到位
   const calm = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -114,9 +111,9 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
       shown = shown.map((v, i) => { const d = goal[i] - v; if (calm || Math.abs(d) < tolerance) return goal[i]; moving = true; return v + d * 0.18; });
     }
     const pose = shown || restView, offline = mode === "offline" || mode === "waiting";
-    const options = { laserOn: laserState() && !offline, dimmed: offline, gripperMm, axes };
+    const options = { dimmed: offline, gripperMm, axes };
     if (axes === 6) scene.setPoseMatrices(forwardUrdf(config, pose), { ...options,
-      endPoses: endPoses(config, pose), laserRay: laserRay(config, pose), frustumCorners: frustumCorners(config, pose, 0.18) });
+      endPoses: endPoses(config, pose), frustumCorners: frustumCorners(config, pose, 0.18) });
     else scene.setPose(panelToUrdf(config, pose), options);
     scene.render();
     const degrees = pose.map(v => axes === 6 ? v * 180 / Math.PI : v);
@@ -236,7 +233,6 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
         const [lo, hi] = config.gripper.openingMm;
         if (frame.gripper_mm >= lo && frame.gripper_mm <= hi) gripperMm = frame.gripper_mm;
       }
-      if (typeof frame.laser === "boolean") laser = frame.laser;
       const next = frame.online === false ? "offline" : MODE[frame.mode] ? frame.mode
         : frame.online === true && (mode === "offline" || mode === "waiting") ? "live" : mode;
       mode = next; renderStatus();
@@ -260,7 +256,7 @@ export async function createTwin(container, { config = ARM_CONFIG, forceFallback
     // 供测试和调试读取当前显示状态
     state: () => ({ mode, shown: shown ? [...shown] : null, goal: goal ? [...goal] : null,
       q_rad: axes === 6 ? (shown ? [...shown] : null) : config.joints.map(j => panelToUrdf(config, shown || restView)[j.id]),
-      axes, laser: laserState(), renderer, dirty, skin: skinState, gripper: gripperState, view,
+      axes, renderer, dirty, skin: skinState, gripper: gripperState, view,
       ...(props === null ? {} : { props: copyProps(props) }),
       overlay: { demoPoints: overlay.demoPath.reduce((n, s) => n + s.length, 0),
         runPoints: overlay.runPath.reduce((n, s) => n + s.length, 0), nodes: overlay.nodes.length,

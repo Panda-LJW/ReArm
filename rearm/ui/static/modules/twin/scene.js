@@ -2,6 +2,23 @@
 import * as THREE from "../../vendor/three.module.min.js";
 import { forward, position, multiply } from "./kinematics.js";
 
+// 简化路径与 customFinger 网格生成器共用同一截面；X 接近、Y 闭合、Z 厚度。
+export function createFingerGeometry(finger, side = "left") {
+  const { length, width, thickness, vGroove: v } = finger;
+  const halfAngle = v.angleDeg * Math.PI / 360;
+  const depth = v.side * Math.cos(halfAngle), mouth = 2 * v.side * Math.sin(halfAngle);
+  const tip = -v.flat;
+  const points = [[-length, 0], [tip - mouth, 0], [tip - mouth / 2, depth],
+    [tip, 0], [0, 0], [0, width], [-length, width]];
+  // flat=0 时不重复末端点，避免退化三角形。
+  const outline = points.filter((p, i) => !i || p.some((x, j) => x !== points[i - 1][j]));
+  const profile = new THREE.Shape(outline.map(p => new THREE.Vector2(...p)));
+  const geometry = new THREE.ExtrudeGeometry(profile, { depth: thickness, bevelEnabled: false, steps: 1 });
+  geometry.translate(0, 0, -thickness / 2);
+  if (side === "right") geometry.scale(1, -1, -1); // 绕 X 翻转，相同手指组成菱形。
+  return geometry;
+}
+
 const cssVar = (el, name, fallback) => getComputedStyle(el).getPropertyValue(name).trim() || fallback;
 
 function palette(el) {
@@ -41,8 +58,6 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
   const SKIN = { matte_black: "skinDark", hardware_black: "skinDarker", anodized_grey: "skinPlate", carriage_grey: "skinPlate", metal: "skinMetal", rack_metal: "skinMetal", silver_trim: "skinMetal", seeed_yellow: "skinTrim", travel_stop_yellow: "skinTrim", finger_black: "skinFinger", finger_white: "skinFinger", finger_grey: "skinFinger2" };
   const THEME = { skinPlate: "plate", skinFinger: "finger", skinFinger2: "finger2" };
   const gridMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 });
-  const laserMaterial = new THREE.LineBasicMaterial({ transparent: true });
-  const spotMaterial = new THREE.MeshBasicMaterial({ transparent: true });
   const overlayMaterials = {
     demoPath: new THREE.LineDashedMaterial({ transparent: true, opacity: 0.5, dashSize: 0.008, gapSize: 0.005 }),
     runPath: new THREE.LineBasicMaterial(),
@@ -139,22 +154,22 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
   }
   box(tool, rail.size, "body", rail.center);
   for (const mount of config.gripper.fingers) {
-    slidePart(box(tool, [finger.length, finger.thickness, finger.height], "finger"), mount,
-      [-finger.length / 2, mount.axis[1] * finger.thickness / 2, 0]);
+    const mesh = part(tool, createFingerGeometry(finger, mount.side), "finger");
+    mesh.name = "simple_finger_" + mount.side;
+    slidePart(mesh, mount);
   }
   setOpening(openingMm);
 
-  // 相机和激光头只在六轴入口显示。各自原点是光心/出光点，外壳沿 -X 延伸。
+  // 相机只在六轴入口显示。原点是光心，外壳沿 -X 延伸。
   const sensors = new THREE.Group(); sensors.name = "sensors"; sensors.visible = false; world.add(sensors);
-  const cameraHead = new THREE.Group(), laserHead = new THREE.Group();
-  cameraHead.name = "cameraHead"; laserHead.name = "laserHead";
-  cameraHead.matrixAutoUpdate = laserHead.matrixAutoUpdate = false;
-  sensors.add(cameraHead, laserHead);
+  const cameraHead = new THREE.Group();
+  cameraHead.name = "cameraHead";
+  cameraHead.matrixAutoUpdate = false;
+  sensors.add(cameraHead);
   const [depth, width, height] = config.camera.size;
   box(cameraHead, config.camera.size, "body", [-depth / 2, 0, 0]);
   box(cameraHead, [0.001, width, height], "camera", [0, 0, 0]);
   for (const y of [-width * 0.32, 0, width * 0.32]) cylinder(cameraHead, height * 0.24, 0.0015, "x", "body", [0.001, y, 0]);
-  cylinder(laserHead, 0.004, 0.016, "x", "camera", [-0.008, 0, 0]);
   // 不随网格皮肤加载而隐藏。
   sensors.traverse(o => { o.userData.simple = false; });
   const frustum = new THREE.LineSegments(new THREE.BufferGeometry(), overlayMaterials.frustum);
@@ -201,16 +216,10 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
     }
   }
 
-  // 激光束：六轴使用出光点；旧三轴保留工具原点到地面的投影。
-  const laserGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-  const laser = new THREE.Line(laserGeometry, laserMaterial); world.add(laser);
-  laser.name = "laserBeam";
-  const spot = new THREE.Mesh(new THREE.CircleGeometry(0.012, 24), spotMaterial); world.add(spot);
-
   function applyTheme() {
     const p = palette(container);
     for (const name of Object.keys(materials)) materials[name].color.set(p[THEME[name] || name]);
-    edgeMaterial.color.set(p.edge); gridMaterial.color.set(p.grid); laserMaterial.color.set(p.laser); spotMaterial.color.set(p.laser);
+    edgeMaterial.color.set(p.edge); gridMaterial.color.set(p.grid);
     const colors = { node: "demoPath", current: "joint", measured: "laser", reference: "demoPath", deviation: "laser" };
     for (const [name, material] of Object.entries(overlayMaterials)) material.color.set(p[colors[name] || name]);
   }
@@ -236,8 +245,8 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
     setPoseMatrices(forward(config, urdfAngles), options);
   }
   // 六轴入口直接使用已算好的矩阵，禁止再调用带限位夹取的旧 forward。
-  function setPoseMatrices({ frames, end_link: toolMatrix }, { laserOn = false, dimmed = false, gripperMm = null, axes = 3,
-    endPoses = null, laserRay = null, frustumCorners = null } = {}) {
+  function setPoseMatrices({ frames, end_link: toolMatrix }, { dimmed = false, gripperMm = null, axes = 3,
+    endPoses = null, frustumCorners = null } = {}) {
     lastFrames = { ...frames, tool: toolMatrix };
     for (const [id, matrix] of Object.entries(lastFrames)) { links[id].matrix.set(...matrix); links[id].matrixWorldNeedsUpdate = true; }
     setOpening(gripperMm);
@@ -245,32 +254,12 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
     if (viewMode === "gripper") target.set(...position(endPoses?.tcp || multiply(toolMatrix, config.T_end_tcp)));
     sensors.visible = frustum.visible = axes === 6 && !!endPoses;
     if (sensors.visible) {
-      cameraHead.matrix.set(...endPoses.camera); laserHead.matrix.set(...endPoses.laser);
-      cameraHead.matrixWorldNeedsUpdate = laserHead.matrixWorldNeedsUpdate = true;
+      cameraHead.matrix.set(...endPoses.camera);
+      cameraHead.matrixWorldNeedsUpdate = true;
       const center = position(endPoses.camera), points = [];
       for (let i = 0; i < 4; i++) points.push(center, frustumCorners[i], frustumCorners[i], frustumCorners[(i + 1) % 4]);
       frustum.geometry.setFromPoints(points.map(vector)); frustum.geometry.computeBoundingSphere();
     }
-    if (axes === 6) {
-      laser.visible = laserOn && !dimmed && !!laserRay; spot.visible = false;
-      if (laser.visible) {
-        const { origin, direction } = laserRay;
-        const end = overlay.spots?.measured || origin.map((v, i) => v + direction[i] * 0.6);
-        laserGeometry.setFromPoints([vector(origin), vector(end)]);
-        laserGeometry.computeBoundingSphere();
-      }
-    } else {
-      // 旧三轴仍从工具原点打到地面，保留关灯时的淡色辅助线。
-      const origin = position(toolMatrix), dir = [toolMatrix[0], toolMatrix[4], toolMatrix[8]], floor = -lift;
-      const reach = dir[2] < -1e-3 ? (floor - origin[2]) / dir[2] : 0, hit = reach > 0 && reach < 3;
-      laser.visible = spot.visible = hit;
-      if (hit) {
-        const end = origin.map((v, i) => v + dir[i] * reach);
-        laserGeometry.setFromPoints([vector(origin), vector(end)]); laserGeometry.computeBoundingSphere();
-        spot.position.set(end[0], end[1], floor + 0.001);
-      }
-    }
-    laserMaterial.opacity = laserOn ? 1 : 0.28; spotMaterial.opacity = laserOn ? 1 : 0.35;
     for (const m of Object.values(materials)) { m.transparent = dimmed; m.opacity = dimmed ? 0.45 : 1; }
   }
 
@@ -318,6 +307,8 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
         geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
         geometry.setIndex(new THREE.BufferAttribute(indices, 1));
         const mesh = new THREE.Mesh(geometry, materials[SKIN[item.material]]);
+        // 导轨沿 Y 按显示长度缩放，使旧网格端挡容纳真机 110 mm 开口；夹指、滑块和 FK 不缩放。
+        if (Number.isFinite(item.railLength) && item.railLength > 0) mesh.scale.y = rail.size[1] / item.railLength;
         mesh.userData.skin = item;
         mesh.userData.bakedInEndLink = custom;
         added.push([group, mesh, item]);
@@ -384,7 +375,7 @@ export function createScene(container, config, { view: viewMode = "arm", propsFa
     dispose() {
       disposed = true;
       scene.traverse(o => { o.geometry?.dispose(); });
-      for (const m of [...Object.values(materials), ...Object.values(overlayMaterials), edgeMaterial, gridMaterial, laserMaterial, spotMaterial]) m.dispose();
+      for (const m of [...Object.values(materials), ...Object.values(overlayMaterials), edgeMaterial, gridMaterial]) m.dispose();
       renderer.dispose(); canvas.remove();
     },
   };
