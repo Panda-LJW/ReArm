@@ -18,9 +18,10 @@ export function mount(root) {
     const start = state.mode === "demo" ? "再次点‘示范’结束" : state.demo ? "点‘练习’开始" : "点‘示范’开始";
     set(0, summary.pass == null ? "—" : String(summary.pass), "遍", `模式：${modeText(state)}`);
     if (summary.pass == null && state.mode === "idle") cells[0].detail.textContent = start;
-    const high = summary.lastMeanMm > summary.thresholdMm;
-    set(1, number(summary.lastMeanMm), "mm", summary.lastMeanMm == null ? start :
-      `${high ? "▲ 高于" : "✓ 低于"}阈值 ${summary.thresholdMm} mm · 最大 ${number(summary.lastMaxMm)} mm`, high ? "bad" : "ok");
+    const passed = summary.belowThreshold;
+    set(1, number(summary.lastMeanMm), "mm", passed == null ? start : passed
+      ? `✓ 达标（最大 ≤ ${summary.thresholdMm} mm）` : `▲ 未达标（最大 ${number(summary.lastMaxMm)} mm）`,
+    passed == null ? "none" : passed ? "ok" : "bad");
     const pct = summary.improvedPct;
     const baseline = state.passes.filter(pass => pass.result).length === 1;
     const worse = !baseline && pct < 0;

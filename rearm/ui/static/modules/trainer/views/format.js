@@ -2,8 +2,13 @@ import { number } from "../format.js";
 export { number };
 export const online = state => state.link.online === true && !!state.hello;
 export const modeText = state => !online(state) ? "离线" : ({ idle: "空闲", demo: "示范中", practice: "练习中", estop: "已急停", fault: "故障" }[state.mode] || "等待状态");
-export const latestNode = state => state.passes.flatMap(pass => Object.values(pass.nodes))
-  .filter(node => node.valid === true).sort((a, b) => b.t - a.t || b.seq - a.seq)[0] ?? null;
+export function latestNode(state) {
+  // 有当前节点时只取该节点；缺测或尚未测量都不能回退到别处的旧光点。
+  if (state.currentNode) return state.passes.find(pass => pass.pass === state.currentNode.pass)
+    ?.nodes[state.currentNode.node] ?? null;
+  return state.passes.flatMap(pass => Object.values(pass.nodes))
+    .sort((a, b) => b.t - a.t || b.seq - a.seq)[0] ?? null;
+}
 export const lastCorrection = state => state.passes.filter(pass => pass.correction).at(-1)?.correction ?? null;
 export const correctionValue = item => number(item.delta, 2, true) +
   (["deg", "°"].includes(item.unit) ? "°" : item.unit ? ` ${item.unit}` : "");

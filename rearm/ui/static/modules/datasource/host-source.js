@@ -22,9 +22,9 @@ export function createHostSource({ url, WebSocketImpl = globalThis.WebSocket,
     online = value; reasonLast = reason;
     emitter.emit({ type: "link", online: value, reason });
   }
-  function feed() {
+  function feed(candidate) {
     clearTimeout(watchdog);
-    watchdog = setTimeout(() => link(false, "timeout"), offlineAfterMs);
+    watchdog = setTimeout(() => disconnect(candidate, "timeout"), offlineAfterMs);
   }
   function disconnect(candidate, reason) {
     if (socket !== candidate || stopped) return;
@@ -43,14 +43,14 @@ export function createHostSource({ url, WebSocketImpl = globalThis.WebSocket,
     try { candidate = new WebSocketImpl(url); }
     catch { disconnect(null, "connect_failed"); return; }
     socket = candidate;
-    feed();
+    feed(candidate);
     candidate.onopen = () => {
       if (socket !== candidate || stopped) return;
-      feed(); link(true, "connected");
+      feed(candidate); link(true, "connected");
     };
     candidate.onmessage = event => {
       if (socket !== candidate || stopped) return;
-      feed(); // 链路超时按任何收到的消息计时；无效载荷不进入状态归并。
+      feed(candidate); // 链路超时按任何收到的消息计时；无效载荷不进入状态归并。
       let message = event.data;
       try { if (typeof message === "string") message = JSON.parse(message); } catch { return; }
       if (!message || typeof message !== "object" || Array.isArray(message) || message.v !== 1) return;

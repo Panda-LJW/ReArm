@@ -12,7 +12,7 @@ function newer(message, previous) {
   return !(Number.isFinite(message.seq) && Number.isFinite(previous.seq)) || message.seq > previous.seq;
 }
 
-export function reduce(state, message) {
+export function reduce(state, message, receivedAt = null) {
   if (!message || typeof message !== "object" || Array.isArray(message)) return { ...state };
   if (message.v !== undefined && message.v !== 1) return { ...state };
   const next = { ...state, t: Number.isFinite(message.t) ? Math.max(state.t ?? message.t, message.t) : state.t };
@@ -28,7 +28,9 @@ export function reduce(state, message) {
     case "demo_trajectory":
       return newer(message, state.demo) ? { ...next, demo: message } : next;
     case "laser_state":
-      return newer(message, state.laser) ? { ...next, laser: message } : next;
+      // 本地接收时刻由调用方注入，不信任消息携带的同名字段，不读取墙钟。
+      return newer(message, state.laser) ? { ...next, laser: { ...message,
+        received_at: Number.isFinite(receivedAt) ? receivedAt : null } } : next;
     case "panel_laser":
       return newer(message, state.laserCommand) ? { ...next, laserCommand: message } : next;
     case "node_result":

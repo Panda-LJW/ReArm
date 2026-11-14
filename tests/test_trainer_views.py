@@ -136,7 +136,8 @@ def test_protocol_field_manifest_tracks_accesses_and_t4_payloads():
     text = '\n'.join(p.read_text() for p in TRAINER.rglob('*.js'))
     # 包括 ?. 访问和图表遍历时的动态字段名；排除已知的 UI / store 槽位。
     accessed = set(re.findall(r'(?:message|joint|node|result|correction|item|reply|first|last|row|expected|actual)\??\.(\w+)', text))
-    accessed -= {'nodes', 'result', 'correction', 'parentNode', 'append', 'classList', 'title'}
+    # received_at 由面板调用方注入，是本地状态字段，不是主机协议字段。
+    accessed -= {'nodes', 'result', 'correction', 'parentNode', 'append', 'classList', 'title', 'received_at'}
     assert accessed <= USED_FIELDS | {'want'}, accessed - USED_FIELDS - {'want'}
     assert {'q', 'pass', 'valid', 'llm_text', 'delta', 'unit', 'spot_px', 'ref_spot_px', 'dev_norm_mm'} <= set(re.findall(r'\??\.(\w+)', text))
     mock = (STATIC / 'modules/datasource/mock-host.js').read_text()
@@ -432,4 +433,130 @@ for(const scenario of [{query:'legacy=1'}, {query:''}, {query:'twin=off'}, {quer
  }
  dom.window.close();
 }
+''')
+
+
+def test_kpi_threshold_uses_summary_result_keeps_mean_and_handles_no_valid_nodes():
+    jsdom_script(r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const dom=new JSDOM(fs.readFileSync(root+'/rearm/ui/static/index.html','utf8'));
+globalThis.document=dom.window.document;
+const {mount}=await import('./trainer/views/kpis.js');
+const {initialState}=await import('./trainer/store.js');
+const {summarize}=await import('./trainer/metrics.js');
+const view=mount(document.querySelector('.kpis')),cell=document.querySelectorAll('.kpi')[1];
+for(const [result,text,level,value] of [
+ [{mean_mm:2,max_mm:6.9,valid_nodes:4,total_nodes:4},'▲ 未达标（最大 6.9 mm）','bad','2.0'],
+ [{mean_mm:2,max_mm:5,valid_nodes:4,total_nodes:4},'✓ 达标（最大 ≤ 5 mm）','ok','2.0'],
+ [{mean_mm:2,max_mm:4,valid_nodes:3,total_nodes:4},'▲ 未达标（最大 4.0 mm）','bad','2.0'],
+ [{mean_mm:null,max_mm:null,valid_nodes:0,total_nodes:4,below_threshold:false},'▲ 未达标（最大 — mm）','bad','—'],
+ [{mean_mm:2,max_mm:4,valid_nodes:4,total_nodes:4,below_threshold:false},'▲ 未达标（最大 4.0 mm）','bad','2.0'],
+ [{mean_mm:2,max_mm:6.9,valid_nodes:3,total_nodes:4,below_threshold:true},'✓ 达标（最大 ≤ 5 mm）','ok','2.0'],
+]) {
+ const s={...initialState(),link:{online:true},hello:{sim:true},passes:[{pass:1,nodes:{},result}]};
+ view.render(s,{...summarize(s),thresholdMm:5});
+ assert.equal(cell.querySelector('.d').textContent,text);assert.equal(cell.dataset.level,level);
+ assert.equal(cell.querySelector('.v').childNodes[0].textContent,value);
+ assert.equal(cell.querySelector('.v').classList.contains('badc'),level==='bad');
+}
+view.render({...initialState(),link:{online:true},hello:{sim:true}},{...summarize(initialState()),thresholdMm:5});
+assert.equal(cell.dataset.level,'none');assert.ok(!cell.textContent.includes('达标'));
+view.dispose();dom.window.close();
+''')
+
+
+@pytest.mark.parametrize('reason,text', [('spot_not_found', '未找到光点'), ('depth_invalid', '深度无效'),
+                                       ('timeout', '测量超时'), ('other', '测量无效'), (None, '测量无效'),
+                                       ('toString', '测量无效'), ('__proto__', '测量无效')])
+def test_camera_invalid_current_node_hides_all_marks_and_clears_on_next_node(reason, text):
+    jsdom_script(INTEGRATION.split('const calls=[],overlays=[];')[0] + r'''
+const {mount}=await import('./trainer/views/camera.js');
+const {initialState,reduce}=await import('./trainer/store.js');
+const view=mount(document.querySelector('#cam'));
+let s={...initialState(),link:{online:true},hello:{sim:true,camera:{width:640,height:480}},
+ demo:{nodes:[{id:1,ref_spot_px:[320,274]},{id:2,ref_spot_px:[320,274]}]}};
+const receive=m=>{s=reduce(s,m,now);view.render(s,{thresholdMm:5});};
+receive({type:'joint_state',pass:1,node:1,t:1,mode:'practice'});
+receive({type:'node_result',pass:1,node:1,t:2,valid:true,spot_px:[330,270],dev_norm_mm:3});
+assert.equal(document.querySelectorAll('#overlay circle').length,2);
+// 即使无效载荷仍残留坐标，也必须隐藏整套光点、连线、箭头与偏差标签。
+receive({type:'node_result',pass:1,node:1,t:3,valid:false,spot_px:[330,270],dev_norm_mm:3,invalid_reason:REASON});
+const notice=document.querySelector('.trainer-measurement-status');
+assert.equal(notice.hidden,false);assert.equal(notice.textContent,TEXT);
+assert.equal(document.querySelector('#overlay').children.length,0);
+assert.equal(document.querySelector('.trainer-spot-label').hidden,true);
+assert.match(document.querySelector('#chiperr').textContent,/无效/);
+// 别处晚到的有效结果不能掩盖当前节点无效；同节点旧结果也不能覆盖。
+receive({type:'node_result',pass:2,node:1,t:99,valid:true,spot_px:[330,270]});
+receive({type:'node_result',pass:1,node:1,t:2,valid:true,spot_px:[330,270]});
+assert.equal(notice.hidden,false);assert.equal(document.querySelector('#overlay').children.length,0);
+receive({type:'joint_state',pass:1,node:2,t:4,mode:'practice'});
+assert.equal(notice.hidden,true);assert.equal(notice.textContent,'');
+assert.equal(document.querySelector('#overlay').children.length,0);
+assert.equal(document.querySelector('#chiperr').textContent,'等待测量');
+receive({type:'node_result',pass:1,node:2,t:5,valid:true,spot_px:[321,275],dev_norm_mm:1});
+assert.equal(document.querySelectorAll('#overlay circle').length,2);
+receive({type:'link',online:false});assert.equal(notice.hidden,true);
+view.dispose();assert.equal(document.querySelector('.trainer-measurement-status'),null);dom.window.close();
+'''.replace('REASON', json.dumps(reason)).replace('TEXT', json.dumps(text)))
+
+
+def test_trainer_local_laser_clock_hello_delivery_and_guard_recreation():
+    jsdom_script(INTEGRATION.split('const calls=[],overlays=[];')[0] + r'''
+let socket,seq=0;const requests=[];const hostTime=now+86400000;
+globalThis.WebSocket=class{constructor(){socket=this;} close(){}};
+globalThis.fetch=async(url,options)=>{requests.push(JSON.parse(options.body));return {json:async()=>({ok:true})};};
+const trainer=initTrainer({params:new URLSearchParams({backend:'ws://example.invalid/ws'})});
+socket.onopen();
+const emit=data=>{socket.onmessage({data:JSON.stringify({v:1,seq:++seq,t:hostTime+seq,...data})});flush();};
+emit({type:'hello',sim:false,laser_ttl_ms:900,node_timeout_ms:650});
+emit({type:'joint_state',mode:'idle',q:[0,0,0,0,0,0]});
+emit({type:'laser_state',on:false});
+assert.equal(trainer.state().laser.received_at,now);
+const click=()=>document.querySelector('[data-trainer-action="laser"]').click();
+const commandAt=now;click();await Promise.resolve();await Promise.resolve();flush();
+assert.equal(trainer.state().laserCommand.t,commandAt);
+assert.equal(requests.at(-1).ttl_ms,900);
+advance(299);assert.equal(requests.filter(r=>r.cmd==='laser_renew').length,0);
+advance(1);assert.equal(requests.at(-1).cmd,'laser_renew');assert.equal(requests.at(-1).ttl_ms,900);
+assert.equal(trainer.state().laserCommand.t,commandAt);
+advance(700);emit({type:'laser_state',on:false});assert.ok(!document.querySelector('#chiplaser').textContent.includes('不一致'));
+advance(1);emit({type:'laser_state',on:false});assert.match(document.querySelector('#chiplaser').textContent,/不一致/);
+window.dispatchEvent(new Event('pagehide'));await Promise.resolve();flush();
+advance(250);click();await Promise.resolve();await Promise.resolve();flush();
+// 生命周期重建 guard 后仍使用已归并 hello；旧 hello 不能重新配置。
+assert.equal(requests.at(-1).cmd,'laser_on');assert.equal(requests.at(-1).ttl_ms,900);
+emit({type:'hello',t:hostTime-1,laser_ttl_ms:6000,node_timeout_ms:9000});
+advance(300);assert.equal(requests.at(-1).cmd,'laser_renew');assert.equal(requests.at(-1).ttl_ms,900);
+emit({type:'joint_state',mode:'practice',pass:1,node:1,settled:true,q:[0,0,0,0,0,0]});
+advance(649);assert.notEqual(requests.at(-1).cmd,'laser_off');advance(1);
+assert.equal(requests.at(-1).cmd,'laser_off');trainer.dispose();dom.window.close();
+''')
+
+
+def test_trainer_mock_disabling_laser_mid_practice_clears_twin_and_camera_spots():
+    jsdom_script(INTEGRATION.split('const calls=[],overlays=[];')[0] + r'''
+const overlays=[];
+const trainer=initTrainer({twin:{update(){},setOverlay:o=>overlays.push(o)}});flush();
+await trainer.source.send('demo_start');advance(3000);await trainer.source.send('demo_stop');
+await trainer.source.send('practice_start');flush();
+let elapsed=0;
+while(!overlays.at(-1).spots.measured){advance(50);elapsed+=50;assert.ok(elapsed<10000);}
+assert.equal(document.querySelectorAll('#overlay circle').length,2);
+const send=trainer.source.send.bind(trainer.source);
+trainer.source.send=(cmd,args)=>['laser_on','laser_renew'].includes(cmd)?Promise.resolve({ok:true}):send(cmd,args);
+await send('laser_off');
+while(document.querySelector('.trainer-measurement-status').hidden){advance(50);elapsed+=50;assert.ok(elapsed<20000);}
+assert.equal(document.querySelector('.trainer-measurement-status').textContent,'未找到光点');
+assert.deepEqual(overlays.at(-1).spots,{});assert.equal(document.querySelector('#overlay').children.length,0);
+assert.equal(document.querySelector('.trainer-spot-label').hidden,true);
+const failed=trainer.state().passes.flatMap(p=>Object.values(p.nodes)).find(n=>n.valid===false);
+assert.ok(failed);let next=false;
+while(!next){advance(50);elapsed+=50;assert.ok(elapsed<30000);
+ const current=trainer.state().currentNode;next=current&&(current.pass!==failed.pass||current.node!==failed.node);
+}
+assert.equal(document.querySelector('.trainer-measurement-status').hidden,true);
+assert.equal(document.querySelector('.trainer-measurement-status').textContent,'');
+assert.deepEqual(overlays.at(-1).spots,{});trainer.dispose();assert.equal(tasks.size,0);dom.window.close();
 ''')

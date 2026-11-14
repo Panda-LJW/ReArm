@@ -34,7 +34,7 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
   function render() {
     raf = 0; if (disposed) return;
     const current = viewState(), config = { ...CONFIG, thresholdMm: state.hello?.threshold_mm ?? CONFIG.thresholdMm };
-    const summary = { ...summarize({ ...current, t: Math.max(current.t ?? 0, Date.now()) }, config), thresholdMm: config.thresholdMm };
+    const summary = { ...summarize(current, config), thresholdMm: config.thresholdMm };
     if (summary.laserMismatch && !mismatch) event("激光状态不一致", "bad");
     mismatch = !!summary.laserMismatch;
     // Each view is rendered at most once in this animation frame.
@@ -57,7 +57,7 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
     twin.setOverlay({ demoPath, runPath: buildPath(ARM_PARAMS, samples).segments,
       nodes: nodes.map(node => ({ ...node, current: ready && node.id === state.currentNode?.node })),
       laser: { on: ready && state.laser?.on === true },
-      spots: { measured: mmToM(result?.spot_base_mm), reference: mmToM(result?.ref_spot_base_mm), deviation_mm: result?.dev_norm_mm ?? null } });
+      spots: result?.valid === true ? { measured: mmToM(result.spot_base_mm), reference: mmToM(result.ref_spot_base_mm), deviation_mm: result.dev_norm_mm ?? null } : {} });
   }
   const reason = reply => /[\u3400-\u9fff]/.test(reply?.msg || "") ? reply.msg : ({
     offline: "主机离线，请等待连接恢复", network: "主机连接失败，请稍后重试", busy: "主机正忙，请先结束当前操作",
@@ -67,7 +67,7 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
     if (["laser_on", "laser_off", "laser_renew"].includes(cmd)) {
       const want = cmd !== "laser_off";
       if (!state.laserCommand || state.laserCommand.want !== want) {
-        state = reduce(state, { type: "panel_laser", want, t: Math.max(state.laserCommand?.t ?? 0, state.t ?? Date.now()), seq: ++commandSeq });
+        state = reduce(state, { type: "panel_laser", want, t: Date.now(), seq: ++commandSeq });
       }
     }
     schedule();
@@ -79,6 +79,7 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
   }
   function newGuard() {
     laserGuard = createLaserGuard({ send });
+    if (state.hello) laserGuard.onMessage(state.hello);
     laserGuard.onMessage({ type: "link", online: online(state) });
     if (state.joint) laserGuard.onMessage(state.joint);
     suspended = false;
@@ -86,7 +87,8 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
   function shutdown(reason) { suspended = true; laserGuard.shutdown(reason); schedule(); }
   function receive(message) {
     const previous = state;
-    state = reduce(state, message);
+    state = reduce(state, message, Date.now());
+    if (message.type === "hello" && state.hello === message) laserGuard.onMessage(message);
     if (message.type === "joint_state" && state.joint === message) {
       if (state.mode === "practice") {
         if (pass !== message.pass || previous.mode !== "practice") { pass = message.pass; samples = []; }
@@ -162,7 +164,7 @@ export function initTrainer({ twin = null, params = new URLSearchParams() } = {}
     unsubscribe = source.subscribe(receive);
     source.start();
     if (!ui.active) shutdown("inactive_page");
-    // 即使主机暂未继续推送，也能在 1 秒后呈现激光不一致；绘制仍合并进 RAF。
+    // 定期刷新画面，绘制仍合并进 RAF；告警依据实际收到的激光状态。
     timer = setInterval(schedule, 250); schedule();
     document.dispatchEvent(new CustomEvent("rearm:modules-ready"));
     return { dispose, state: viewState, source };

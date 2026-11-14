@@ -2,10 +2,10 @@ import { CONFIG } from "./config.js";
 
 export function createLaserGuard({ send, now = Date.now, setTimer = setInterval,
   clearTimer = clearInterval, config = CONFIG } = {}) {
-  const settings = { ...CONFIG, ...config }, measured = new Set();
+  const defaults = { ...CONFIG, ...config }, settings = { ...defaults }, measured = new Set();
   let want = false, auto = false, manual = false, activeNode = null;
   let online = false, mode = "idle", renew = null, timeout = null, suspended = false;
-  let lastShutdown = -Infinity;
+  let lastShutdown = -Infinity, openedAt = null;
   const key = node => JSON.stringify([node.pass, node.node]);
   const blocked = () => mode === "estop" || mode === "fault";
   function command(cmd, args = {}) {
@@ -24,20 +24,37 @@ export function createLaserGuard({ send, now = Date.now, setTimer = setInterval,
     lastShutdown = t;
     close(force);
   }
-  function open(node = null) {
-    want = true; auto = node !== null; manual = !auto;
-    activeNode = node;
+  function startRenewal() {
+    clearTimer(renew);
     renew = setTimer(() => {
       if (want) command("laser_renew", { ttl_ms: settings.laserTtlMs });
-    }, settings.laserRenewMs);
-    if (node) timeout = setTimer(() => {
-      if (activeNode && key(activeNode) === key(node)) { measured.add(key(node)); close(); }
-    }, settings.nodeTimeoutMs);
-    command("laser_on", { ttl_ms: settings.laserTtlMs });
+    }, Math.min(1000, settings.laserTtlMs / 3));
+  }
+  function startNodeTimeout() {
+    clearTimer(timeout); timeout = null;
+    if (!activeNode) return;
+    const expire = () => { measured.add(key(activeNode)); close(); };
+    const remaining = settings.nodeTimeoutMs - (now() - openedAt);
+    if (remaining <= 0) expire();
+    else timeout = setTimer(expire, remaining);
+  }
+  function open(node = null) {
+    want = true; auto = node !== null; manual = !auto;
+    activeNode = node; openedAt = now();
+    startRenewal(); startNodeTimeout();
+    if (want) command("laser_on", { ttl_ms: settings.laserTtlMs });
   }
   return {
     onMessage(message) {
-      if (message.type === "link") {
+      if (message.type === "hello") {
+        const positive = (value, fallback) => Number.isFinite(value) && value > 0 ? value : fallback;
+        const ttl = positive(message.laser_ttl_ms, defaults.laserTtlMs);
+        const wait = positive(message.node_timeout_ms, defaults.nodeTimeoutMs);
+        const changedTtl = ttl !== settings.laserTtlMs, changedWait = wait !== settings.nodeTimeoutMs;
+        settings.laserTtlMs = ttl; settings.nodeTimeoutMs = wait;
+        if (want && changedTtl) startRenewal();
+        if (want && changedWait) startNodeTimeout();
+      } else if (message.type === "link") {
         online = message.online === true;
         if (!online) {
           if (activeNode) measured.add(key(activeNode));

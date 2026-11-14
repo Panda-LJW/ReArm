@@ -352,17 +352,19 @@ const unsubscribe = host.subscribe(m => seen.push(m)); host.start(); host.start(
 sockets[0].open(); assert.equal(seen.at(-1).online,true);
 const frame = {v:1,type:"joint_state",seq:1,t:clock.now(),q:[0,0,0,0,0,0]};
 sockets[0].push(JSON.stringify(frame)); assert.deepEqual(seen.at(-1),frame);
+const oldMessage = sockets[0].onmessage;
 for (const data of ["null", "[]", "1", "bad json", '{"v":2}', null]) sockets[0].push(data);
 assert.equal(seen.filter(m => m.v).length,1);
 clock.advance(2999); assert.notEqual(seen.at(-1).online,false);
 clock.advance(1); assert.deepEqual(seen.at(-1), {type:"link",online:false,reason:"timeout"});
+assert.equal(sockets[0].closed,true);
+const afterTimeout = seen.length;
 sockets[0].push({v:1,type:"heartbeat",seq:2,t:clock.now()});
-assert.equal(seen.at(-2).online,true);
-const oldMessage = sockets[0].onmessage;
+assert.equal(seen.length,afterTimeout);
 sockets[0].close(); assert.equal(seen.at(-1).online,false);
 clock.advance(999); assert.equal(sockets.length,1); clock.advance(1); assert.equal(sockets.length,2);
 const count = seen.length; oldMessage({data:JSON.stringify(frame)}); assert.equal(seen.length,count);
-sockets[1].open(); unsubscribe(); host.stop(); clock.advance(10000);
+sockets[1].open(); assert.equal(seen.at(-1).online,true); unsubscribe(); host.stop(); clock.advance(10000);
 assert.equal(sockets.length,2); assert.equal(clock.size(),0); assert.equal(sockets[1].closed,true);
 console.log(JSON.stringify(true));
 ''') is True
@@ -394,7 +396,8 @@ def test_host_silent_connection_reports_timeout_then_close_even_already_offline(
 const host = createHostSource({url:"ws://example.invalid/ws",WebSocketImpl:FakeSocket,fetchImpl:fakeFetch}), seen=[];
 host.subscribe(m => seen.push(m)); host.start(); clock.advance(3000);
 assert.deepEqual(seen.at(-1), {type:"link",online:false,reason:"timeout"});
-sockets[0].close(); assert.deepEqual(seen.at(-1), {type:"link",online:false,reason:"closed"});
+assert.equal(sockets[0].closed,true);
+sockets[0].close(); assert.deepEqual(seen.at(-1), {type:"link",online:false,reason:"timeout"});
 host.stop(); clock.advance(4000); assert.equal(sockets.length,1); assert.equal(clock.size(),0);
 console.log(JSON.stringify(true));
 ''') is True
@@ -432,13 +435,14 @@ console.log(JSON.stringify(true));
 def test_metrics_empty_zero_baseline_and_laser_mismatch_use_message_time():
     assert node(IMPORTS + '''
 let state = initialState(); assert.ok(Object.values(summarize(state,CONFIG)).every(value => value === null));
-for (const m of [{type:"panel_laser",want:true,t:1000}, {type:"laser_state",on:false,t:1500}]) state=reduce(state,m);
+for (const m of [{type:"panel_laser",want:true,t:1000}, {type:"laser_state",on:false,t:1500}]) state=reduce(state,m,1500);
 assert.equal(summarize(state).laserMismatch,false);
 state=reduce(state,{type:"heartbeat",t:2000}); assert.equal(summarize(state).laserMismatch,false);
-state=reduce(state,{type:"heartbeat",t:2001}); assert.equal(summarize(state).laserMismatch,true);
-state=reduce(state,{type:"laser_state",on:true,t:2002}); assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{type:"heartbeat",t:2001}); assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{type:"laser_state",on:false,t:2001},2001); assert.equal(summarize(state).laserMismatch,true);
+state=reduce(state,{type:"laser_state",on:true,t:2002},2002); assert.equal(summarize(state).laserMismatch,false);
 state=reduce(state,{type:"panel_laser",want:false,t:2003}); assert.equal(summarize(state).laserMismatch,false);
-state=reduce(state,{type:"heartbeat",t:3004}); assert.equal(summarize(state).laserMismatch,true);
+state=reduce(state,{type:"laser_state",on:true,t:3004},3004); assert.equal(summarize(state).laserMismatch,true);
 state=reduce(state,{type:"pass_result",pass:1,mean_mm:0,max_mm:0,valid_nodes:4,total_nodes:4,t:4000});
 assert.equal(summarize(state).improvedPct,null); assert.equal(summarize(state).lastMeanMm,0);
 state=reduce(initialState(),{type:"pass_result",pass:1,mean_mm:null,max_mm:null,valid_nodes:0,total_nodes:4,t:4000});
@@ -498,3 +502,130 @@ const d=doubled.find(m=>m.type==='demo_trajectory');
 for(let i=0;i<d.nodes.length;i++)assert.ok(d.nodes[i].ref_spot_px.every((v,j)=>Math.abs(v-demo.nodes[i].ref_spot_px[j]*2)<1e-9));
 host.stop();console.log('{}');
 ''')
+
+
+@pytest.mark.parametrize('offset', [-86400000, 86400000])
+def test_laser_mismatch_uses_injected_local_receipt_not_host_clock(offset):
+    assert node(IMPORTS + '''
+Date.now=()=>{throw Error('pure functions must not read the clock');};
+let state=reduce(initialState(),{type:'panel_laser',want:true,t:10000,seq:1});
+const report=Object.freeze({type:'laser_state',on:false,t:OFFSET+10000,seq:1,received_at:999999999});
+state=reduce(state,report,10500);
+assert.equal(state.laser.received_at,10500);assert.equal(report.received_at,999999999);
+assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{...report,seq:2,t:OFFSET+10001},11000);
+assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{...report,seq:3,t:OFFSET+10002},11001);
+assert.equal(summarize(state).laserMismatch,true);
+// 旧回报不覆盖已归并结果，也不把晚到时刻伪装成新的状态回报。
+const latest=state.laser;
+state=reduce(state,report,20000);assert.equal(state.laser,latest);
+state=reduce(state,{...report,seq:4,t:OFFSET+10003,on:true},11002);
+assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{type:'panel_laser',want:false,t:12000,seq:2});
+assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{type:'heartbeat',t:9e15},15000);
+assert.equal(summarize(state).laserMismatch,false);
+state=reduce(state,{...report,seq:5,t:OFFSET+10004,on:true},13001);
+assert.equal(summarize(state).laserMismatch,true);
+const missing=reduce(initialState(),report);
+assert.equal(missing.laser.received_at,null);assert.equal(summarize(missing).laserMismatch,null);
+console.log('true');
+'''.replace('OFFSET', str(offset))) is True
+
+
+@pytest.mark.parametrize('ttl,wait,renew', [(900, 650, 300), (6000, 2200, 1000)])
+def test_guard_hello_controls_ttl_renewal_and_node_deadline(ttl, wait, renew):
+    assert node(GUARD_FIXTURE + '''
+guard.onMessage({type:'hello',laser_ttl_ms:TTL,node_timeout_ms:WAIT});
+joint();assert.equal(mock.commands().at(-1).ttl_ms,TTL);
+clock.advance(RENEW-1);assert.deepEqual(commands(),['laser_on']);
+clock.advance(1);assert.equal(mock.commands().at(-1).cmd,'laser_renew');
+assert.equal(mock.commands().at(-1).ttl_ms,TTL);
+clock.advance(WAIT-RENEW-1);assert.equal(guard.state().want,true);
+clock.advance(1);assert.equal(guard.state().want,false);assert.equal(commands().at(-1),'laser_off');
+assert.equal(clock.size(),0);joint();assert.equal(guard.state().want,false);
+console.log('true');
+'''.replace('TTL', str(ttl)).replace('WAIT', str(wait)).replace('RENEW', str(renew))) is True
+
+
+@pytest.mark.parametrize('value', ['undefined', 'null', '0', '-1', 'NaN', 'Infinity', '"900"', 'true'])
+def test_guard_invalid_hello_timings_restore_defaults_independently(value):
+    assert node(GUARD_FIXTURE + '''
+// 先收到有效配置，再收到缺失或非法字段，也应恢复默认值。
+guard.onMessage({type:'hello',laser_ttl_ms:900,node_timeout_ms:500});
+guard.onMessage({type:'hello',laser_ttl_ms:VALUE,node_timeout_ms:VALUE});
+joint();assert.equal(mock.commands().at(-1).ttl_ms,3000);
+clock.advance(999);assert.deepEqual(commands(),['laser_on']);
+clock.advance(1);assert.equal(mock.commands().at(-1).cmd,'laser_renew');
+clock.advance(999);assert.equal(guard.state().want,true);
+clock.advance(1);assert.equal(guard.state().want,false);
+guard.onMessage({type:'hello',laser_ttl_ms:900,node_timeout_ms:VALUE});
+joint('practice',1,2);clock.advance(300);assert.equal(mock.commands().at(-1).ttl_ms,900);
+clock.advance(1699);assert.equal(guard.state().want,true);clock.advance(1);assert.equal(guard.state().want,false);
+guard.onMessage({type:'hello',laser_ttl_ms:VALUE,node_timeout_ms:500});
+joint('practice',1,3);assert.equal(mock.commands().at(-1).ttl_ms,3000);
+clock.advance(500);assert.equal(guard.state().want,false);assert.equal(clock.size(),0);
+console.log('true');
+'''.replace('VALUE', value)) is True
+
+
+def test_guard_updated_hello_reschedules_active_timers_without_resetting_node_start():
+    assert node(GUARD_FIXTURE + '''
+joint();clock.advance(200);
+guard.onMessage({type:'hello',laser_ttl_ms:600,node_timeout_ms:500});
+clock.advance(199);assert.deepEqual(commands(),['laser_on']);clock.advance(1);
+assert.equal(mock.commands().at(-1).cmd,'laser_renew');assert.equal(mock.commands().at(-1).ttl_ms,600);
+clock.advance(99);assert.equal(guard.state().want,true);clock.advance(1);
+assert.equal(guard.state().want,false);assert.equal(clock.size(),0);
+joint('practice',1,2);clock.advance(100);
+guard.onMessage({type:'hello',laser_ttl_ms:900,node_timeout_ms:50});
+assert.equal(guard.state().want,false);assert.equal(clock.size(),0);
+// 极短的合法等待时间若在设置计时器时已耗尽，不能先关再误开。
+let reads=0;const sent=[];
+const short=createLaserGuard({send:cmd=>sent.push(cmd),now:()=>reads++ ? 1 : 0,
+ setTimer:clock.setTimer,clearTimer:clock.clearTimer});
+short.onMessage({type:'hello',laser_ttl_ms:1,node_timeout_ms:0.5});
+short.onMessage({type:'link',online:true});
+short.onMessage({type:'joint_state',mode:'practice',pass:1,node:1,settled:true});
+assert.deepEqual(sent,['laser_off']);assert.equal(clock.size(),0);
+console.log('true');
+''') is True
+
+
+def test_host_silence_watchdog_refresh_retry_interval_and_stop_during_retry():
+    assert node(HOST_FIXTURE + '''
+const host=createHostSource({url:'ws://example.invalid/ws',WebSocketImpl:FakeSocket,fetchImpl:fakeFetch,offlineAfterMs:80,retryMs:25});
+const seen=[];host.subscribe(m=>seen.push(m));host.start();sockets[0].open();
+clock.advance(79);sockets[0].push('invalid json');clock.advance(79);
+assert.notEqual(sockets[0].closed,true);assert.equal(seen.at(-1).online,true);
+const staleOpen=sockets[0].onopen,staleClose=sockets[0].onclose,staleError=sockets[0].onerror;
+clock.advance(1);assert.equal(sockets[0].closed,true);
+assert.deepEqual(seen.at(-1),{type:'link',online:false,reason:'timeout'});
+const count=seen.length;staleOpen();staleClose();staleError();assert.equal(seen.length,count);
+clock.advance(24);assert.equal(sockets.length,1);clock.advance(1);assert.equal(sockets.length,2);
+sockets[1].open();assert.deepEqual(seen.at(-1),{type:'link',online:true,reason:'connected'});
+clock.advance(80);assert.equal(sockets[1].closed,true);host.stop();clock.advance(1000);
+assert.equal(sockets.length,2);assert.equal(clock.size(),0);
+// 握手一直未完成也不能卡住，stop 后取消看门狗与重连。
+host.start();clock.advance(80);assert.equal(sockets[2].closed,true);
+clock.advance(25);assert.equal(sockets.length,4);host.stop();assert.equal(clock.size(),0);
+console.log('true');
+''') is True
+
+
+@pytest.mark.parametrize('result,expected', [
+    ({'mean_mm': 2, 'max_mm': 6.9, 'valid_nodes': 4, 'total_nodes': 4}, False),
+    ({'mean_mm': 2, 'max_mm': 5, 'valid_nodes': 4, 'total_nodes': 4}, True),
+    ({'mean_mm': 2, 'max_mm': 4, 'valid_nodes': 3, 'total_nodes': 4}, False),
+    ({'mean_mm': None, 'max_mm': None, 'valid_nodes': 0, 'total_nodes': 4}, False),
+    ({'mean_mm': 0, 'max_mm': 0, 'valid_nodes': 0, 'total_nodes': 0}, False),
+    ({'mean_mm': 2, 'max_mm': 4, 'valid_nodes': 4, 'total_nodes': 4, 'below_threshold': False}, False),
+    ({'mean_mm': 2, 'max_mm': 6.9, 'valid_nodes': 3, 'total_nodes': 4, 'below_threshold': True}, True),
+])
+def test_pass_threshold_uses_host_boolean_or_inclusive_max_and_all_valid(result, expected):
+    assert node(IMPORTS + f'''
+const state=reduce(initialState(),{{type:'pass_result',pass:1,...{json.dumps(result)}}});
+assert.equal(summarize(state).belowThreshold,{json.dumps(expected)});
+console.log('true');
+''') is True
